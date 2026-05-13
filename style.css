@@ -617,3 +617,94 @@ select {
     width: 100%;
   }
 }
+
+/* TOOLTIP */
+
+.tooltip {
+
+  position: relative;
+
+  cursor: help;
+}
+
+
+.tooltip::after {
+
+  content: attr(data-tooltip);
+
+  position: absolute;
+
+  bottom: 130%;
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  background: #111827;
+
+  color: white;
+
+  padding: 8px 10px;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+
+  width: max-content;
+
+  max-width: 260px;
+
+  white-space: normal;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transition: 0.2s;
+
+  z-index: 100;
+}
+
+
+.tooltip:hover::after {
+
+  opacity: 1;
+}
+
+
+.info-icon {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 16px;
+
+  height: 16px;
+
+  border-radius: 50%;
+
+  background: #e5e7eb;
+
+  color: #6b7280;
+
+  font-size: 11px;
+
+  margin-left: 6px;
+
+  font-weight: 700;
+}
+
+
+.card-actions {
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 10px;
+}
