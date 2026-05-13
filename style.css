@@ -1,1 +1,39 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
 
+.toolbar {
+  margin-bottom: 20px;
+}
+
+input {
+  padding: 8px;
+  width: 300px;
+}
+
+button {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 15px;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  vertical-align: top;
+}
+
+th {
+  background: #f3f3f3;
+}
+
+.summary {
+  color: #555;
+}
