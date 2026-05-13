@@ -50,7 +50,7 @@ let lastParams = {};
 
 let currentRows = [];
 
-const CLIENT_PAGE_SIZE = 12;
+const CLIENT_PAGE_SIZE = 10;
 
 
 // ====================================
@@ -513,7 +513,6 @@ function copyText(text) {
 
   navigator.clipboard.writeText(text);
 
-  alert("Copied");
 }
 
 
@@ -560,7 +559,12 @@ function resetSearch() {
       cb => cb.checked = true
     );
 
-  loadDateRange();
+  // Reset default dates
+  date_from.value = "2026-03-01";
+
+  date_to.value = "2026-03-31";
+
+  search(1);
 }
 
 
@@ -738,8 +742,7 @@ date_from.addEventListener(
 
     if (this.value) {
 
-      date_to.min =
-        this.value;
+      date_to.min = this.value;
 
 
       if (
@@ -759,17 +762,11 @@ date_to.addEventListener(
   function () {
 
     if (
-      this.value <
-      date_from.value
+      this.value &&
+      this.value < date_from.value
     ) {
 
-      alert(
-        '"To date" cannot be earlier than "From date"'
-      );
-
       this.value = "";
-
-      return;
     }
   }
 );
@@ -780,5 +777,17 @@ date_to.addEventListener(
 // ====================================
 window.onload = () => {
 
-  loadDateRange();
+  // Default dates
+  date_from.value = "2026-03-01";
+
+  date_to.value = "2026-03-31";
+
+  // Allowed limits
+  date_from.min = "2025-10-01";
+  date_to.min = "2025-10-01";
+
+  date_from.max = "2026-03-31";
+  date_to.max = "2026-03-31";
+
+  search(1);
 };
