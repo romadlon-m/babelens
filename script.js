@@ -1,6 +1,72 @@
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwCCgzR89n5wLrSRkWqCCZDLAvzbWwx9Y-3Dhn5QpHf2NSXFhoKdjkJmN_wG-EZKqu6/exec";
 
+
+// ====================================
+// LAPUS LABELS
+// ====================================
+const LAPUS_LABELS = {
+
+  A: "Pertanian, Kehutanan, dan Perikanan",
+
+  B: "Pertambangan dan Penggalian",
+
+  C: "Industri Pengolahan",
+
+  D: "Pengadaan Listrik dan Gas",
+
+  E: "Pengadaan Air, Pengelolaan Sampah, Limbah dan Daur Ulang",
+
+  F: "Konstruksi",
+
+  G: "Perdagangan Besar dan Eceran; Reparasi Mobil dan Sepeda Motor",
+
+  H: "Transportasi dan Pergudangan",
+
+  I: "Penyediaan Akomodasi dan Makan Minum",
+
+  J: "Informasi dan Komunikasi",
+
+  K: "Jasa Keuangan dan Asuransi",
+
+  L: "Real Estat",
+
+  MN: "Jasa Perusahaan",
+
+  O: "Administrasi Pemerintahan, Pertahanan dan Jaminan Sosial Wajib",
+
+  P: "Jasa Pendidikan",
+
+  Q: "Jasa Kesehatan dan Kegiatan Sosial",
+
+  RSTU: "Jasa Lainnya"
+};
+
+
+// ====================================
+// GLOBAL STATE
+// ====================================
+let lastParams = {};
+
+
+// ====================================
+// FORMAT DATE
+// ====================================
+function formatDateIndo(dateString) {
+
+  const d = new Date(dateString);
+
+  return new Intl.DateTimeFormat(
+    "id-ID",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    }
+  ).format(d);
+}
+
+
 // ====================================
 // SEARCH
 // ====================================
@@ -19,7 +85,7 @@ function search(page = 1) {
     return;
   }
 
-  const params = {
+  lastParams = {
 
     action: "searchNews",
 
@@ -61,14 +127,16 @@ function search(page = 1) {
 
 
   result.innerHTML =
-    `<div class="news-card">
+    `
+    <div class="news-card">
       Loading...
-    </div>`;
+    </div>
+    `;
 
 
   fetch(
     API_URL + "?" +
-    new URLSearchParams(params)
+    new URLSearchParams(lastParams)
   )
 
   .then(res => res.json())
@@ -80,9 +148,11 @@ function search(page = 1) {
     console.error(err);
 
     result.innerHTML =
-      `<div class="news-card">
+      `
+      <div class="news-card">
         Failed to load data
-      </div>`;
+      </div>
+      `;
   });
 }
 
@@ -93,15 +163,19 @@ function search(page = 1) {
 function render(data) {
 
   meta.innerHTML =
-    `Found <b>${data.totalFound}</b>
-    articles`;
+    `
+    Found <b>${data.totalFound}</b>
+    articles
+    `;
 
   if (!data.rows.length) {
 
     result.innerHTML =
-      `<div class="news-card">
+      `
+      <div class="news-card">
         No results found.
-      </div>`;
+      </div>
+      `;
 
     return;
   }
@@ -109,6 +183,21 @@ function render(data) {
   let html = "";
 
   data.rows.forEach((r, i) => {
+
+    const formattedDate =
+      formatDateIndo(
+        r.publication_datetime
+      );
+
+    const citationText =
+      `${r.title} (${r.source}, ${formattedDate})`;
+
+    const summaryText =
+      `${r.title}\n\n${r.summary}`;
+
+    const lapusTooltip =
+      LAPUS_LABELS[r.lapus] || r.lapus || "-";
+
 
     html += `
 
@@ -133,7 +222,7 @@ function render(data) {
 
               ${r.source}
               •
-              ${r.publication_datetime}
+              ${formattedDate}
               •
               ${r.region || "-"}
 
@@ -145,32 +234,68 @@ function render(data) {
 
 
         <div class="news-summary">
+
           ${r.summary || "-"}
+
+          <span
+            class="tooltip info-icon"
+            data-tooltip="
+              Summary generated using AI.
+              Please verify if needed.
+            "
+          >
+            i
+          </span>
+
         </div>
 
 
         <div class="badges">
 
-          <span class="
-            badge
-            ${r.pdrb_relevan === "YA"
-              ? "badge-green"
-              : "badge-gray"}
-          ">
+          <span
+            class="
+              badge
+              tooltip
+              ${
+                r.pdrb_relevan === "YA"
+                ? "badge-green"
+                : "badge-gray"
+              }
+            "
+
+            data-tooltip="
+              PDRB relevance generated using AI classification.
+              Please verify if needed.
+            "
+          >
+
             PDRB:
             ${r.pdrb_relevan || "TIDAK"}
+
           </span>
 
 
           ${
             r.lapus
             ? `
-              <span class="
-                badge
-                badge-blue
-              ">
+              <span
+                class="
+                  badge
+                  badge-blue
+                  tooltip
+                "
+
+                data-tooltip="
+                  ${lapusTooltip}
+
+                  Generated using trained
+                  Machine Learning model.
+                "
+              >
+
                 Lapus:
                 ${r.lapus}
+
               </span>
             `
             : ""
@@ -180,11 +305,21 @@ function render(data) {
           ${
             r.event_time
             ? `
-              <span class="
-                badge
-                badge-gray
-              ">
+              <span
+                class="
+                  badge
+                  badge-gray
+                  tooltip
+                "
+
+                data-tooltip="
+                  Event status generated using AI extraction.
+                  Please verify if needed.
+                "
+              >
+
                 ${r.event_time}
+
               </span>
             `
             : ""
@@ -197,16 +332,21 @@ function render(data) {
 
           <button
             class="card-btn"
-            onclick="copySummary(this)"
-            data-copy="
-              ${(
-                r.title +
-                ' — ' +
-                r.summary
-              ).replace(/"/g, '&quot;')}
-            "
+            onclick='copyText(
+              ${JSON.stringify(citationText)}
+            )'
           >
-            Copy
+            Copy Citation
+          </button>
+
+
+          <button
+            class="card-btn"
+            onclick='copyText(
+              ${JSON.stringify(summaryText)}
+            )'
+          >
+            Copy Summary
           </button>
 
 
@@ -271,6 +411,7 @@ function renderPager(data) {
           class="
             ${i === page ? 'active' : ''}
           "
+
           onclick="search(${i})"
         >
           ${i}
@@ -297,23 +438,11 @@ function renderPager(data) {
 // ====================================
 // COPY
 // ====================================
-function copySummary(btn) {
+function copyText(text) {
 
-  navigator.clipboard.writeText(
-    btn.dataset.copy
-  );
+  navigator.clipboard.writeText(text);
 
-  const original =
-    btn.textContent;
-
-  btn.textContent = "Copied";
-
-  setTimeout(() => {
-
-    btn.textContent =
-      original;
-
-  }, 1000);
+  alert("Copied");
 }
 
 
@@ -358,7 +487,54 @@ function resetSearch() {
     .querySelectorAll(".event_filter")
     .forEach(cb => cb.checked = true);
 
-  search(1);
+  loadDateRange();
+}
+
+
+// ====================================
+// DATE RANGE
+// ====================================
+function loadDateRange() {
+
+  fetch(
+    API_URL +
+    "?action=getDateRange"
+  )
+
+  .then(res => res.json())
+
+  .then(range => {
+
+    if (
+      !range ||
+      !range.dataset_min
+    ) {
+
+      search(1);
+
+      return;
+    }
+
+    date_from.min =
+      range.dataset_min;
+
+    date_to.min =
+      range.dataset_min;
+
+    date_from.max =
+      range.max;
+
+    date_to.max =
+      range.max;
+
+    date_from.value =
+      range.default_from;
+
+    date_to.value =
+      range.max;
+
+    search(1);
+  });
 }
 
 
@@ -385,7 +561,10 @@ document
 
 document
   .getElementById("closeSidebarBtn")
-  .addEventListener("click", closeSidebar);
+  .addEventListener(
+    "click",
+    closeSidebar
+  );
 
 overlay.addEventListener(
   "click",
@@ -452,5 +631,6 @@ keyword.addEventListener(
 // FIRST LOAD
 // ====================================
 window.onload = () => {
-  search(1);
+
+  loadDateRange();
 };
