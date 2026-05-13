@@ -360,11 +360,7 @@ function render(data) {
         </div>
 
 
-        <div class="full-article">
-
-          ${r.content || "-"}
-
-        </div>
+        <div class="full-article">${r.content || "-"}</div>
 
       </article>
     `;
