@@ -2,13 +2,30 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
-  >
+  />
 
   <title>Babelens News Search</title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
 
   <link
     rel="stylesheet"
@@ -18,26 +35,322 @@
 
 <body>
 
-  <h2>Babelens News Search</h2>
+  <!-- MOBILE OVERLAY -->
+  <div
+    id="sidebarOverlay"
+    class="sidebar-overlay"
+  ></div>
 
-  <div class="toolbar">
+  <!-- SIDEBAR -->
+  <aside
+    id="sidebar"
+    class="sidebar"
+  >
 
-    <input
-      id="keyword"
-      placeholder="Search keyword"
-    >
+    <div class="sidebar-top">
 
-    <button onclick="search(1)">
-      Search
-    </button>
+      <div class="brand">
+        <div class="brand-logo">B</div>
 
-  </div>
+        <div>
+          <h1>Babelens</h1>
+          <p>News Monitoring Dashboard</p>
+        </div>
+      </div>
 
-  <div id="meta"></div>
+      <button
+        id="closeSidebarBtn"
+        class="mobile-close-btn"
+      >
+        ✕
+      </button>
 
-  <div id="result"></div>
+    </div>
 
-  <div id="pager"></div>
+
+    <!-- FILTERS -->
+    <div class="filter-group">
+
+      <label>Keyword</label>
+
+      <input
+        id="keyword"
+        type="text"
+        placeholder="Search keyword..."
+      >
+    </div>
+
+
+    <div class="filter-row">
+
+      <div class="filter-group">
+        <label>From</label>
+
+        <input
+          type="date"
+          id="date_from"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label>To</label>
+
+        <input
+          type="date"
+          id="date_to"
+        >
+      </div>
+
+    </div>
+
+
+    <div class="filter-group">
+
+      <label>Region</label>
+
+      <select id="region">
+        <option value="">All Regions</option>
+        <option>Bangka Belitung</option>
+        <option>Bangka</option>
+        <option>Belitung</option>
+        <option>Bangka Barat</option>
+        <option>Bangka Tengah</option>
+        <option>Bangka Selatan</option>
+        <option>Belitung Timur</option>
+        <option>Kota Pangkal Pinang</option>
+      </select>
+    </div>
+
+
+    <div class="filter-group">
+
+      <label>Lapangan Usaha</label>
+
+      <select id="lapus">
+
+        <option value="">All Lapangan Usaha</option>
+
+        <option value="A">
+          A Pertanian
+        </option>
+
+        <option value="B">
+          B Pertambangan
+        </option>
+
+        <option value="C">
+          C Industri Pengolahan
+        </option>
+
+        <option value="F">
+          F Konstruksi
+        </option>
+
+        <option value="G">
+          G Perdagangan
+        </option>
+
+        <option value="H">
+          H Transportasi
+        </option>
+
+        <option value="I">
+          I Akomodasi
+        </option>
+
+        <option value="J">
+          J Informasi
+        </option>
+
+        <option value="K">
+          K Keuangan
+        </option>
+
+      </select>
+    </div>
+
+
+    <div class="filter-group">
+
+      <label>PDRB Relevan</label>
+
+      <label class="checkbox-row">
+
+        <input
+          type="checkbox"
+          id="pdrb_only"
+          checked
+        >
+
+        <span>
+          Only show PDRB Relevan
+        </span>
+
+      </label>
+
+    </div>
+
+
+    <div class="filter-group">
+
+      <label>Search In</label>
+
+      <label class="checkbox-row">
+        <input
+          type="checkbox"
+          id="f_title"
+          checked
+        >
+        <span>Title</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input
+          type="checkbox"
+          id="f_summary"
+          checked
+        >
+        <span>Summary</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input
+          type="checkbox"
+          id="f_full"
+        >
+        <span>Full Article</span>
+      </label>
+
+    </div>
+
+
+    <div class="filter-group">
+
+      <label>Event Status</label>
+
+      <label class="checkbox-row">
+        <input
+          class="event_filter"
+          type="checkbox"
+          value="Sudah Terjadi"
+          checked
+        >
+        <span>Sudah Terjadi</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input
+          class="event_filter"
+          type="checkbox"
+          value="Sedang Terjadi"
+          checked
+        >
+        <span>Sedang Terjadi</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input
+          class="event_filter"
+          type="checkbox"
+          value="Akan Terjadi"
+          checked
+        >
+        <span>Akan Terjadi</span>
+      </label>
+
+    </div>
+
+
+    <div class="sidebar-actions">
+
+      <button
+        class="primary-btn"
+        onclick="search(1)"
+      >
+        Search
+      </button>
+
+      <button
+        class="secondary-btn"
+        onclick="resetSearch()"
+      >
+        Reset
+      </button>
+
+    </div>
+
+  </aside>
+
+
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+
+      <div class="topbar-left">
+
+        <button
+          id="mobileMenuBtn"
+          class="mobile-menu-btn"
+        >
+          ☰
+        </button>
+
+        <div>
+
+          <h2>
+            Babelens News Search
+          </h2>
+
+          <p>
+            Economic news monitoring dashboard
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="topbar-right">
+
+        <button
+          class="export-btn"
+          onclick="alert('Export temporarily disabled')"
+        >
+          Export
+        </button>
+
+      </div>
+
+    </header>
+
+
+
+    <!-- META -->
+    <section class="meta-section">
+
+      <div id="meta"></div>
+
+    </section>
+
+
+    <!-- RESULTS -->
+    <section
+      id="result"
+      class="cards-container"
+    ></section>
+
+
+    <!-- PAGINATION -->
+    <section
+      id="pager"
+      class="pager"
+    ></section>
+
+  </main>
+
 
   <script src="script.js"></script>
 
