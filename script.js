@@ -48,6 +48,10 @@ const LAPUS_LABELS = {
 // ====================================
 let lastParams = {};
 
+let currentRows = [];
+
+const CLIENT_PAGE_SIZE = 12;
+
 
 // ====================================
 // FORMAT DATE
@@ -85,6 +89,21 @@ function search(page = 1) {
     return;
   }
 
+
+  if (
+    date_to.value &&
+    date_from.value &&
+    date_to.value < date_from.value
+  ) {
+
+    alert(
+      '"To date" cannot be earlier than "From date"'
+    );
+
+    return;
+  }
+
+
   lastParams = {
 
     action: "searchNews",
@@ -111,9 +130,9 @@ function search(page = 1) {
     date_to:
       date_to.value,
 
-    page,
+    page: 1,
 
-    pageSize: 25,
+    pageSize: 100000,
 
     f_title:
       f_title.checked,
@@ -141,7 +160,12 @@ function search(page = 1) {
 
   .then(res => res.json())
 
-  .then(render)
+  .then(data => {
+
+    currentRows = data.rows || [];
+
+    renderPage(1);
+  })
 
   .catch(err => {
 
@@ -158,17 +182,46 @@ function search(page = 1) {
 
 
 // ====================================
-// RENDER
+// CLIENT PAGINATION
 // ====================================
-function render(data) {
+function renderPage(page = 1) {
+
+  const totalFound =
+    currentRows.length;
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        totalFound /
+        CLIENT_PAGE_SIZE
+      )
+    );
+
+  const start =
+    (page - 1) *
+    CLIENT_PAGE_SIZE;
+
+  const end =
+    start +
+    CLIENT_PAGE_SIZE;
+
+  const rows =
+    currentRows.slice(
+      start,
+      end
+    );
+
 
   meta.innerHTML =
     `
-    Found <b>${data.totalFound}</b>
+    Found
+    <b>${totalFound}</b>
     articles
     `;
 
-  if (!data.rows.length) {
+
+  if (!rows.length) {
 
     result.innerHTML =
       `
@@ -177,12 +230,16 @@ function render(data) {
       </div>
       `;
 
+    pager.innerHTML = "";
+
     return;
   }
 
+
   let html = "";
 
-  data.rows.forEach((r, i) => {
+
+  rows.forEach((r) => {
 
     const formattedDate =
       formatDateIndo(
@@ -196,7 +253,9 @@ function render(data) {
       `${r.title}\n\n${r.summary}`;
 
     const lapusTooltip =
-      LAPUS_LABELS[r.lapus] || r.lapus || "-";
+      LAPUS_LABELS[r.lapus] ||
+      r.lapus ||
+      "-";
 
 
     html += `
@@ -366,36 +425,50 @@ function render(data) {
     `;
   });
 
+
   result.innerHTML = html;
 
-  renderPager(data);
+  renderPager(
+    page,
+    totalPages
+  );
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 }
 
 
 // ====================================
 // PAGER
 // ====================================
-function renderPager(data) {
-
-  const {
-    page,
-    totalPages
-  } = data;
+function renderPager(
+  page,
+  totalPages
+) {
 
   let html = "";
+
 
   if (page > 1) {
 
     html += `
       <button
-        onclick="search(${page - 1})"
+        onclick="renderPage(${page - 1})"
       >
         Prev
       </button>
     `;
   }
 
-  for (let i = 1; i <= totalPages; i++) {
+
+  for (
+    let i = 1;
+    i <= totalPages;
+    i++
+  ) {
 
     if (
       i >= page - 2 &&
@@ -408,7 +481,7 @@ function renderPager(data) {
             ${i === page ? 'active' : ''}
           "
 
-          onclick="search(${i})"
+          onclick="renderPage(${i})"
         >
           ${i}
         </button>
@@ -416,16 +489,18 @@ function renderPager(data) {
     }
   }
 
+
   if (page < totalPages) {
 
     html += `
       <button
-        onclick="search(${page + 1})"
+        onclick="renderPage(${page + 1})"
       >
         Next
       </button>
     `;
   }
+
 
   pager.innerHTML = html;
 }
@@ -481,7 +556,9 @@ function resetSearch() {
 
   document
     .querySelectorAll(".event_filter")
-    .forEach(cb => cb.checked = true);
+    .forEach(
+      cb => cb.checked = true
+    );
 
   loadDateRange();
 }
@@ -511,6 +588,7 @@ function loadDateRange() {
       return;
     }
 
+
     date_from.min =
       range.dataset_min;
 
@@ -523,11 +601,13 @@ function loadDateRange() {
     date_to.max =
       range.max;
 
+
     date_from.value =
       range.default_from;
 
     date_to.value =
       range.max;
+
 
     search(1);
   });
@@ -538,29 +618,46 @@ function loadDateRange() {
 // MOBILE SIDEBAR
 // ====================================
 const sidebar =
-  document.getElementById("sidebar");
+  document.getElementById(
+    "sidebar"
+  );
 
 const overlay =
   document.getElementById(
     "sidebarOverlay"
   );
 
-document
-  .getElementById("mobileMenuBtn")
-  .addEventListener("click", () => {
-
-    sidebar.classList.add("open");
-
-    overlay.classList.add("show");
-  });
-
 
 document
-  .getElementById("closeSidebarBtn")
+  .getElementById(
+    "mobileMenuBtn"
+  )
+
+  .addEventListener(
+    "click",
+    () => {
+
+      sidebar.classList.add(
+        "open"
+      );
+
+      overlay.classList.add(
+        "show"
+      );
+    }
+  );
+
+
+document
+  .getElementById(
+    "closeSidebarBtn"
+  )
+
   .addEventListener(
     "click",
     closeSidebar
   );
+
 
 overlay.addEventListener(
   "click",
@@ -570,9 +667,13 @@ overlay.addEventListener(
 
 function closeSidebar() {
 
-  sidebar.classList.remove("open");
+  sidebar.classList.remove(
+    "open"
+  );
 
-  overlay.classList.remove("show");
+  overlay.classList.remove(
+    "show"
+  );
 }
 
 
@@ -594,6 +695,7 @@ function closeSidebar() {
 
   document
     .getElementById(id)
+
     .addEventListener(
       "change",
       () => search(1)
@@ -602,7 +704,10 @@ function closeSidebar() {
 
 
 document
-  .querySelectorAll(".event_filter")
+  .querySelectorAll(
+    ".event_filter"
+  )
+
   .forEach(cb => {
 
     cb.addEventListener(
@@ -617,7 +722,54 @@ keyword.addEventListener(
   e => {
 
     if (e.key === "Enter") {
+
       search(1);
+    }
+  }
+);
+
+
+// ====================================
+// DATE VALIDATION
+// ====================================
+date_from.addEventListener(
+  "change",
+  function () {
+
+    if (this.value) {
+
+      date_to.min =
+        this.value;
+
+
+      if (
+        date_to.value &&
+        date_to.value < this.value
+      ) {
+
+        date_to.value = "";
+      }
+    }
+  }
+);
+
+
+date_to.addEventListener(
+  "change",
+  function () {
+
+    if (
+      this.value <
+      date_from.value
+    ) {
+
+      alert(
+        '"To date" cannot be earlier than "From date"'
+      );
+
+      this.value = "";
+
+      return;
     }
   }
 );
