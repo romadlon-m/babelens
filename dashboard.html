@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- MOBILE OVERLAY -->
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar">
+
+    <div class="sidebar-top">
+      <div class="brand">
+        <div class="brand-logo">B</div>
+        <div>
+          <h1>Babelens</h1>
+          <p>Berita Ekonomi Bangka Belitung</p>
+        </div>
+      </div>
+      <button id="closeSidebarBtn" class="mobile-close-btn">✕</button>
+    </div>
+
+    <!-- NAVIGASI -->
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🔍</span> Pencarian Berita
+      </a>
+      <a href="dashboard.html" class="nav-item active">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="guide.html" class="nav-item">
+        <span class="nav-icon">📖</span> Panduan
+      </a>
+    </nav>
+
+    <div class="filter-divider"></div>
+
+    <!-- FILTER TANGGAL -->
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Tanggal Awal</label>
+        <input type="date" id="dash_from">
+      </div>
+      <div class="filter-group">
+        <label>Tanggal Akhir</label>
+        <input type="date" id="dash_to">
+      </div>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="primary-btn" style="width:100%" onclick="loadDashboard()">Terapkan</button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+        <div><h2>Dashboard</h2></div>
+      </div>
+    </header>
+
+    <!-- STAT CARDS -->
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-label">Total Berita</div>
+        <div class="stat-value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">PDRB Relevan</div>
+        <div class="stat-value" id="stat-pdrb">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lapangan Usaha</div>
+        <div class="stat-value" id="stat-lapus">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Wilayah Tercakup</div>
+        <div class="stat-value" id="stat-wilayah">—</div>
+      </div>
+    </div>
+
+    <!-- CHARTS GRID -->
+    <div class="charts-grid">
+
+      <div class="chart-card chart-wide">
+        <div class="chart-title">Tren Berita per Bulan</div>
+        <div id="chart-tren" class="chart-container"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Distribusi Lapangan Usaha</div>
+        <div id="chart-lapus" class="chart-container"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Distribusi per Wilayah</div>
+        <div id="chart-wilayah" class="chart-container"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Relevansi PDRB</div>
+        <div id="chart-pdrb" class="chart-container"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Status Kejadian</div>
+        <div id="chart-status" class="chart-container"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

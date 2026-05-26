@@ -1,83 +1,53 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
   <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Babelens - Pencarian Berita</title>
-
-  <link
-    rel="preconnect"
-    href="https://fonts.googleapis.com"
-  >
-
-  <link
-    rel="preconnect"
-    href="https://fonts.gstatic.com"
-    crossorigin
-  >
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  >
-
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
   <!-- MOBILE OVERLAY -->
-  <div
-    id="sidebarOverlay"
-    class="sidebar-overlay"
-  ></div>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
   <!-- SIDEBAR -->
-  <aside
-    id="sidebar"
-    class="sidebar"
-  >
+  <aside id="sidebar" class="sidebar">
 
     <div class="sidebar-top">
-
       <div class="brand">
         <div class="brand-logo">B</div>
-
         <div>
           <h1>Babelens</h1>
-          <p>Automated Lens for Bangka Belitung News</p>
+          <span class="brand-tagline">Automated Lens for Bangka Belitung News</span>
         </div>
       </div>
-
-      <button
-        id="closeSidebarBtn"
-        class="mobile-close-btn"
-      >
-        ✕
-      </button>
-
+      <button id="closeSidebarBtn" class="mobile-close-btn">✕</button>
     </div>
 
+    <!-- NAVIGASI -->
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item active">
+        <span class="nav-icon">🔍</span> Pencarian Berita
+      </a>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="guide.html" class="nav-item">
+        <span class="nav-icon">📖</span> Panduan
+      </a>
+    </nav>
+
+    <div class="filter-divider"></div>
 
     <!-- FILTERS -->
     <div class="filter-group">
       <label>Kata Kunci</label>
-      <input
-        id="keyword"
-        type="text"
-        placeholder="Cari kata kunci..."
-      >
+      <input id="keyword" type="text" placeholder="Cari kata kunci...">
     </div>
 
     <div class="filter-group">
@@ -108,6 +78,8 @@
         <input type="date" id="date_to">
       </div>
     </div>
+
+    <div class="filter-divider"></div>
 
     <div class="filter-group">
       <label>Wilayah</label>
@@ -145,7 +117,7 @@
     <div class="filter-group">
       <label class="checkbox-row">
         <input type="checkbox" id="pdrb_only" checked>
-        <span>Terkait PDRB Saja</span>
+        <span>Hanya PDRB Relevan</span>
       </label>
     </div>
 
@@ -176,14 +148,10 @@
     </div>
 
     <div class="sidebar-actions">
-      <button class="secondary-btn" onclick="resetSearch()">
-        Reset
-      </button>
+      <button class="secondary-btn" onclick="resetSearch()">Reset</button>
     </div>
 
   </aside>
-
-
 
   <!-- MAIN -->
   <main class="main-content">
@@ -192,37 +160,23 @@
     <header class="topbar">
       <div class="topbar-left">
         <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
-        <div>
-          <h2>Pencarian Berita</h2>
-        </div>
+        <div><h2>Pencarian Berita</h2></div>
       </div>
-
       <div class="meta-bar">
         <div id="meta"></div>
         <button class="export-btn" onclick="exportToExcel()">Ekspor</button>
       </div>
     </header>
 
-    <!-- hapus seluruh section meta-section -->
-
-
     <!-- RESULTS -->
-    <section
-      id="result"
-      class="cards-container"
-    ></section>
-
+    <section id="result" class="cards-container"></section>
 
     <!-- PAGINATION -->
-    <section
-      id="pager"
-      class="pager"
-    ></section>
+    <section id="pager" class="pager"></section>
 
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
-
 </body>
 </html>
