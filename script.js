@@ -60,22 +60,22 @@ let currentRows = [];
 
 const CLIENT_PAGE_SIZE = 10;
 
+// Defaults populated on first load from the DB
+let defaultMinDate = null;
+let defaultMaxDate = null;
+
 
 // ====================================
 // FORMAT DATE
 // ====================================
 function formatDateIndo(dateString) {
-
   const d = new Date(dateString);
-
-  return new Intl.DateTimeFormat(
-    "id-ID",
-    {
-      day: "2-digit",
-      month: "long",
-      year: "numeric"
-    }
-  ).format(d);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(d);
 }
 
 
@@ -103,12 +103,8 @@ function search(page = 1) {
     date_from.value &&
     date_to.value < date_from.value
   ) {
-
-    alert(
-      '"To date" cannot be earlier than "From date"'
-    );
-
-    return;
+    // Automatically correct invalid range (UI prevents this normally)
+    date_to.value = date_from.value;
   }
 
 
@@ -231,11 +227,14 @@ function renderPage(page = 1) {
     );
 
 
+  const showingStart = totalFound === 0 ? 0 : start + 1;
+  const showingEnd = start + rows.length;
+
   meta.innerHTML =
     `
-    Found
-    <b>${totalFound}</b>
-    articles
+    Found <b>${totalFound}</b> articles • Page <b>${page}</b> of <b>${totalPages}</b>
+    <br>
+    Showing <b>${showingStart}</b> - <b>${showingEnd}</b>
     `;
 
 
@@ -301,7 +300,7 @@ function renderPage(page = 1) {
               •
               ${formattedDate}
               •
-              ${r.region || "-"}
+              ${r.region_final || r.region || "-"}
 
             </div>
 
@@ -474,6 +473,14 @@ function renderPager(
 
     html += `
       <button
+        onclick="renderPage(1)"
+      >
+        First
+      </button>
+    `;
+
+    html += `
+      <button
         onclick="renderPage(${page - 1})"
       >
         Prev
@@ -517,6 +524,14 @@ function renderPager(
         Next
       </button>
     `;
+
+    html += `
+      <button
+        onclick="renderPage(${totalPages})"
+      >
+        Last
+      </button>
+    `;
   }
 
 
@@ -558,29 +573,30 @@ function toggleArticle(btn) {
 function resetSearch() {
 
   keyword.value = "";
-
   region.value = "";
-
   lapus.value = "";
-
   pdrb_only.checked = true;
-
   f_title.checked = true;
-
   f_summary.checked = true;
-
   f_full.checked = false;
 
-  document
-    .querySelectorAll(".event_filter")
-    .forEach(
-      cb => cb.checked = true
-    );
+  document.querySelectorAll(".event_filter").forEach(cb => cb.checked = true);
 
-  // Reset default dates
-  date_from.value = "2026-03-01";
+  // Reset default dates to the dynamic range (fallbacks if unavailable)
+  const minD = defaultMinDate || "2025-10-01";
+  const maxD = defaultMaxDate || new Date().toISOString().split('T')[0];
 
-  date_to.value = "2026-03-31";
+  date_from.value = minD;
+  date_to.value = maxD;
+
+  // keep allowed limits in sync
+  const datasetMin = "2025-10-01";
+  date_from.min = datasetMin;
+  // Prevent selecting a 'to' date earlier than the chosen 'from'
+  date_to.min = date_from.value || datasetMin;
+
+  date_from.max = maxD;
+  date_to.max = maxD;
 
   search(1);
 }
@@ -752,19 +768,98 @@ date_to.addEventListener(
 // ====================================
 // FIRST LOAD
 // ====================================
-window.onload = () => {
+window.onload = async () => {
+  
+  // Fetch latest date from database
+  const { data } = await db.from('news')
+    .select('publication_datetime')
+    .order('publication_datetime', { ascending: false })
+    .limit(1);
 
-  // Default dates
-  date_from.value = "2026-03-01";
+  let maxDate, minDate;
 
-  date_to.value = "2026-03-31";
+  if (data && data.length > 0) {
+    const latest = new Date(data[0].publication_datetime);
+    const earliest = new Date(latest);
+    earliest.setDate(earliest.getDate() - 30);
 
-  // Allowed limits
-  date_from.min = "2025-10-01";
-  date_to.min = "2025-10-01";
+    maxDate = latest.toISOString().split('T')[0];
+    minDate = earliest.toISOString().split('T')[0];
+  } else {
+    // Fallback if DB is empty
+    const today = new Date();
+    maxDate = today.toISOString().split('T')[0];
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate() - 30);
+    minDate = fallback.toISOString().split('T')[0];
+  }
 
-  date_from.max = "2026-03-31";
-  date_to.max = "2026-03-31";
+  // store defaults for reuse (e.g. Reset button)
+  defaultMinDate = minDate;
+  defaultMaxDate = maxDate;
+
+  date_from.value = minDate;
+  date_to.value = maxDate;
+  date_from.max = maxDate;
+  date_to.max = maxDate;
+
+  const datasetMin = "2025-10-01"; // your dataset start date
+
+  // Ensure the "To" picker can't select a date earlier than the current "From"
+  date_from.min = datasetMin;
+  date_to.min = date_from.value || datasetMin;
 
   search(1);
 };
+
+// ====================================
+// EXPORT to EXCEL
+// ====================================
+function exportToExcel() {
+  if (!currentRows || currentRows.length === 0) {
+    alert("No data to export.");
+    return;
+  }
+
+  const exportData = currentRows.map((r, i) => ({
+    "No": i + 1,
+    "Judul": r.title || "-",
+    "Tanggal": r.publication_datetime
+      ? formatDateIndo(r.publication_datetime)
+      : "-",
+    "Sumber": r.source || "-",
+    "Wilayah": r.region_final || "-",
+    "Kategori": r.category || "-",
+    "Status Event": r.event_time || "-",
+    "PDRB Relevan": r.pdrb_relevan || "-",
+    "Justifikasi PDRB": r.justifikasi_pdrb || "-",
+    "Lap. Usaha": r.lapus || "-",
+    "Lap. Usaha 2": r.lapus_second || "-",
+    "Ringkasan": r.summary || "-",
+    "URL": r.url || "-",
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Babelens");
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 5  },  // No
+    { wch: 50 },  // Judul
+    { wch: 18 },  // Tanggal
+    { wch: 20 },  // Sumber
+    { wch: 20 },  // Wilayah
+    { wch: 20 },  // Kategori
+    { wch: 18 },  // Status Event
+    { wch: 15 },  // PDRB Relevan
+    { wch: 40 },  // Justifikasi PDRB
+    { wch: 15 },  // Lap. Usaha
+    { wch: 15 },  // Lap. Usaha 2
+    { wch: 60 },  // Ringkasan
+    { wch: 40 },  // URL
+  ];
+
+  const filename = `babelens_${date_from.value}_${date_to.value}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
