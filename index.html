@@ -313,9 +313,16 @@
 
       <div class="topbar-right">
 
-        <button
+        <!-- <button
           class="export-btn"
           onclick="alert('Export temporarily disabled')"
+        >
+          Export
+        </button> -->
+
+        <button
+          class="export-btn"
+          onclick="exportToExcel()"
         >
           Export
         </button>
@@ -349,7 +356,7 @@
 
   </main>
 
-
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 
 </body>
