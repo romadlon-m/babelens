@@ -1,6 +1,14 @@
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbwCCgzR89n5wLrSRkWqCCZDLAvzbWwx9Y-3Dhn5QpHf2NSXFhoKdjkJmN_wG-EZKqu6/exec";
-
+const SUPABASE_URL = 'https://cyqqohycenkoludiefgq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cXFvaHljZW5rb2x1ZGllZmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTE2NjYsImV4cCI6MjA5NTMyNzY2Nn0.J8gFaUhXjI_jgEtOvOMa9VtdmKm3TdLyNLHgsJsBrwM';
+// const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  global: {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  }
+});
 
 // ====================================
 // LAPUS LABELS
@@ -152,32 +160,42 @@ function search(page = 1) {
     </div>
     `;
 
+  let query = db.from('news')
+  .select('*')
+  .order('publication_datetime', { ascending: false })
+  .limit(100000);
 
-  fetch(
-    API_URL + "?" +
-    new URLSearchParams(lastParams)
-  )
+  //Supa base filters
+  if (lastParams.region)       query = query.eq('region_final', lastParams.region);
+  if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
+  if (lastParams.pdrb_relevan) query = query.eq('pdrb_relevan', 'YA');
+  if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
+  if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
 
-  .then(res => res.json())
+  // Event time filter
+  const eventTimes = lastParams.event_time ? lastParams.event_time.split(',') : [];
+  if (eventTimes.length > 0 && eventTimes.length < 3) {
+    query = query.in('event_time', eventTimes);
+  }
 
-  .then(data => {
-
-    currentRows = data.rows || [];
-
+  query.then(({ data: rows, error }) => {
+    if (error) {
+      console.error(error);
+      result.innerHTML = `<div class="news-card">Failed to load data</div>`;
+      return;
+    }
+    let filtered = rows || [];
+    if (lastParams.keyword) {
+      const kw = lastParams.keyword.toLowerCase();
+      filtered = rows.filter(r =>
+        (lastParams.f_title   && r.title?.toLowerCase().includes(kw)) ||
+        (lastParams.f_summary && r.summary?.toLowerCase().includes(kw)) ||
+        (lastParams.f_full    && r.content?.toLowerCase().includes(kw))
+      );
+    }
+    currentRows = filtered;
     renderPage(1);
-  })
-
-  .catch(err => {
-
-    console.error(err);
-
-    result.innerHTML =
-      `
-      <div class="news-card">
-        Failed to load data
-      </div>
-      `;
-  });
+  });   
 }
 
 
@@ -572,49 +590,8 @@ function resetSearch() {
 // DATE RANGE
 // ====================================
 function loadDateRange() {
-
-  fetch(
-    API_URL +
-    "?action=getDateRange"
-  )
-
-  .then(res => res.json())
-
-  .then(range => {
-
-    if (
-      !range ||
-      !range.dataset_min
-    ) {
-
-      search(1);
-
-      return;
-    }
-
-
-    date_from.min =
-      range.dataset_min;
-
-    date_to.min =
-      range.dataset_min;
-
-    date_from.max =
-      range.max;
-
-    date_to.max =
-      range.max;
-
-
-    date_from.value =
-      range.default_from;
-
-    date_to.value =
-      range.max;
-
-
-    search(1);
-  });
+  // Supabase: just use static defaults, no API call needed
+  search(1);
 }
 
 
