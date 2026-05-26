@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Panduan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- MOBILE OVERLAY -->
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar">
+
+    <div class="sidebar-top">
+      <div class="brand">
+        <div class="brand-logo">B</div>
+        <div>
+          <h1>Babelens</h1>
+          <p>Berita Ekonomi Bangka Belitung</p>
+        </div>
+      </div>
+      <button id="closeSidebarBtn" class="mobile-close-btn">✕</button>
+    </div>
+
+    <!-- NAVIGASI -->
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🔍</span> Pencarian Berita
+      </a>
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="guide.html" class="nav-item active">
+        <span class="nav-icon">📖</span> Panduan
+      </a>
+    </nav>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+        <div><h2>Panduan</h2></div>
+      </div>
+    </header>
+
+    <div class="guide-content">
+
+      <div class="guide-section">
+        <h3>Tentang Babelens</h3>
+        <p>Babelens adalah alat pencarian dan analisis berita ekonomi Kepulauan Bangka Belitung. Data bersumber dari berbagai media online lokal dan nasional, diproses secara otomatis menggunakan AI dan model Machine Learning untuk klasifikasi lapangan usaha dan relevansi PDRB.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>Cara Menggunakan Filter</h3>
+        <ul>
+          <li><b>Kata Kunci</b> — masukkan kata yang ingin dicari. Pilih lingkup pencarian: Judul, Ringkasan, atau Artikel Lengkap.</li>
+          <li><b>Tanggal Awal & Akhir</b> — batasi rentang waktu berita yang ditampilkan.</li>
+          <li><b>Wilayah</b> — filter berita berdasarkan kabupaten/kota yang disebut dalam berita.</li>
+          <li><b>Lapangan Usaha</b> — filter berdasarkan sektor ekonomi (klasifikasi BPS).</li>
+          <li><b>Hanya PDRB Relevan</b> — tampilkan hanya berita yang dinilai relevan terhadap penghitungan PDRB.</li>
+          <li><b>Status Kejadian</b> — filter berdasarkan waktu kejadian: sudah, sedang, atau akan terjadi.</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
+        <h3>Penjelasan Badge</h3>
+        <ul>
+          <li><span class="badge badge-green" style="font-size:12px">PDRB: YA</span> — berita dinilai relevan terhadap PDRB oleh model AI.</li>
+          <li><span class="badge badge-blue" style="font-size:12px">Lapus: A</span> — klasifikasi lapangan usaha oleh model Machine Learning.</li>
+          <li><span class="badge badge-gray" style="font-size:12px">Sudah Terjadi</span> — status waktu kejadian yang diekstrak oleh AI.</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
+        <h3>Catatan Penting</h3>
+        <p>Ringkasan, klasifikasi PDRB, lapangan usaha, dan status kejadian dibuat secara otomatis menggunakan AI. Harap verifikasi informasi sebelum digunakan dalam laporan resmi.</p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    document.getElementById("mobileMenuBtn").addEventListener("click", () => {
+      sidebar.classList.add("open");
+      overlay.classList.add("show");
+    });
+    document.getElementById("closeSidebarBtn").addEventListener("click", () => {
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+    });
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+    });
+  </script>
+
+</body>
+</html>
