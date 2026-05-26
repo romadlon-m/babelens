@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
   <meta charset="UTF-8" />
@@ -9,7 +9,7 @@
     content="width=device-width, initial-scale=1.0"
   />
 
-  <title>Babelens News Search</title>
+  <title>Babelens - Pencarian Berita</title>
 
   <link
     rel="preconnect"
@@ -56,7 +56,7 @@
 
         <div>
           <h1>Babelens</h1>
-          <p>Bangka Belitung E-News</p>
+          <p>Automated Lens for Bangka Belitung News</p>
         </div>
       </div>
 
@@ -72,46 +72,47 @@
 
     <!-- FILTERS -->
     <div class="filter-group">
-
-      <label>Keyword</label>
-
+      <label>Kata Kunci</label>
       <input
         id="keyword"
         type="text"
-        placeholder="Search keyword..."
+        placeholder="Cari kata kunci..."
       >
     </div>
 
-
-    <div class="filter-row">
-
-      <div class="filter-group">
-        <label>From</label>
-
-        <input
-          type="date"
-          id="date_from"
-        >
-      </div>
-
-      <div class="filter-group">
-        <label>To</label>
-
-        <input
-          type="date"
-          id="date_to"
-        >
-      </div>
-
+    <div class="filter-group">
+      <small class="filter-hint">Cari kata kunci di:</small>
+      <label class="checkbox-row">
+        <input type="checkbox" id="f_title" checked>
+        <span>Judul</span>
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" id="f_summary" checked>
+        <span>Ringkasan</span>
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" id="f_full">
+        <span>Artikel Lengkap</span>
+      </label>
     </div>
 
+    <div class="filter-divider"></div>
+
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Tanggal Awal</label>
+        <input type="date" id="date_from">
+      </div>
+      <div class="filter-group">
+        <label>Tanggal Akhir</label>
+        <input type="date" id="date_to">
+      </div>
+    </div>
 
     <div class="filter-group">
-
-      <label>Region</label>
-
+      <label>Wilayah</label>
       <select id="region">
-        <option value="">All Regions</option>
+        <option value="">Semua Wilayah</option>
         <option>Bangka Belitung</option>
         <option>Bangka</option>
         <option>Belitung</option>
@@ -123,162 +124,61 @@
       </select>
     </div>
 
-
     <div class="filter-group">
-
       <label>Lapangan Usaha</label>
-
       <select id="lapus">
-
-        <option value="">All Lapangan Usaha</option>
-
-        <option value="A">
-          A Pertanian
-        </option>
-
-        <option value="B">
-          B Pertambangan
-        </option>
-
-        <option value="C">
-          C Industri Pengolahan
-        </option>
-
-        <option value="F">
-          F Konstruksi
-        </option>
-
-        <option value="G">
-          G Perdagangan
-        </option>
-
-        <option value="H">
-          H Transportasi
-        </option>
-
-        <option value="I">
-          I Akomodasi
-        </option>
-
-        <option value="J">
-          J Informasi
-        </option>
-
-        <option value="K">
-          K Keuangan
-        </option>
-
+        <option value="">Semua Lapangan Usaha</option>
+        <option value="A">A Pertanian</option>
+        <option value="B">B Pertambangan</option>
+        <option value="C">C Industri Pengolahan</option>
+        <option value="F">F Konstruksi</option>
+        <option value="G">G Perdagangan</option>
+        <option value="H">H Transportasi</option>
+        <option value="I">I Akomodasi</option>
+        <option value="J">J Informasi</option>
+        <option value="K">K Keuangan</option>
       </select>
     </div>
 
+    <div class="filter-divider"></div>
 
     <div class="filter-group">
-
-      <label>PDRB Relevan</label>
-
       <label class="checkbox-row">
-
-        <input
-          type="checkbox"
-          id="pdrb_only"
-          checked
-        >
-
-        <span>
-          Only show PDRB Relevan
-        </span>
-
+        <input type="checkbox" id="pdrb_only" checked>
+        <span>Terkait PDRB Saja</span>
       </label>
-
     </div>
 
+    <div class="filter-divider"></div>
 
     <div class="filter-group">
-
-      <label>Search In</label>
-
+      <label>Status Kejadian</label>
       <label class="checkbox-row">
-        <input
-          type="checkbox"
-          id="f_title"
-          checked
-        >
-        <span>Title</span>
-      </label>
-
-      <label class="checkbox-row">
-        <input
-          type="checkbox"
-          id="f_summary"
-          checked
-        >
-        <span>Summary</span>
-      </label>
-
-      <label class="checkbox-row">
-        <input
-          type="checkbox"
-          id="f_full"
-        >
-        <span>Full Article</span>
-      </label>
-
-    </div>
-
-
-    <div class="filter-group">
-
-      <label>Event Status</label>
-
-      <label class="checkbox-row">
-        <input
-          class="event_filter"
-          type="checkbox"
-          value="Sudah Terjadi"
-          checked
-        >
+        <input class="event_filter" type="checkbox" value="Sudah Terjadi" checked>
         <span>Sudah Terjadi</span>
       </label>
-
       <label class="checkbox-row">
-        <input
-          class="event_filter"
-          type="checkbox"
-          value="Sedang Terjadi"
-          checked
-        >
+        <input class="event_filter" type="checkbox" value="Sedang Terjadi" checked>
         <span>Sedang Terjadi</span>
       </label>
-
       <label class="checkbox-row">
-        <input
-          class="event_filter"
-          type="checkbox"
-          value="Akan Terjadi"
-          checked
-        >
+        <input class="event_filter" type="checkbox" value="Akan Terjadi" checked>
         <span>Akan Terjadi</span>
       </label>
-
     </div>
 
+    <div class="filter-divider"></div>
+
+    <!-- INDIKATOR FILTER AKTIF -->
+    <div id="active-filters" class="active-filters" style="display:none;">
+      <small>Filter aktif:</small>
+      <div id="active-filters-list"></div>
+    </div>
 
     <div class="sidebar-actions">
-
-      <button
-        class="primary-btn"
-        onclick="search(1)"
-      >
-        Search
-      </button>
-
-      <button
-        class="secondary-btn"
-        onclick="resetSearch()"
-      >
+      <button class="secondary-btn" onclick="resetSearch()">
         Reset
       </button>
-
     </div>
 
   </aside>
@@ -290,55 +190,20 @@
 
     <!-- TOPBAR -->
     <header class="topbar">
-
       <div class="topbar-left">
-
-        <button
-          id="mobileMenuBtn"
-          class="mobile-menu-btn"
-        >
-          ☰
-        </button>
-
+        <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
         <div>
-
-          <h2>
-            Babelens News Search
-          </h2>
-
+          <h2>Pencarian Berita</h2>
         </div>
-
       </div>
 
-
-      <div class="topbar-right">
-
-        <!-- <button
-          class="export-btn"
-          onclick="alert('Export temporarily disabled')"
-        >
-          Export
-        </button> -->
-
-        <button
-          class="export-btn"
-          onclick="exportToExcel()"
-        >
-          Export
-        </button>
-
+      <div class="meta-bar">
+        <div id="meta"></div>
+        <button class="export-btn" onclick="exportToExcel()">Ekspor</button>
       </div>
-
     </header>
 
-
-
-    <!-- META -->
-    <section class="meta-section">
-
-      <div id="meta"></div>
-
-    </section>
+    <!-- hapus seluruh section meta-section -->
 
 
     <!-- RESULTS -->
