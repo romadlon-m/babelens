@@ -197,8 +197,8 @@ select {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
 }
 
 .topbar-left {
@@ -258,7 +258,7 @@ select {
   align-items: center;
   gap: 16px;
   justify-content: space-between;
-  min-width: 300px;
+  width: 70%;
 }
 
 /* ============================================================
