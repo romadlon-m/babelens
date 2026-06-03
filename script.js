@@ -488,6 +488,9 @@ function exportToExcel() {
     "Lap. Usaha 2": r.lapus_second || "-",
     "Ringkasan": r.summary || "-",
     "URL": r.url || "-",
+    "Kutipan": r.title
+      ? `${r.title} (${r.source || "-"}, ${r.publication_datetime ? formatDateIndo(r.publication_datetime) : "-"})`
+      : "-",
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportData);
@@ -508,6 +511,7 @@ function exportToExcel() {
     { wch: 15 },  // Lap. Usaha 2
     { wch: 60 },  // Ringkasan
     { wch: 40 },  // URL
+    { wch: 80 },  // Kutipan
   ];
 
   const filename = `babelens_${date_from.value}_${date_to.value}.xlsx`;

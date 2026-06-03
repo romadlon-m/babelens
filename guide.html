@@ -29,17 +29,7 @@
     </div>
 
     <!-- NAVIGASI -->
-    <nav class="sidebar-nav">
-      <a href="index.html" class="nav-item">
-        <span class="nav-icon">🔍</span> Pencarian Berita
-      </a>
-      <a href="dashboard.html" class="nav-item">
-        <span class="nav-icon">📊</span> Dashboard
-      </a>
-      <a href="guide.html" class="nav-item active">
-        <span class="nav-icon">📖</span> Panduan
-      </a>
-    </nav>
+    <div id="nav-placeholder"></div>
 
   </aside>
 
@@ -90,22 +80,7 @@
 
   </main>
 
-  <script>
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("sidebarOverlay");
-    document.getElementById("mobileMenuBtn").addEventListener("click", () => {
-      sidebar.classList.add("open");
-      overlay.classList.add("show");
-    });
-    document.getElementById("closeSidebarBtn").addEventListener("click", () => {
-      sidebar.classList.remove("open");
-      overlay.classList.remove("show");
-    });
-    overlay.addEventListener("click", () => {
-      sidebar.classList.remove("open");
-      overlay.classList.remove("show");
-    });
-  </script>
+  <script src="sidebar.js"></script>
 
 </body>
 </html>
