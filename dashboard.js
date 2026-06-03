@@ -9,6 +9,20 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   }
 });
 
+const CHART_COLORS = {
+  pdrbRelevant: '#16a34a',
+  pdrbNotRelevant: '#d97706',
+  lapus: '#2563eb',
+  wilayah: '#0891b2',
+  pdrb: '#7c3aed',
+  status: {
+    'Sudah Terjadi': '#6b7280',
+    'Sedang Terjadi': '#2563eb',
+    'Akan Terjadi': '#d97706'
+  },
+  neutral: '#94a3b8'
+};
+
 // ====================================
 // MOBILE SIDEBAR
 // ====================================
@@ -34,19 +48,19 @@ window.onload = async () => {
     .order('publication_datetime', { ascending: false })
     .limit(1);
 
-  let maxDate, minDate;
+  const defaultStartDate = '2026-01-01';
+  let maxDate = defaultStartDate;
+  let minDate = defaultStartDate;
+
   if (data && data.length > 0) {
     const latest = new Date(data[0].publication_datetime);
-    const earliest = new Date(latest);
-    earliest.setDate(earliest.getDate() - 30);
     maxDate = latest.toISOString().split('T')[0];
-    minDate = earliest.toISOString().split('T')[0];
+    if (new Date(maxDate) < new Date(defaultStartDate)) {
+      minDate = maxDate;
+    }
   } else {
     const today = new Date();
     maxDate = today.toISOString().split('T')[0];
-    const fallback = new Date();
-    fallback.setDate(fallback.getDate() - 30);
-    minDate = fallback.toISOString().split('T')[0];
   }
 
   document.getElementById('dash_from').value = minDate;
@@ -113,28 +127,47 @@ function echartsColors() {
 // CHART: TREN PER BULAN
 // ====================================
 function renderTren(data) {
-  const monthly = {};
+  const monthlyTotal = {};
+  const monthlyRelevant = {};
+
   data.forEach(r => {
     if (!r.publication_datetime) return;
     const d = new Date(r.publication_datetime);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    monthly[key] = (monthly[key] || 0) + 1;
+    monthlyTotal[key] = (monthlyTotal[key] || 0) + 1;
+    if (r.pdrb_relevan === 'YA') {
+      monthlyRelevant[key] = (monthlyRelevant[key] || 0) + 1;
+    }
   });
 
-  const keys = Object.keys(monthly).sort();
-  const values = keys.map(k => monthly[k]);
+  const keys = Object.keys(monthlyTotal).sort();
+  const relevantValues = keys.map(k => monthlyRelevant[k] || 0);
+  const notRelevantValues = keys.map(k => (monthlyTotal[k] || 0) - (monthlyRelevant[k] || 0));
 
   const chart = echarts.init(document.getElementById('chart-tren'));
   chart.setOption({
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 0 },
     xAxis: { type: 'category', data: keys, axisLabel: { rotate: 30 } },
     yAxis: { type: 'value', name: 'Jumlah Berita' },
-    series: [{
-      type: 'bar',
-      data: values,
-      itemStyle: { color: '#2563eb', borderRadius: [4, 4, 0, 0] },
-      label: { show: true, position: 'top', fontSize: 11 }
-    }],
+    series: [
+      {
+        name: 'PDRB Relevan',
+        type: 'bar',
+        stack: 'total',
+        data: relevantValues,
+        itemStyle: { color: CHART_COLORS.pdrbRelevant, borderRadius: [4, 4, 0, 0] },
+        label: { show: true, position: 'insideTop', fontSize: 11 }
+      },
+      {
+        name: 'Tidak Relevan',
+        type: 'bar',
+        stack: 'total',
+        data: notRelevantValues,
+        itemStyle: { color: CHART_COLORS.pdrbNotRelevant, borderRadius: [4, 4, 0, 0] },
+        label: { show: true, position: 'insideTop', fontSize: 11 }
+      }
+    ],
     grid: { left: 50, right: 20, bottom: 60, top: 30 }
   });
   window.addEventListener('resize', () => chart.resize());
@@ -155,7 +188,7 @@ function renderLapus(data) {
     series: [{
       type: 'bar',
       data: sorted.map(x => x[1]).reverse(),
-      itemStyle: { color: '#2563eb', borderRadius: [0, 4, 4, 0] },
+      itemStyle: { color: CHART_COLORS.lapus, borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', fontSize: 11 }
     }],
     grid: { left: 40, right: 60, bottom: 20, top: 10 }
@@ -178,7 +211,7 @@ function renderWilayah(data) {
     series: [{
       type: 'bar',
       data: sorted.map(x => x[1]).reverse(),
-      itemStyle: { color: '#16a34a', borderRadius: [0, 4, 4, 0] },
+      itemStyle: { color: CHART_COLORS.wilayah, borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', fontSize: 11 }
     }],
     grid: { left: 120, right: 60, bottom: 20, top: 10 }
@@ -201,8 +234,8 @@ function renderPdrb(data) {
       type: 'pie',
       radius: ['45%', '70%'],
       data: [
-        { value: ya, name: 'Relevan', itemStyle: { color: '#16a34a' } },
-        { value: tidak, name: 'Tidak Relevan', itemStyle: { color: '#e5e7eb' } }
+        { value: ya, name: 'Relevan', itemStyle: { color: CHART_COLORS.pdrbRelevant } },
+        { value: tidak, name: 'Tidak Relevan', itemStyle: { color: CHART_COLORS.pdrbNotRelevant } }
       ],
       label: { formatter: '{b}\n{d}%' }
     }]
@@ -215,7 +248,7 @@ function renderPdrb(data) {
 // ====================================
 function renderStatus(data) {
   const counts = countBy(data.filter(r => r.event_time), 'event_time');
-  const colors = { 'Sudah Terjadi': '#6b7280', 'Sedang Terjadi': '#2563eb', 'Akan Terjadi': '#d97706' };
+  const colors = CHART_COLORS.status;
 
   const chart = echarts.init(document.getElementById('chart-status'));
   chart.setOption({
