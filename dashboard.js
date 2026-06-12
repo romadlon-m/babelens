@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://cyqqohycenkoludiefgq.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cXFvaHljZW5rb2x1ZGllZmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTE2NjYsImV4cCI6MjA5NTMyNzY2Nn0.J8gFaUhXjI_jgEtOvOMa9VtdmKm3TdLyNLHgsJsBrwM';
+const SUPABASE_KEY = 'sb_publishable_cuOUAfPmSs0ooVWrvbcISQ_VF5eOStv';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   global: {
     headers: {
