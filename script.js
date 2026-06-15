@@ -410,9 +410,23 @@ document.querySelectorAll(".event_filter").forEach(cb => {
   cb.addEventListener("change", () => search(1));
 });
 
+/* Page size change handler: calculates the first visible article index based on the current page and old page size, updates the page size in sessionStorage, then calculates the new page number to render so that the same articles remain visible. After rendering the new page, it scrolls to the article that was at the top of the viewport before the change. */
 document.getElementById("page_size_select").addEventListener("change", function () {
+  const oldPageSize = getPageSize();
+  const currentPage = parseInt(new URL(window.location).searchParams.get('page') || '1', 10);
+  const firstVisibleIndex = (currentPage - 1) * oldPageSize;
+
+  const newPageSize = parseInt(this.value, 10);
   sessionStorage.setItem('page_size', this.value);
-  renderPage(1);
+
+  const newPage = Math.floor(firstVisibleIndex / newPageSize) + 1;
+  renderPage(newPage);
+
+  const cardIndex = firstVisibleIndex % newPageSize;
+  const cards = result.querySelectorAll('article.news-card');
+  if (cardIndex > 0 && cards[cardIndex]) {
+    cards[cardIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 
 keyword.addEventListener("keydown", e => {
