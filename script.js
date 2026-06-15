@@ -38,7 +38,10 @@ const LAPUS_LABELS = {
 // ====================================
 let lastParams = {};
 let currentRows = [];
-const CLIENT_PAGE_SIZE = 10;
+
+function getPageSize() {
+  return parseInt(sessionStorage.getItem('page_size') || '10', 10);
+}
 
 // Defaults populated on first load from the DB
 let defaultMinDate = null;
@@ -62,7 +65,7 @@ function formatDateIndo(dateString) {
 // ====================================
 // CARI
 // ====================================
-function search(page = 1) {
+async function search(page = 1) {
 
   if (
     !f_title.checked &&
@@ -98,41 +101,50 @@ function search(page = 1) {
 
   result.innerHTML = `<div class="news-card">Memuat...</div>`;
 
-  let query = db.from('news')
-    .select('*')
-    .order('publication_datetime', { ascending: false })
-    .limit(100000);
-
-  if (lastParams.region)       query = query.eq('region_final', lastParams.region);
-  if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
-  if (lastParams.pdrb_relevan) query = query.eq('pdrb_relevan', 'YA');
-  if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
-  if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
-
-  // Filter status kejadian
+  const BATCH = 1000;
   const eventTimes = lastParams.event_time ? lastParams.event_time.split(',') : [];
-  if (eventTimes.length > 0 && eventTimes.length < 3) {
-    query = query.in('event_time', eventTimes);
-  }
+  let allRows = [];
+  let from = 0;
 
-  query.then(({ data: rows, error }) => {
+  while (true) {
+    result.innerHTML = `<div class="news-card">Memuat... (${allRows.length} artikel dimuat)</div>`;
+
+    let query = db.from('news')
+      .select('*')
+      .order('publication_datetime', { ascending: false })
+      .range(from, from + BATCH - 1);
+
+    if (lastParams.region)       query = query.eq('region_final', lastParams.region);
+    if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
+    if (lastParams.pdrb_relevan) query = query.eq('pdrb_relevan', 'YA');
+    if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
+    if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
+    if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
+
+    const { data: rows, error } = await query;
+
     if (error) {
       console.error(error);
       result.innerHTML = `<div class="news-card">Gagal memuat data.</div>`;
       return;
     }
-    let filtered = rows || [];
-    if (lastParams.keyword) {
-      const kw = lastParams.keyword.toLowerCase();
-      filtered = rows.filter(r =>
-        (lastParams.f_title   && r.title?.toLowerCase().includes(kw)) ||
-        (lastParams.f_summary && r.summary?.toLowerCase().includes(kw)) ||
-        (lastParams.f_full    && r.content?.toLowerCase().includes(kw))
-      );
-    }
-    currentRows = filtered;
-    renderPage(1);
-  });
+
+    allRows = allRows.concat(rows || []);
+    if (!rows || rows.length < BATCH) break;
+    from += BATCH;
+  }
+
+  let filtered = allRows;
+  if (lastParams.keyword) {
+    const kw = lastParams.keyword.toLowerCase();
+    filtered = allRows.filter(r =>
+      (lastParams.f_title   && r.title?.toLowerCase().includes(kw)) ||
+      (lastParams.f_summary && r.summary?.toLowerCase().includes(kw)) ||
+      (lastParams.f_full    && r.content?.toLowerCase().includes(kw))
+    );
+  }
+  currentRows = filtered;
+  renderPage(1);
 }
 
 
@@ -142,19 +154,14 @@ function search(page = 1) {
 function renderPage(page = 1) {
 
   const totalFound = currentRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalFound / CLIENT_PAGE_SIZE));
-  const start = (page - 1) * CLIENT_PAGE_SIZE;
-  const end = start + CLIENT_PAGE_SIZE;
+  const pageSize = getPageSize();
+  const totalPages = Math.max(1, Math.ceil(totalFound / pageSize));
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
   const rows = currentRows.slice(start, end);
 
   const showingStart = totalFound === 0 ? 0 : start + 1;
   const showingEnd = start + rows.length;
-
-  // meta.innerHTML = `
-  //   Ditemukan <b>${totalFound}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages}</b>
-  //   <br>
-  //   Menampilkan <b>${showingStart}</b> - <b>${showingEnd}</b>
-  // `;
 
   meta.innerHTML = `
     Ditemukan <b>${totalFound}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages}</b> • Menampilkan <b>${showingStart}</b>–<b>${showingEnd}</b>
@@ -267,7 +274,32 @@ function renderPage(page = 1) {
 
   result.innerHTML = html;
   renderPager(page, totalPages);
+  updateUrl(page);
+
+  requestAnimationFrame(() => {
+    const pagerEl = document.querySelector('.pager.fixed-bottom');
+    const pagerHeight = pagerEl ? pagerEl.getBoundingClientRect().height : 0;
+    const paddingBottom = pagerHeight + 16 + 8;
+    result.style.paddingBottom = paddingBottom + 'px';
+    console.log('Parent element: #result (.cards-container)');
+    console.log('Pager height (getBoundingClientRect):', pagerHeight + 'px');
+    console.log('Final padding-bottom applied:', paddingBottom + 'px');
+  });
+
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+function updateUrl(page) {
+  try {
+    const url = new URL(window.location);
+    const params = url.searchParams;
+    params.set('page', page);
+    params.set('page_size', getPageSize());
+    history.replaceState(null, '', url.pathname + '?' + params.toString());
+  } catch (e) {
+    // ignore
+  }
 }
 
 
@@ -279,8 +311,8 @@ function renderPager(page, totalPages) {
   let html = "";
 
   if (page > 1) {
-    html += `<button onclick="renderPage(1)">Pertama</button>`;
-    html += `<button onclick="renderPage(${page - 1})">Sebelumnya</button>`;
+    html += `<button onclick="renderPage(1)" title="Halaman Pertama">«</button>`;
+    html += `<button onclick="renderPage(${page - 1})" title="Sebelumnya">‹</button>`;
   }
 
   for (let i = 1; i <= totalPages; i++) {
@@ -297,8 +329,8 @@ function renderPager(page, totalPages) {
   }
 
   if (page < totalPages) {
-    html += `<button onclick="renderPage(${page + 1})">Berikutnya</button>`;
-    html += `<button onclick="renderPage(${totalPages})">Terakhir</button>`;
+    html += `<button onclick="renderPage(${page + 1})" title="Berikutnya">›</button>`;
+    html += `<button onclick="renderPage(${totalPages})" title="Halaman Terakhir">»</button>`;
   }
 
   pager.innerHTML = html;
@@ -367,26 +399,6 @@ function resetSearch() {
 
 
 // ====================================
-// MOBILE SIDEBAR
-// ====================================
-const sidebar = document.getElementById("sidebar");
-const overlay = document.getElementById("sidebarOverlay");
-
-document.getElementById("mobileMenuBtn").addEventListener("click", () => {
-  sidebar.classList.add("open");
-  overlay.classList.add("show");
-});
-
-document.getElementById("closeSidebarBtn").addEventListener("click", closeSidebar);
-overlay.addEventListener("click", closeSidebar);
-
-function closeSidebar() {
-  sidebar.classList.remove("open");
-  overlay.classList.remove("show");
-}
-
-
-// ====================================
 // EVENT OTOMATIS PENCARIAN
 // ====================================
 ["region", "lapus", "date_from", "date_to", "pdrb_only", "f_title", "f_summary", "f_full"]
@@ -402,6 +414,18 @@ keyword.addEventListener("keydown", e => {
   if (e.key === "Enter") search(1);
 });
 
+function updatePagerVisibility() {
+  const pager = document.getElementById("pager");
+  if (!pager) return;
+  if (window.scrollY >= 300) {
+    pager.classList.add("visible");
+  } else {
+    pager.classList.remove("visible");
+  }
+}
+
+window.addEventListener("scroll", updatePagerVisibility);
+window.addEventListener("load", updatePagerVisibility);
 
 // ====================================
 // VALIDASI TANGGAL

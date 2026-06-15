@@ -18,19 +18,7 @@
   <!-- SIDEBAR -->
   <aside id="sidebar" class="sidebar">
 
-    <div class="sidebar-top">
-      <div class="brand">
-        <div class="brand-logo">B</div>
-        <div>
-          <h1>Babelens</h1>
-          <span class="brand-tagline">Automated Lens for Bangka Belitung News</span>
-        </div>
-      </div>
-      <button id="closeSidebarBtn" class="mobile-close-btn">✕</button>
-    </div>
-
-    <!-- NAVIGASI -->
-    <div id="nav-placeholder"></div>
+    <div id="sidebar-container"></div>
 
     <div class="filter-divider"></div>
 
@@ -90,15 +78,23 @@
       <label>Lapangan Usaha</label>
       <select id="lapus">
         <option value="">Semua Lapangan Usaha</option>
-        <option value="A">A Pertanian</option>
-        <option value="B">B Pertambangan</option>
-        <option value="C">C Industri Pengolahan</option>
-        <option value="F">F Konstruksi</option>
-        <option value="G">G Perdagangan</option>
-        <option value="H">H Transportasi</option>
-        <option value="I">I Akomodasi</option>
-        <option value="J">J Informasi</option>
-        <option value="K">K Keuangan</option>
+        <option value="A">A - Pertanian, Kehutanan, dan Perikanan</option>
+        <option value="B">B - Pertambangan dan Penggalian</option>
+        <option value="C">C - Industri Pengolahan</option>
+        <option value="D">D - Pengadaan Listrik dan Gas</option>
+        <option value="E">E - Pengadaan Air, Pengelolaan Sampah, Limbah dan Daur Ulang</option>
+        <option value="F">F - Konstruksi</option>
+        <option value="G">G - Perdagangan Besar dan Eceran; Reparasi Mobil dan Sepeda Motor</option>
+        <option value="H">H - Transportasi dan Pergudangan</option>
+        <option value="I">I - Penyediaan Akomodasi dan Makan Minum</option>
+        <option value="J">J - Informasi dan Komunikasi</option>
+        <option value="K">K - Jasa Keuangan dan Asuransi</option>
+        <option value="L">L - Real Estat</option>
+        <option value="M,N">M,N - Jasa Perusahaan</option>
+        <option value="O">O - Administrasi Pemerintahan, Pertahanan dan Jaminan Sosial Wajib</option>
+        <option value="P">P - Jasa Pendidikan</option>
+        <option value="Q">Q - Jasa Kesehatan dan Kegiatan Sosial</option>
+        <option value="R,S,T,U">R,S,T,U - Jasa lainnya</option>
       </select>
     </div>
 
@@ -154,7 +150,23 @@
       </div>
       <div class="meta-bar">
         <div id="meta"></div>
-        <button class="export-btn" onclick="exportToExcel()">Ekspor</button>
+        <div class="page-size">
+          <label for="page_size_select">Jumlah Berita per Halaman</label>
+          <select id="page_size_select">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+          </select>
+        </div>
+        <button
+          class="export-btn"
+          onclick="exportToExcel()"
+          title="Unduh hasil pencarian dalam format Excel"
+        >
+          Unduh Excel
+        </button>
       </div>
     </header>
 
@@ -162,7 +174,7 @@
     <section id="result" class="cards-container"></section>
 
     <!-- PAGINATION -->
-    <section id="pager" class="pager"></section>
+    <section id="pager" class="pager fixed-bottom"></section>
 
   </main>
 
