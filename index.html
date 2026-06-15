@@ -19,19 +19,7 @@
   <!-- SIDEBAR -->
   <aside id="sidebar" class="sidebar">
 
-    <div class="sidebar-top">
-      <div class="brand">
-        <div class="brand-logo">B</div>
-        <div>
-          <h1>Babelens</h1>
-          <p>Berita Ekonomi Bangka Belitung</p>
-        </div>
-      </div>
-      <button id="closeSidebarBtn" class="mobile-close-btn">✕</button>
-    </div>
-
-    <!-- NAVIGASI -->
-    <div id="nav-placeholder"></div>
+    <div id="sidebar-container"></div>
 
     <div class="filter-divider"></div>
 
@@ -45,6 +33,32 @@
         <label>Tanggal Akhir</label>
         <input type="date" id="dash_to">
       </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <!-- FILTER WILAYAH -->
+    <div class="filter-group">
+      <label>Wilayah</label>
+      <select id="dash_region">
+        <option value="">Semua Wilayah</option>
+        <option>Bangka Belitung</option>
+        <option>Bangka</option>
+        <option>Belitung</option>
+        <option>Bangka Barat</option>
+        <option>Bangka Tengah</option>
+        <option>Bangka Selatan</option>
+        <option>Belitung Timur</option>
+        <option>Kota Pangkal Pinang</option>
+      </select>
+    </div>
+
+    <!-- FILTER PDRB -->
+    <div class="filter-group">
+      <label class="checkbox-row">
+        <input type="checkbox" id="dash_pdrb_only">
+        <span>Hanya PDRB Relevan</span>
+      </label>
     </div>
 
     <div class="sidebar-actions">

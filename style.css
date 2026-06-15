@@ -291,11 +291,29 @@ select {
   min-width: 0;
 }
 
-/* META */
+/* META: Ditemukan ... artikel*/
 .meta-section {
   margin-bottom: 18px;
   color: var(--muted);
   font-size: 14px;
+}
+
+#meta {
+  font-size: 13px;
+}
+
+/* Jumlah Berita per halaman */
+.page-size label {
+  font-size: 12px;
+}
+
+.page-size select {
+  font-size: 12px;
+}
+
+/* Eksport button */
+.export-btn {
+  font-size: 12px;
 }
 
 /* ============================================================
@@ -304,6 +322,7 @@ select {
 .cards-container {
   display: grid;
   gap: 18px;
+  padding-bottom: 86px;
 }
 
 .news-card {
@@ -448,6 +467,44 @@ select {
   background: var(--primary);
   color: white;
   border-color: var(--primary);
+}
+
+/* Fixed pager at bottom so users don't need to scroll */
+.pager.fixed-bottom {
+  position: fixed;
+  bottom: 16px;
+  left: calc(var(--sidebar-width) + 32px);
+  right: 32px;
+  justify-content: center;
+  padding: 10px 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* ensure content isn't hidden behind fixed pager */
+.main-content {
+  padding-bottom: 100px;
+}
+
+@media (max-width: 960px) {
+  .pager.fixed-bottom {
+    left: 24px;
+    right: 24px;
+  }
+}
+
+.pager.fixed-bottom.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 /* ============================================================
@@ -655,9 +712,15 @@ select {
 /* ============================================================
    BRANDING
    ============================================================ */
-.brand-tagline {
+/* .brand-tagline {
   display: block;
   margin: 2px 0 0;
   color: var(--muted);
   font-size: 10px;
+} */
+.brand-tagline {
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin: 2px 0 0 0;
+  line-height: 1.2;
 }

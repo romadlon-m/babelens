@@ -10,77 +10,102 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
   <!-- MOBILE OVERLAY -->
   <div id="sidebarOverlay" class="sidebar-overlay"></div>
-
   <!-- SIDEBAR -->
   <aside id="sidebar" class="sidebar">
-
-    <div class="sidebar-top">
-      <div class="brand">
-        <div class="brand-logo">B</div>
-        <div>
-          <h1>Babelens</h1>
-          <p>Berita Ekonomi Bangka Belitung</p>
-        </div>
-      </div>
-      <button id="closeSidebarBtn" class="mobile-close-btn">✕</button>
-    </div>
-
-    <!-- NAVIGASI -->
-    <div id="nav-placeholder"></div>
-
+    <div id="sidebar-container"></div>
   </aside>
-
   <!-- MAIN -->
   <main class="main-content">
-
     <header class="topbar">
       <div class="topbar-left">
         <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
         <div><h2>Panduan</h2></div>
       </div>
     </header>
-
     <div class="guide-content">
 
+      <!-- TENTANG -->
       <div class="guide-section">
         <h3>Tentang Babelens</h3>
-        <p>Babelens adalah alat pencarian dan analisis berita ekonomi Kepulauan Bangka Belitung. Data bersumber dari berbagai media online lokal dan nasional, diproses secara otomatis menggunakan AI dan model Machine Learning untuk klasifikasi lapangan usaha dan relevansi PDRB.</p>
+        <p>Babelens adalah platform intelijen berita regional untuk Kepulauan Bangka Belitung. Data bersumber dari media online lokal dan nasional, diproses menggunakan AI dan model Machine Learning untuk menghasilkan ringkasan, klasifikasi lapangan usaha, penilaian relevansi PDRB, dan identifikasi status kejadian.</p>
       </div>
 
+      <!-- DASHBOARD -->
       <div class="guide-section">
-        <h3>Cara Menggunakan Filter</h3>
+        <h3>Dashboard</h3>
+        <p>Halaman Dashboard menampilkan gambaran agregat seluruh berita dalam database. Semua grafik akan diperbarui secara bersamaan saat filter diubah.</p>
+
+        <h4>Filter Dashboard</h4>
+        <ul>
+          <li><b>Tanggal Awal & Akhir</b> — batasi rentang waktu data yang ditampilkan di seluruh grafik.</li>
+          <li><b>Wilayah</b> — saring data berdasarkan kabupaten/kota. Pilih "Semua Wilayah" untuk melihat data keseluruhan.</li>
+          <li><b>Hanya PDRB Relevan</b> — jika dicentang, seluruh grafik hanya menampilkan berita yang dinilai relevan terhadap PDRB.</li>
+        </ul>
+
+        <h4>Grafik yang Tersedia</h4>
+        <ul>
+          <li><b>Tren Berita per Bulan</b> — jumlah berita per bulan, dibedakan antara PDRB Relevan (hijau) dan Tidak Relevan (abu-abu).</li>
+          <li><b>Distribusi Lapangan Usaha</b> — jumlah berita per sektor ekonomi (kode klasifikasi BPS). Arahkan kursor ke batang untuk melihat nama lengkap sektor.</li>
+          <li><b>Distribusi per Wilayah</b> — jumlah berita per kabupaten/kota.</li>
+          <li><b>Relevansi PDRB</b> — proporsi berita yang relevan vs tidak relevan terhadap PDRB.</li>
+          <li><b>Status Kejadian</b> — proporsi berita berdasarkan waktu kejadian: Sudah Terjadi, Sedang Terjadi, Akan Terjadi, dan Tidak Disebutkan.</li>
+        </ul>
+      </div>
+
+      <!-- PENCARIAN BERITA -->
+      <div class="guide-section">
+        <h3>Pencarian Berita</h3>
+        <p>Halaman Pencarian Berita memungkinkan penelusuran artikel secara individual dengan berbagai kombinasi filter.</p>
+
+        <h4>Filter Pencarian</h4>
         <ul>
           <li><b>Kata Kunci</b> — masukkan kata yang ingin dicari. Pilih lingkup pencarian: Judul, Ringkasan, atau Artikel Lengkap.</li>
           <li><b>Tanggal Awal & Akhir</b> — batasi rentang waktu berita yang ditampilkan.</li>
           <li><b>Wilayah</b> — filter berita berdasarkan kabupaten/kota yang disebut dalam berita.</li>
           <li><b>Lapangan Usaha</b> — filter berdasarkan sektor ekonomi (klasifikasi BPS).</li>
-          <li><b>Hanya PDRB Relevan</b> — tampilkan hanya berita yang dinilai relevan terhadap penghitungan PDRB.</li>
-          <li><b>Status Kejadian</b> — filter berdasarkan waktu kejadian: sudah, sedang, atau akan terjadi.</li>
+          <li><b>Hanya PDRB Relevan</b> — tampilkan hanya berita yang dinilai relevan terhadap PDRB.</li>
+          <li><b>Status Kejadian</b> — filter berdasarkan satu atau lebih status: Sudah Terjadi, Sedang Terjadi, Akan Terjadi.</li>
         </ul>
-      </div>
 
-      <div class="guide-section">
-        <h3>Penjelasan Badge</h3>
+        <h4>Hasil Pencarian</h4>
         <ul>
-          <li><span class="badge badge-green" style="font-size:12px">PDRB: YA</span> — berita dinilai relevan terhadap PDRB oleh model AI.</li>
-          <li><span class="badge badge-blue" style="font-size:12px">Lapus: A</span> — klasifikasi lapangan usaha oleh model Machine Learning.</li>
-          <li><span class="badge badge-gray" style="font-size:12px">Sudah Terjadi</span> — status waktu kejadian yang diekstrak oleh AI.</li>
+          <li><b>Jumlah Berita per Halaman</b> — atur jumlah artikel yang ditampilkan per halaman melalui dropdown di kanan atas.</li>
+          <li><b>Navigasi Halaman</b> — gunakan tombol pagination di atas dan bawah daftar hasil untuk berpindah halaman.</li>
+          <li><b>Unduh Excel</b> — ekspor seluruh hasil pencarian (sesuai filter aktif) ke file Excel.</li>
         </ul>
       </div>
 
+      <!-- BADGE -->
+      <div class="guide-section">
+        <h3>Penjelasan Badge pada Artikel</h3>
+        <ul>
+          <li><span class="badge badge-green" style="font-size:12px">PDRB: YA</span> — berita dinilai relevan terhadap penghitungan PDRB oleh model AI.</li>
+          <li><span class="badge badge-blue" style="font-size:12px">Lapus: A</span> — kode klasifikasi lapangan usaha menurut BPS, dihasilkan oleh model Machine Learning.</li>
+          <li><span class="badge badge-gray" style="font-size:12px">Sudah Terjadi</span> — status waktu kejadian yang diekstrak oleh AI dari isi berita.</li>
+        </ul>
+        <p>Arahkan kursor ke ikon <b>ⓘ</b> pada kartu berita untuk melihat penjelasan tambahan dari AI mengenai alasan klasifikasi.</p>
+      </div>
+
+      <!-- TOMBOL AKSI -->
+      <div class="guide-section">
+        <h3>Tombol Aksi pada Kartu Berita</h3>
+        <ul>
+          <li><b>Salin Kutipan</b> — menyalin teks ringkasan berita ke clipboard, siap ditempelkan ke dokumen atau laporan.</li>
+          <li><b>Salin Ringkasan</b> — menyalin ringkasan lengkap beserta metadata (tanggal, sumber, wilayah).</li>
+          <li><b>Artikel Lengkap</b> — membuka halaman berita asli di tab baru.</li>
+        </ul>
+      </div>
+
+      <!-- CATATAN -->
       <div class="guide-section">
         <h3>Catatan Penting</h3>
-        <p>Ringkasan, klasifikasi PDRB, lapangan usaha, dan status kejadian dibuat secara otomatis menggunakan AI. Harap verifikasi informasi sebelum digunakan dalam laporan resmi.</p>
+        <p>Ringkasan, klasifikasi lapangan usaha, penilaian relevansi PDRB, dan status kejadian dihasilkan secara otomatis menggunakan AI (Qwen) dan model Machine Learning. Akurasi tidak dijamin 100%. Verifikasi informasi sebelum digunakan dalam laporan atau dokumen resmi.</p>
       </div>
 
     </div>
-
   </main>
-
   <script src="sidebar.js"></script>
-
 </body>
 </html>
