@@ -410,6 +410,11 @@ document.querySelectorAll(".event_filter").forEach(cb => {
   cb.addEventListener("change", () => search(1));
 });
 
+document.getElementById("page_size_select").addEventListener("change", function () {
+  sessionStorage.setItem('page_size', this.value);
+  renderPage(1);
+});
+
 keyword.addEventListener("keydown", e => {
   if (e.key === "Enter") search(1);
 });
@@ -483,6 +488,8 @@ window.onload = async () => {
   const datasetMin = "2025-10-01";
   date_from.min = datasetMin;
   date_to.min = date_from.value || datasetMin;
+
+  document.getElementById("page_size_select").value = getPageSize();
 
   search(1);
 };
