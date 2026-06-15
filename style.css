@@ -11,7 +11,7 @@
   --primary-light: #eff6ff;
   --green: #16a34a;
   --gray: #6b7280;
-  --sidebar-width: 320px;
+  --sidebar-width: 330px;
 }
 
 /* ============================================================
@@ -662,10 +662,10 @@ select {
 
 /* GUIDE */
 .guide-content {
-  max-width: 720px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
+  align-items: start;
 }
 
 .guide-section {
