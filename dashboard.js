@@ -69,8 +69,12 @@ window.onload = async () => {
     maxDate = today.toISOString().split('T')[0];
   }
 
-  document.getElementById('dash_from').value = minDate;
-  document.getElementById('dash_to').value = maxDate;
+  const datasetMin = '2025-10-01';
+  const dashFrom = document.getElementById('dash_from');
+  const dashTo = document.getElementById('dash_to');
+  dashFrom.value = minDate;
+  dashFrom.min = datasetMin;
+  dashTo.value = maxDate;
 
   document.getElementById('dash_region').addEventListener('change', applyFiltersAndRender);
   document.getElementById('dash_pdrb_only').addEventListener('change', applyFiltersAndRender);
@@ -166,7 +170,13 @@ function renderTren(data) {
     }
   });
 
+  const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
   const keys = Object.keys(monthlyTotal).sort();
+  const indoLabels = keys.map(k => {
+    const [year, month] = k.split('-');
+    return `${BULAN_ID[parseInt(month, 10) - 1]}\n${year}`;
+  });
   const relevantValues = keys.map(k => monthlyRelevant[k] || 0);
   const notRelevantValues = keys.map(k => (monthlyTotal[k] || 0) - (monthlyRelevant[k] || 0));
 
@@ -178,7 +188,7 @@ function renderTren(data) {
       formatter: params => params.map(p => `${p.marker}${p.seriesName}: <b>${fmt(p.value)}</b>`).join('<br/>')
     },
     legend: { bottom: 0 },
-    xAxis: { type: 'category', data: keys, axisLabel: { rotate: 30 } },
+    xAxis: { type: 'category', data: indoLabels, axisLabel: { fontSize: 11, interval: 0 } },
     yAxis: { type: 'value', name: 'Jumlah Berita', axisLabel: { formatter: v => fmt(v) } },
     series: [
       {
@@ -198,7 +208,7 @@ function renderTren(data) {
         label: { show: true, position: 'insideTop', fontSize: 11, formatter: p => p.value === 0 ? '' : fmt(p.value) }
       }
     ],
-    grid: { left: 50, right: 20, bottom: 60, top: 30 }
+    grid: { left: 50, right: 20, bottom: 100, top: 30 }
   });
   window.addEventListener('resize', () => chart.resize());
 }
