@@ -48,6 +48,45 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(navHtml => {
             navPlaceholder.innerHTML = navHtml;
             setActiveNav();
+            if (typeof window.db !== 'undefined') {
+              window.db.auth.getSession().then(({ data: { session } }) => {
+                const widget = document.getElementById('header-user-widget');
+                if (!widget) return;
+                if (!session) {
+                  widget.innerHTML = '<a href="login.html" class="header-login-btn">Masuk</a>';
+                  document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => {
+                    if ((el.getAttribute('href') || '') !== 'index.html') el.style.display = 'none';
+                  });
+                  return;
+                }
+                document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => {
+                  el.style.display = '';
+                });
+                const profilePromise = typeof getCurrentProfile === 'function'
+                  ? getCurrentProfile()
+                  : Promise.resolve(null);
+                profilePromise.then(profile => {
+                  const displayName = profile?.nama || 'Pengguna';
+                  widget.innerHTML = `
+                    <div class="user-dropdown-wrapper">
+                      <button class="user-dropdown-btn" id="userDropdownBtn">${displayName} <span class="dropdown-arrow">▾</span></button>
+                      <div class="user-dropdown" id="userDropdown">
+                        <a href="change-password.html" class="user-dropdown-item">🔑 Ubah Kata Sandi</a>
+                        <button class="user-dropdown-item user-dropdown-danger" onclick="signOut()">🚪 Keluar</button>
+                      </div>
+                    </div>
+                  `;
+                  document.getElementById('userDropdownBtn').addEventListener('click', e => {
+                    e.stopPropagation();
+                    document.getElementById('userDropdown').classList.toggle('open');
+                  });
+                  document.addEventListener('click', () => {
+                    const dd = document.getElementById('userDropdown');
+                    if (dd) dd.classList.remove('open');
+                  });
+                });
+              });
+            }
           })
           .catch(err => console.error('Failed to load nav.html:', err));
       }

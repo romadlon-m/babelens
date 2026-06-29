@@ -8,23 +8,35 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="dashboard-page">
 
-  <!-- MOBILE OVERLAY -->
-  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+  <!-- GLOBAL HEADER -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+      <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
+      <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
+    </div>
+    <div id="header-user-widget"></div>
+  </header>
 
-  <!-- SIDEBAR -->
-  <aside id="sidebar" class="sidebar">
+  <div class="app-body">
 
-    <div id="sidebar-container"></div>
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-    <div class="filter-divider"></div>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
 
-    <!-- FILTER TANGGAL -->
-    <div class="filter-row">
+      <div id="sidebar-container"></div>
+
+      <div class="filter-divider"></div>
+
+      <!-- FILTER TANGGAL -->
       <div class="filter-group">
         <label>Tanggal Awal</label>
         <input type="date" id="dash_from">
@@ -33,101 +45,135 @@
         <label>Tanggal Akhir</label>
         <input type="date" id="dash_to">
       </div>
+
+      <div class="filter-divider"></div>
+
+      <!-- FILTER WILAYAH -->
+      <div class="filter-group">
+        <label>Wilayah</label>
+        <select id="dash_region">
+          <option value="">Semua Wilayah</option>
+          <option>Bangka Belitung</option>
+          <option>Bangka</option>
+          <option>Belitung</option>
+          <option>Bangka Barat</option>
+          <option>Bangka Tengah</option>
+          <option>Bangka Selatan</option>
+          <option>Belitung Timur</option>
+          <option>Kota Pangkal Pinang</option>
+        </select>
+      </div>
+
+      <!-- FILTER PDRB -->
+      <div class="filter-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="dash_pdrb_only">
+          <span>Hanya PDRB Relevan</span>
+        </label>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="primary-btn" style="width:100%" onclick="loadDashboard()">Terapkan</button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- TITLE + STAT CARDS ROW -->
+      <div class="dash-header-row">
+        <h2 class="dash-title">Dashboard</h2>
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-icon">📰</div>
+            <div>
+              <div class="stat-label">Total Berita</div>
+              <div class="stat-value" id="stat-total">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div>
+              <div class="stat-label">PDRB Relevan</div>
+              <div class="stat-value" id="stat-pdrb">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏭</div>
+            <div>
+              <div class="stat-label">Lapangan Usaha</div>
+              <div class="stat-value" id="stat-lapus">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🗺️</div>
+            <div>
+              <div class="stat-label">Wilayah Tercakup</div>
+              <div class="stat-value" id="stat-wilayah">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS 2-COLUMN LAYOUT -->
+      <div class="charts-2col">
+
+        <!-- LEFT COLUMN: Jumlah (55%) + Lapus (45%) -->
+        <div class="charts-col">
+          <div class="chart-card chart-col-item" style="flex:55">
+            <div class="chart-card-header">
+              <div class="chart-title">Jumlah Berita per Bulan</div>
+              <div class="chart-legend-inline">
+                <span class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>PDRB Relevan</span>
+                <span class="legend-item"><span class="legend-swatch" style="background:#9ca3af"></span>Tidak Relevan</span>
+              </div>
+            </div>
+            <div id="chart-tren" class="chart-container"></div>
+          </div>
+          <div class="chart-card chart-col-item" style="flex:45">
+            <div class="chart-card-header">
+              <div class="chart-title">5 Lapangan Usaha Teratas</div>
+              <button class="lihat-semua-btn" onclick="openLapusModal()">Lihat Semua</button>
+            </div>
+            <div id="chart-lapus" class="chart-container"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Wilayah (60%) + [PDRB + Status side by side] (40%) -->
+        <div class="charts-col">
+          <div class="chart-card chart-col-item" style="flex:55">
+            <div class="chart-title">Distribusi per Wilayah</div>
+            <div id="chart-wilayah" class="chart-container"></div>
+          </div>
+          <div class="chart-row-pair" style="flex:45">
+            <div class="chart-card chart-col-item">
+              <div class="chart-title">Relevansi PDRB</div>
+              <div id="chart-pdrb" class="chart-container"></div>
+            </div>
+            <div class="chart-card chart-col-item">
+              <div class="chart-title">Status Kejadian</div>
+              <div id="chart-status" class="chart-container"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div><!-- /.app-body -->
+
+  <!-- LAPUS MODAL -->
+  <div id="lapus-modal" class="lapus-modal-overlay" onclick="closeLapusModal(event)">
+    <div class="lapus-modal">
+      <div class="lapus-modal-header">
+        <span class="lapus-modal-title">Semua Lapangan Usaha</span>
+        <button class="lapus-modal-close" onclick="closeLapusModalDirect()">&times;</button>
+      </div>
+      <div id="chart-lapus-all" class="lapus-modal-chart"></div>
     </div>
-
-    <div class="filter-divider"></div>
-
-    <!-- FILTER WILAYAH -->
-    <div class="filter-group">
-      <label>Wilayah</label>
-      <select id="dash_region">
-        <option value="">Semua Wilayah</option>
-        <option>Bangka Belitung</option>
-        <option>Bangka</option>
-        <option>Belitung</option>
-        <option>Bangka Barat</option>
-        <option>Bangka Tengah</option>
-        <option>Bangka Selatan</option>
-        <option>Belitung Timur</option>
-        <option>Kota Pangkal Pinang</option>
-      </select>
-    </div>
-
-    <!-- FILTER PDRB -->
-    <div class="filter-group">
-      <label class="checkbox-row">
-        <input type="checkbox" id="dash_pdrb_only">
-        <span>Hanya PDRB Relevan</span>
-      </label>
-    </div>
-
-    <div class="sidebar-actions">
-      <button class="primary-btn" style="width:100%" onclick="loadDashboard()">Terapkan</button>
-    </div>
-
-  </aside>
-
-  <!-- MAIN -->
-  <main class="main-content">
-
-    <header class="topbar">
-      <div class="topbar-left">
-        <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
-        <div><h2>Dashboard</h2></div>
-      </div>
-    </header>
-
-    <!-- STAT CARDS -->
-    <div class="stat-cards">
-      <div class="stat-card">
-        <div class="stat-label">Total Berita</div>
-        <div class="stat-value" id="stat-total">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">PDRB Relevan</div>
-        <div class="stat-value" id="stat-pdrb">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Lapangan Usaha</div>
-        <div class="stat-value" id="stat-lapus">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Wilayah Tercakup</div>
-        <div class="stat-value" id="stat-wilayah">—</div>
-      </div>
-    </div>
-
-    <!-- CHARTS GRID -->
-    <div class="charts-grid">
-
-      <div class="chart-card chart-wide">
-        <div class="chart-title">Tren Berita per Bulan</div>
-        <div id="chart-tren" class="chart-container"></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-title">Distribusi Lapangan Usaha</div>
-        <div id="chart-lapus" class="chart-container"></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-title">Distribusi per Wilayah</div>
-        <div id="chart-wilayah" class="chart-container"></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-title">Relevansi PDRB</div>
-        <div id="chart-pdrb" class="chart-container"></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-title">Status Kejadian</div>
-        <div id="chart-status" class="chart-container"></div>
-      </div>
-
-    </div>
-
-  </main>
+  </div>
 
   <script src="sidebar.js"></script>
   <script src="dashboard.js"></script>

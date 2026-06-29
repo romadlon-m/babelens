@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Masuk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:28px;">
+      <img src="assets/images/babelens-logo.png" alt="Babelens" style="height:52px;">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);">Babelens</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Lensa Berita Bangka Belitung</div>
+      </div>
+    </div>
+
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:600;color:var(--text);">Masuk ke Akun</h2>
+    <p style="color:var(--muted);font-size:14px;margin:0 0 24px;">Gunakan NIP Lama dan kata sandi Anda</p>
+
+    <div id="login-error" class="login-error" style="display:none;"></div>
+
+    <div class="filter-group">
+      <label>NIP Lama (9 digit)</label>
+      <input type="text" id="nip" maxlength="9" placeholder="123456789" inputmode="numeric" autocomplete="username">
+    </div>
+    <div class="filter-group">
+      <label>Kata Sandi</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="primary-btn" id="loginBtn" style="width:100%;margin-top:8px;" onclick="handleLogin()">
+      Masuk
+    </button>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

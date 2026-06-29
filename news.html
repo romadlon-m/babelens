@@ -8,178 +8,195 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="news-page" style="visibility:hidden">
 
-  <!-- MOBILE OVERLAY -->
-  <div id="sidebarOverlay" class="sidebar-overlay"></div>
-
-  <!-- SIDEBAR -->
-  <aside id="sidebar" class="sidebar">
-
-    <div id="sidebar-container"></div>
-
-    <div class="filter-divider"></div>
-
-    <!-- FILTERS -->
-    <div class="filter-group">
-      <label>Kata Kunci</label>
-      <input id="keyword" type="text" placeholder="Cari kata kunci...">
+  <!-- GLOBAL HEADER -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
+      <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
+      <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
     </div>
+    <div id="header-user-widget"></div>
+  </header>
 
-    <div class="filter-group">
-      <small class="filter-hint">Cari kata kunci di:</small>
-      <label class="checkbox-row">
-        <input type="checkbox" id="f_title" checked>
-        <span>Judul</span>
-      </label>
-      <label class="checkbox-row">
-        <input type="checkbox" id="f_summary" checked>
-        <span>Ringkasan</span>
-      </label>
-      <label class="checkbox-row">
-        <input type="checkbox" id="f_full">
-        <span>Artikel Lengkap</span>
-      </label>
-    </div>
+  <div class="app-body">
 
-    <div class="filter-divider"></div>
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-    <div class="filter-row">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+
+      <div id="sidebar-container"></div>
+
+      <div class="filter-divider"></div>
+
+      <!-- FILTERS -->
       <div class="filter-group">
-        <label>Tanggal Awal</label>
-        <input type="date" id="date_from">
+        <label>Kata Kunci</label>
+        <input id="keyword" type="text" placeholder="Cari kata kunci...">
       </div>
+
       <div class="filter-group">
-        <label>Tanggal Akhir</label>
-        <input type="date" id="date_to">
+        <small class="filter-hint">Cari kata kunci di:</small>
+        <label class="checkbox-row">
+          <input type="checkbox" id="f_title" checked>
+          <span>Judul</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="f_summary" checked>
+          <span>Ringkasan</span>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="f_full">
+          <span>Artikel Lengkap</span>
+        </label>
       </div>
-    </div>
 
-    <div class="filter-divider"></div>
+      <div class="filter-divider"></div>
 
-    <div class="filter-group">
-      <label>Wilayah</label>
-      <select id="region">
-        <option value="">Semua Wilayah</option>
-        <option>Bangka Belitung</option>
-        <option>Bangka</option>
-        <option>Belitung</option>
-        <option>Bangka Barat</option>
-        <option>Bangka Tengah</option>
-        <option>Bangka Selatan</option>
-        <option>Belitung Timur</option>
-        <option>Kota Pangkal Pinang</option>
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label>Lapangan Usaha</label>
-      <select id="lapus">
-        <option value="">Semua Lapangan Usaha</option>
-        <option value="A">A - Pertanian, Kehutanan, dan Perikanan</option>
-        <option value="B">B - Pertambangan dan Penggalian</option>
-        <option value="C">C - Industri Pengolahan</option>
-        <option value="D">D - Pengadaan Listrik dan Gas</option>
-        <option value="E">E - Pengadaan Air, Pengelolaan Sampah, Limbah dan Daur Ulang</option>
-        <option value="F">F - Konstruksi</option>
-        <option value="G">G - Perdagangan Besar dan Eceran; Reparasi Mobil dan Sepeda Motor</option>
-        <option value="H">H - Transportasi dan Pergudangan</option>
-        <option value="I">I - Penyediaan Akomodasi dan Makan Minum</option>
-        <option value="J">J - Informasi dan Komunikasi</option>
-        <option value="K">K - Jasa Keuangan dan Asuransi</option>
-        <option value="L">L - Real Estat</option>
-        <option value="M,N">M,N - Jasa Perusahaan</option>
-        <option value="O">O - Administrasi Pemerintahan, Pertahanan dan Jaminan Sosial Wajib</option>
-        <option value="P">P - Jasa Pendidikan</option>
-        <option value="Q">Q - Jasa Kesehatan dan Kegiatan Sosial</option>
-        <option value="R,S,T,U">R,S,T,U - Jasa lainnya</option>
-      </select>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <div class="filter-group">
-      <label class="checkbox-row">
-        <input type="checkbox" id="pdrb_only" checked>
-        <span>Hanya PDRB Relevan</span>
-      </label>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <div class="filter-group">
-      <label>Status Kejadian</label>
-      <label class="checkbox-row">
-        <input class="event_filter" type="checkbox" value="Sudah Terjadi" checked>
-        <span>Sudah Terjadi</span>
-      </label>
-      <label class="checkbox-row">
-        <input class="event_filter" type="checkbox" value="Sedang Terjadi" checked>
-        <span>Sedang Terjadi</span>
-      </label>
-      <label class="checkbox-row">
-        <input class="event_filter" type="checkbox" value="Akan Terjadi" checked>
-        <span>Akan Terjadi</span>
-      </label>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <!-- INDIKATOR FILTER AKTIF -->
-    <div id="active-filters" class="active-filters" style="display:none;">
-      <small>Filter aktif:</small>
-      <div id="active-filters-list"></div>
-    </div>
-
-    <div class="sidebar-actions">
-      <button class="secondary-btn" onclick="resetSearch()">Reset</button>
-    </div>
-
-  </aside>
-
-  <!-- MAIN -->
-  <main class="main-content">
-
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
-        <div><h2>Pencarian Berita</h2></div>
-      </div>
-      <div class="meta-bar">
-        <div id="meta"></div>
-        <div class="page-size">
-          <label for="page_size_select">Jumlah Berita per Halaman</label>
-          <select id="page_size_select">
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="250">250</option>
-          </select>
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Tanggal Awal</label>
+          <input type="date" id="date_from">
         </div>
-        <button
-          class="export-btn"
-          onclick="exportToExcel()"
-          title="Unduh hasil pencarian dalam format Excel"
-        >
-          Unduh Excel
-        </button>
+        <div class="filter-group">
+          <label>Tanggal Akhir</label>
+          <input type="date" id="date_to">
+        </div>
       </div>
-    </header>
 
-    <!-- RESULTS -->
-    <section id="result" class="cards-container"></section>
+      <div class="filter-divider"></div>
 
-    <!-- PAGINATION -->
-    <section id="pager" class="pager fixed-bottom"></section>
+      <div class="filter-group">
+        <label>Wilayah</label>
+        <select id="region">
+          <option value="">Semua Wilayah</option>
+          <option>Bangka Belitung</option>
+          <option>Bangka</option>
+          <option>Belitung</option>
+          <option>Bangka Barat</option>
+          <option>Bangka Tengah</option>
+          <option>Bangka Selatan</option>
+          <option>Belitung Timur</option>
+          <option>Kota Pangkal Pinang</option>
+        </select>
+      </div>
 
-  </main>
+      <div class="filter-group">
+        <label>Lapangan Usaha</label>
+        <select id="lapus">
+          <option value="">Semua Lapangan Usaha</option>
+          <option value="A">A - Pertanian, Kehutanan, dan Perikanan</option>
+          <option value="B">B - Pertambangan dan Penggalian</option>
+          <option value="C">C - Industri Pengolahan</option>
+          <option value="D">D - Pengadaan Listrik dan Gas</option>
+          <option value="E">E - Pengadaan Air, Pengelolaan Sampah, Limbah dan Daur Ulang</option>
+          <option value="F">F - Konstruksi</option>
+          <option value="G">G - Perdagangan Besar dan Eceran; Reparasi Mobil dan Sepeda Motor</option>
+          <option value="H">H - Transportasi dan Pergudangan</option>
+          <option value="I">I - Penyediaan Akomodasi dan Makan Minum</option>
+          <option value="J">J - Informasi dan Komunikasi</option>
+          <option value="K">K - Jasa Keuangan dan Asuransi</option>
+          <option value="L">L - Real Estat</option>
+          <option value="M,N">M,N - Jasa Perusahaan</option>
+          <option value="O">O - Administrasi Pemerintahan, Pertahanan dan Jaminan Sosial Wajib</option>
+          <option value="P">P - Jasa Pendidikan</option>
+          <option value="Q">Q - Jasa Kesehatan dan Kegiatan Sosial</option>
+          <option value="R,S,T,U">R,S,T,U - Jasa lainnya</option>
+        </select>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <div class="filter-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="pdrb_only" checked>
+          <span>Hanya PDRB Relevan</span>
+        </label>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <div class="filter-group">
+        <label>Status Kejadian</label>
+        <label class="checkbox-row">
+          <input class="event_filter" type="checkbox" value="Sudah Terjadi" checked>
+          <span>Sudah Terjadi</span>
+        </label>
+        <label class="checkbox-row">
+          <input class="event_filter" type="checkbox" value="Sedang Terjadi" checked>
+          <span>Sedang Terjadi</span>
+        </label>
+        <label class="checkbox-row">
+          <input class="event_filter" type="checkbox" value="Akan Terjadi" checked>
+          <span>Akan Terjadi</span>
+        </label>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <!-- INDIKATOR FILTER AKTIF -->
+      <div id="active-filters" class="active-filters" style="display:none;">
+        <small>Filter aktif:</small>
+        <div id="active-filters-list"></div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="secondary-btn" onclick="resetSearch()">Reset</button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div><h2>Pencarian Berita</h2></div>
+        </div>
+        <div class="meta-bar">
+          <div id="meta"></div>
+          <div class="page-size">
+            <label for="page_size_select">Jumlah Berita per Halaman</label>
+            <select id="page_size_select">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="250">250</option>
+            </select>
+          </div>
+          <button
+            class="export-btn"
+            onclick="exportToExcel()"
+            title="Unduh hasil pencarian dalam format Excel"
+          >
+            Unduh Excel
+          </button>
+        </div>
+      </header>
+
+      <!-- RESULTS -->
+      <section id="result" class="cards-container"></section>
+
+      <!-- PAGINATION -->
+      <section id="pager" class="pager fixed-bottom"></section>
+
+    </main>
+
+  </div><!-- /.app-body -->
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="sidebar.js"></script>
+  <script>
+    requireAuth().then(r => { if (r) document.body.style.visibility = 'visible'; });
+  </script>
   <script src="script.js"></script>
 </body>
 </html>
