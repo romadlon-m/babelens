@@ -1,13 +1,4 @@
-const SUPABASE_URL = 'https://cyqqohycenkoludiefgq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_cuOUAfPmSs0ooVWrvbcISQ_VF5eOStv';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  global: {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`
-    }
-  }
-});
+const db = window.db;
 
 // ====================================
 // LAPUS LABELS

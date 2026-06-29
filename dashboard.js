@@ -1,13 +1,4 @@
-const SUPABASE_URL = 'https://cyqqohycenkoludiefgq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_cuOUAfPmSs0ooVWrvbcISQ_VF5eOStv';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  global: {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`
-    }
-  }
-});
+const db = window.db;
 
 const CHART_COLORS = {
   pdrbRelevant: '#16a34a',
@@ -24,6 +15,7 @@ const CHART_COLORS = {
 };
 
 let rawData = [];
+let lastFilteredData = [];
 
 const LAPUS_LABELS = {
   A: "Pertanian, Kehutanan, dan Perikanan",
@@ -113,6 +105,7 @@ function applyFiltersAndRender() {
   if (region)   filtered = filtered.filter(r => r.region_final === region);
   if (pdrbOnly) filtered = filtered.filter(r => r.pdrb_relevan === 'YA');
 
+  lastFilteredData = filtered;
   renderStats(filtered);
   renderTren(filtered);
   renderLapus(filtered);
@@ -187,9 +180,9 @@ function renderTren(data) {
       axisPointer: { type: 'shadow' },
       formatter: params => params.map(p => `${p.marker}${p.seriesName}: <b>${fmt(p.value)}</b>`).join('<br/>')
     },
-    legend: { bottom: 0 },
+    legend: { show: false },
     xAxis: { type: 'category', data: indoLabels, axisLabel: { fontSize: 11, interval: 0 } },
-    yAxis: { type: 'value', name: 'Jumlah Berita', axisLabel: { formatter: v => fmt(v) } },
+    yAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
     series: [
       {
         name: 'PDRB Relevan',
@@ -208,7 +201,7 @@ function renderTren(data) {
         label: { show: true, position: 'insideTop', fontSize: 11, formatter: p => p.value === 0 ? '' : fmt(p.value) }
       }
     ],
-    grid: { left: 50, right: 20, bottom: 100, top: 30 }
+    grid: { left: 10, right: 20, bottom: 30, top: 10 }
   });
   window.addEventListener('resize', () => chart.resize());
 }
@@ -218,7 +211,7 @@ function renderTren(data) {
 // ====================================
 function renderLapus(data) {
   const counts = countBy(data.filter(r => r.lapus), 'lapus');
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const chart = echarts.init(document.getElementById('chart-lapus'));
   chart.setOption({
@@ -231,7 +224,7 @@ function renderLapus(data) {
         return `${fullName} (${code})<br/><b>${fmt(p[0].value)}</b>`;
       }
     },
-    xAxis: { type: 'value', axisLabel: { formatter: v => fmt(v) } },
+    xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
     yAxis: { type: 'category', data: sorted.map(x => x[0]).reverse() },
     series: [{
       type: 'bar',
@@ -239,7 +232,7 @@ function renderLapus(data) {
       itemStyle: { color: CHART_COLORS.lapus, borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', fontSize: 11, formatter: p => fmt(p.value) }
     }],
-    grid: { left: 40, right: 60, bottom: 20, top: 10 }
+    grid: { left: 40, right: 60, bottom: 10, top: 10 }
   });
   window.addEventListener('resize', () => chart.resize());
 }
@@ -258,7 +251,7 @@ function renderWilayah(data) {
       axisPointer: { type: 'shadow' },
       formatter: p => `${p[0].name}<br/><b>${fmt(p[0].value)}</b>`
     },
-    xAxis: { type: 'value', axisLabel: { formatter: v => fmt(v) } },
+    xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
     yAxis: { type: 'category', data: sorted.map(x => x[0]).reverse() },
     series: [{
       type: 'bar',
@@ -266,7 +259,7 @@ function renderWilayah(data) {
       itemStyle: { color: CHART_COLORS.wilayah, borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', fontSize: 11, formatter: p => fmt(p.value) }
     }],
-    grid: { left: 150, right: 60, bottom: 20, top: 10 }
+    grid: { left: 150, right: 60, bottom: 10, top: 10 }
   });
   window.addEventListener('resize', () => chart.resize());
 }
@@ -277,11 +270,19 @@ function renderWilayah(data) {
 function renderPdrb(data) {
   const ya = data.filter(r => r.pdrb_relevan === 'YA').length;
   const tidak = data.length - ya;
+  const total = ya + tidak;
+  const relevanPct = total > 0 ? ((ya / total) * 100).toFixed(2) + '%' : '0%';
 
-  const chart = echarts.init(document.getElementById('chart-pdrb'));
+  const el = document.getElementById('chart-pdrb');
+  if (!el) { setTimeout(() => renderPdrb(data), 100); return; }
+
+  el.style.position = 'relative';
+
+  // Reuse existing instance to avoid re-stacking the canvas layer
+  const chart = echarts.getInstanceByDom(el) || echarts.init(el);
   chart.setOption({
     tooltip: { trigger: 'item', formatter: p => `${p.name}: ${fmt(p.value)} (${p.percent}%)` },
-    legend: { bottom: 0 },
+    legend: { show: false },
     series: [{
       type: 'pie',
       radius: ['45%', '70%'],
@@ -289,10 +290,74 @@ function renderPdrb(data) {
         { value: ya, name: 'Relevan', itemStyle: { color: CHART_COLORS.pdrbRelevant } },
         { value: tidak, name: 'Tidak Relevan', itemStyle: { color: CHART_COLORS.pdrbNotRelevant } }
       ],
-      label: { formatter: '{b}\n{d}%' }
+      label: { show: false },
+      labelLine: { show: false }
     }]
   });
+
+  // Inject after setOption so the label sits above the ECharts canvas in z-order
+  const injectLabel = () => {
+    const prev = el.querySelector('.pdrb-html-label');
+    if (prev) prev.remove();
+    const label = document.createElement('div');
+    label.className = 'pdrb-html-label';
+    label.style.cssText = 'position:absolute;top:8px;right:8px;text-align:right;line-height:1.4;pointer-events:none;z-index:10;';
+    label.innerHTML = `<span style="display:block;font-size:11px;font-weight:700;color:#10b981;">Relevan</span>`
+                    + `<span style="display:block;font-size:11px;font-weight:700;color:#10b981;">${relevanPct}</span>`;
+    el.appendChild(label);
+  };
+  injectLabel();
+
   window.addEventListener('resize', () => chart.resize());
+}
+
+// ====================================
+// LAPUS MODAL
+// ====================================
+let lapusModalChart = null;
+
+function openLapusModal() {
+  const modal = document.getElementById('lapus-modal');
+  modal.classList.add('open');
+
+  const counts = countBy(lastFilteredData.filter(r => r.lapus), 'lapus');
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  const el = document.getElementById('chart-lapus-all');
+  if (!lapusModalChart) {
+    lapusModalChart = echarts.init(el);
+  }
+  lapusModalChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => {
+        const code = p[0].name;
+        const fullName = LAPUS_LABELS[code] || code;
+        return `${fullName} (${code})<br/><b>${fmt(p[0].value)}</b>`;
+      }
+    },
+    xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
+    yAxis: { type: 'category', data: sorted.map(x => x[0]).reverse(), axisLabel: { fontSize: 12 } },
+    series: [{
+      type: 'bar',
+      data: sorted.map(x => x[1]).reverse(),
+      itemStyle: { color: CHART_COLORS.lapus, borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: 'right', fontSize: 12, formatter: p => fmt(p.value) }
+    }],
+    grid: { left: 40, right: 60, bottom: 10, top: 10 }
+  });
+  lapusModalChart.resize();
+}
+
+function closeLapusModal(e) {
+  if (e.target === document.getElementById('lapus-modal')) {
+    document.getElementById('lapus-modal').classList.remove('open');
+  }
+}
+
+function closeLapusModalDirect() {
+  document.getElementById('lapus-modal').classList.remove('open');
 }
 
 // ====================================
@@ -301,19 +366,23 @@ function renderPdrb(data) {
 function renderStatus(data) {
   const counts = countBy(data.filter(r => r.event_time), 'event_time');
   const colors = CHART_COLORS.status;
+  const ORDER = ['Sudah Terjadi', 'Sedang Terjadi', 'Akan Terjadi', 'Tidak Disebutkan'];
+  const labels = ORDER.filter(k => counts[k] !== undefined);
+  const values = labels.map(k => counts[k] || 0);
+  const barColors = labels.map(k => colors[k] || CHART_COLORS.neutral);
 
   const chart = echarts.init(document.getElementById('chart-status'));
   chart.setOption({
-    tooltip: { trigger: 'item', formatter: p => `${p.name}: ${fmt(p.value)} (${p.percent}%)` },
-    legend: { bottom: 0 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: p => `${p[0].name}<br/><b>${fmt(p[0].value)}</b>` },
+    xAxis: { type: 'value', show: false, splitLine: { show: false } },
+    yAxis: { type: 'category', data: labels },
     series: [{
-      type: 'pie',
-      radius: ['45%', '70%'],
-      data: Object.entries(counts).map(([name, value]) => ({
-        name, value, itemStyle: { color: colors[name] || CHART_COLORS.neutral }
-      })),
-      label: { formatter: '{b}\n{d}%' }
-    }]
+      type: 'bar',
+      data: values.map((v, i) => ({ value: v, itemStyle: { color: barColors[i] } })),
+      label: { show: true, position: 'right', fontSize: 11, formatter: p => fmt(p.value) },
+      itemStyle: { borderRadius: [0, 4, 4, 0] }
+    }],
+    grid: { left: 120, right: 50, bottom: 10, top: 10, containLabel: false }
   });
   window.addEventListener('resize', () => chart.resize());
 }
