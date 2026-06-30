@@ -147,7 +147,7 @@ function echartsColors() {
 const fmt = n => n.toLocaleString('id-ID');
 
 // ====================================
-// CHART: TREN PER BULAN
+// CHART: JUMLAH PER BULAN
 // ====================================
 function renderTren(data) {
   const monthlyTotal = {};

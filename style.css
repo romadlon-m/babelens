@@ -577,37 +577,6 @@ select {
   display: none;
 }
 
-@media (max-width: 960px) {
-  .sidebar {
-    position: fixed;
-    left: -100%;
-    top: var(--header-height);
-    height: calc(100vh - var(--header-height));
-    z-index: 100;
-    transition: 0.3s;
-  }
-
-  .sidebar.open {
-    left: 0;
-  }
-
-  .sidebar-overlay.show {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 90;
-  }
-
-  .mobile-menu-btn,
-  .mobile-close-btn {
-    display: block;
-  }
-
-  .main-content {
-    width: 100%;
-  }
-}
 
 /* ============================================================
    DASHBOARD
@@ -723,8 +692,12 @@ select {
 
 .dashboard-page .main-content {
   padding-bottom: 24px;
-  overflow: hidden;
 }
+
+.dashboard-page .stat-label { white-space: normal; line-height: 1.2; }
+.dashboard-page .stat-card { min-width: 0; overflow: hidden; }
+.dashboard-page .stat-icon { flex-shrink: 0; }
+.dashboard-page .stat-value { font-size: clamp(1rem, 2vw, 1.4rem); }
 
 /* ============================================================
    NEWS PAGE — compact sidebar
@@ -842,8 +815,9 @@ select {
 .charts-2col {
   display: flex;
   gap: 14px;
-  /* 110px = padding-top(24) + stat-cards(~46) + dash-header margin-bottom(16) + padding-bottom(24) */
-  height: calc(100vh - var(--header-height) - 110px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .charts-col {
@@ -901,19 +875,6 @@ select {
   gap: 8px;
 }
 
-@media (max-width: 960px) {
-  .stat-cards {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-wide {
-    grid-column: 1;
-  }
-}
 
 /* ============================================================
    BRANDING
@@ -1182,4 +1143,165 @@ select {
 .lapus-modal-chart {
   flex: 1;
   min-height: 360px;
+}
+
+
+/* ============================================================
+   RESPONSIVE — tablet (< 1024px)
+   ============================================================ */
+@media (max-width: 1023px) {
+  /* Sidebar stays visible — no hiding */
+
+  /* Charts: single column, fixed heights, scrollable */
+  .charts-2col {
+    flex-direction: column;
+    flex: none;
+    overflow: visible;
+    height: auto;
+  }
+
+  .charts-col {
+    min-height: 0;
+  }
+
+  /* Reset flex-fill on chart containers; use fixed heights */
+  .chart-col-item {
+    min-height: 0;
+  }
+
+  .charts-2col .chart-container {
+    flex: none;
+    height: 220px;
+  }
+
+  /* chart-row-pair keeps side-by-side at tablet */
+  .chart-row-pair {
+    flex-direction: row;
+  }
+
+  .chart-row-pair .chart-col-item .chart-container {
+    height: 220px;
+  }
+
+  /* main-content scrolls vertically */
+  .dashboard-page .main-content {
+    overflow-y: auto;
+  }
+
+  /* Stat cards: all 4 in one row, allow shrinking */
+  .dashboard-page .stat-cards {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .dashboard-page .stat-card {
+    min-width: 0;
+  }
+
+  .dashboard-page .stat-label {
+    font-size: 0.65rem;
+  }
+
+  .dashboard-page .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .dashboard-page .stat-icon {
+    font-size: 22px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — mobile (< 768px)
+   ============================================================ */
+@media (max-width: 767px) {
+  html, body { height: 100%; }
+  body { margin: 0; padding: 0; }
+
+  .topbar {
+    position: static;
+    top: auto;
+  }
+
+  /* Header: hide tagline */
+  .app-header-tagline {
+    display: none;
+  }
+
+  /* Show hamburger */
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  /* Sidebar: hidden by default, slides in on toggle */
+  .sidebar {
+    position: fixed;
+    left: -100%;
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    z-index: 100;
+    transition: left 0.3s;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 90;
+  }
+
+  .main-content {
+    width: 100%;
+    overflow-y: auto;
+  }
+
+  /* Title + stat cards: stack vertically */
+  .dash-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dash-header-row .stat-cards {
+    width: 100%;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Charts: single column, 200px each */
+  .charts-2col {
+    flex-direction: column;
+    flex: none;
+    height: auto;
+    overflow: visible;
+  }
+
+  .charts-2col .chart-container {
+    flex: none;
+    height: 200px;
+  }
+
+  /* PDRB + Status: stack vertically */
+  .chart-row-pair {
+    flex-direction: column;
+  }
+
+  .chart-row-pair .chart-col-item .chart-container {
+    height: 200px;
+  }
+}
+
+/* ============================================================
+   DASHBOARD — desktop full-height chart layout (≥ 1024px)
+   ============================================================ */
+@media (min-width: 1024px) {
+  .dashboard-page .app-body { flex: 1; min-height: 0; overflow: hidden; }
+  .dashboard-page .main-content { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .dashboard-page .dash-header-row { flex-shrink: 0; }
+  .dashboard-page .charts-2col { flex: 1; min-height: 0; overflow: hidden; }
+  .dashboard-page .charts-col { flex: 1; min-height: 0; overflow: hidden; }
+  .dashboard-page .chart-col-item { flex: 1; min-height: 0; overflow: hidden; }
+  .dashboard-page .charts-2col .chart-container { flex: 1; height: 100%; min-height: 0; }
 }
