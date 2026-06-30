@@ -14,7 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (overlay) overlay.classList.remove('show');
   }
 
-  if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openSidebar);
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const isOpen = sidebar.classList.contains('open');
+    if (isOpen) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
+  if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleSidebar);
   if (overlay) overlay.addEventListener('click', closeSidebar);
 
   function setActiveNav() {
