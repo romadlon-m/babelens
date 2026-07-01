@@ -37,6 +37,26 @@ const LAPUS_LABELS = {
   RSTU: "Jasa Lainnya"
 };
 
+const LAPUS_SHORT_LABELS = {
+  A: "Pertanian & Perikanan",
+  B: "Pertambangan",
+  C: "Industri Pengolahan",
+  D: "Listrik & Gas",
+  E: "Air & Limbah",
+  F: "Konstruksi",
+  G: "Perdagangan & Reparasi",
+  H: "Transportasi",
+  I: "Akomodasi & Kuliner",
+  J: "Informasi & Komunikasi",
+  K: "Jasa Keuangan",
+  L: "Real Estat",
+  MN: "Jasa Perusahaan",
+  O: "Adm. Pemerintahan",
+  P: "Jasa Pendidikan",
+  Q: "Jasa Kesehatan",
+  RSTU: "Jasa Lainnya"
+};
+
 // ====================================
 // INIT
 // ====================================
@@ -156,7 +176,7 @@ function renderTren(data) {
   data.forEach(r => {
     if (!r.publication_datetime) return;
     const d = new Date(r.publication_datetime);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
     monthlyTotal[key] = (monthlyTotal[key] || 0) + 1;
     if (r.pdrb_relevan === 'YA') {
       monthlyRelevant[key] = (monthlyRelevant[key] || 0) + 1;
@@ -172,13 +192,23 @@ function renderTren(data) {
   });
   const relevantValues = keys.map(k => monthlyRelevant[k] || 0);
   const notRelevantValues = keys.map(k => (monthlyTotal[k] || 0) - (monthlyRelevant[k] || 0));
+  const totalValues = keys.map(k => monthlyTotal[k] || 0);
+
+  // Hide the in-bar Relevan label when its segment is too short to render legibly.
+  const maxTotal = Math.max(...totalValues, 1);
+  const minLabelValue = maxTotal * 0.05;
 
   const chart = echarts.init(document.getElementById('chart-tren'));
   chart.setOption({
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: params => params.map(p => `${p.marker}${p.seriesName}: <b>${fmt(p.value)}</b>`).join('<br/>')
+      formatter: params => {
+        const idx = params[0].dataIndex;
+        return `Relevan: <b>${fmt(relevantValues[idx])}</b><br/>`
+          + `Tidak Relevan: <b>${fmt(notRelevantValues[idx])}</b><br/>`
+          + `Total: <b>${fmt(totalValues[idx])}</b>`;
+      }
     },
     legend: { show: false },
     xAxis: { type: 'category', data: indoLabels, axisLabel: { fontSize: 11, interval: 0 } },
@@ -190,7 +220,12 @@ function renderTren(data) {
         stack: 'total',
         data: relevantValues,
         itemStyle: { color: CHART_COLORS.pdrbRelevant, borderRadius: [4, 4, 0, 0] },
-        label: { show: true, position: 'insideTop', fontSize: 11, formatter: p => p.value === 0 ? '' : fmt(p.value) }
+        label: {
+          show: true,
+          position: 'insideTop',
+          fontSize: 11,
+          formatter: p => (p.value === 0 || p.value < minLabelValue) ? '' : fmt(p.value)
+        }
       },
       {
         name: 'Tidak Relevan',
@@ -198,10 +233,25 @@ function renderTren(data) {
         stack: 'total',
         data: notRelevantValues,
         itemStyle: { color: CHART_COLORS.pdrbNotRelevant, borderRadius: [4, 4, 0, 0] },
-        label: { show: true, position: 'insideTop', fontSize: 11, formatter: p => p.value === 0 ? '' : fmt(p.value) }
+        label: { show: false }
+      },
+      {
+        name: 'Total',
+        type: 'bar',
+        stack: 'total',
+        data: totalValues.map(() => 0),
+        itemStyle: { color: 'transparent' },
+        tooltip: { show: false },
+        label: {
+          show: true,
+          position: 'top',
+          fontSize: 10,
+          color: '#9ca3af',
+          formatter: p => fmt(totalValues[p.dataIndex])
+        }
       }
     ],
-    grid: { left: 10, right: 20, bottom: 30, top: 10 }
+    grid: { left: 10, right: 20, bottom: 30, top: 24 }
   });
   window.addEventListener('resize', () => chart.resize());
 }
@@ -214,6 +264,13 @@ function renderLapus(data) {
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const chart = echarts.init(document.getElementById('chart-lapus'));
+
+  // Label column scales with the card's actual rendered width, since this
+  // chart lives in a constrained card rather than a full-width container.
+  const lapusLabelRatio = 0.45;
+  const lapusChartWidth = chart.getWidth();
+  const lapusLabelWidth = Math.round(lapusChartWidth * lapusLabelRatio) - 10;
+
   chart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -225,14 +282,24 @@ function renderLapus(data) {
       }
     },
     xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category', data: sorted.map(x => x[0]).reverse() },
+    yAxis: {
+      type: 'category',
+      data: sorted.map(x => x[0]).reverse(),
+      axisLabel: {
+        formatter: code => `${code} · ${LAPUS_SHORT_LABELS[code] || code}`,
+        fontSize: 11,
+        width: lapusLabelWidth,
+        overflow: 'truncate',
+        ellipsis: '...'
+      }
+    },
     series: [{
       type: 'bar',
       data: sorted.map(x => x[1]).reverse(),
       itemStyle: { color: CHART_COLORS.lapus, borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', fontSize: 11, formatter: p => fmt(p.value) }
     }],
-    grid: { left: 40, right: 60, bottom: 10, top: 10 }
+    grid: { left: `${Math.round(lapusLabelRatio * 100)}%`, right: 60, bottom: 10, top: 10 }
   });
   window.addEventListener('resize', () => chart.resize());
 }
@@ -327,6 +394,13 @@ function openLapusModal() {
   if (!lapusModalChart) {
     lapusModalChart = echarts.init(el);
   }
+
+  // Label column scales with the modal's actual rendered width (independent
+  // of the top-5 card chart's own ratio), computed after the modal is shown.
+  const lapusModalLabelRatio = 0.4;
+  const lapusModalChartWidth = lapusModalChart.getWidth();
+  const lapusModalLabelWidth = Math.round(lapusModalChartWidth * lapusModalLabelRatio) - 10;
+
   lapusModalChart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -338,16 +412,27 @@ function openLapusModal() {
       }
     },
     xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category', data: sorted.map(x => x[0]).reverse(), axisLabel: { fontSize: 12 } },
+    yAxis: {
+      type: 'category',
+      data: sorted.map(x => x[0]).reverse(),
+      axisLabel: {
+        fontSize: 12,
+        formatter: code => `${code} · ${LAPUS_SHORT_LABELS[code] || code}`,
+        width: lapusModalLabelWidth,
+        overflow: 'truncate',
+        ellipsis: '...'
+      }
+    },
     series: [{
       type: 'bar',
       data: sorted.map(x => x[1]).reverse(),
       itemStyle: { color: CHART_COLORS.lapus, borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', fontSize: 12, formatter: p => fmt(p.value) }
     }],
-    grid: { left: 40, right: 60, bottom: 10, top: 10 }
+    grid: { left: `${Math.round(lapusModalLabelRatio * 100)}%`, right: 60, bottom: 10, top: 10 }
   });
-  lapusModalChart.resize();
+
+  requestAnimationFrame(() => lapusModalChart.resize());
 }
 
 function closeLapusModal(e) {

@@ -40,6 +40,21 @@ let defaultMaxDate = null;
 
 
 // ====================================
+// NEWS SEARCH SKELETON LOADER
+// ====================================
+function renderNewsSearchSkeleton(count = 4) {
+  const card = `
+    <div class="news-search-skeleton">
+      <div class="skeleton-line skeleton-title"></div>
+      <div class="skeleton-line skeleton-meta"></div>
+      <div class="skeleton-line skeleton-summary"></div>
+      <div class="skeleton-line skeleton-summary"></div>
+    </div>
+  `;
+  return card.repeat(count);
+}
+
+// ====================================
 // FORMAT DATE
 // ====================================
 function formatDateIndo(dateString) {
@@ -90,7 +105,7 @@ async function search(page = 1) {
     f_full: f_full.checked
   };
 
-  result.innerHTML = `<div class="news-card">Memuat...</div>`;
+  result.innerHTML = renderNewsSearchSkeleton();
 
   const BATCH = 1000;
   const eventTimes = lastParams.event_time ? lastParams.event_time.split(',') : [];
@@ -98,8 +113,6 @@ async function search(page = 1) {
   let from = 0;
 
   while (true) {
-    result.innerHTML = `<div class="news-card">Memuat... (${allRows.length} artikel dimuat)</div>`;
-
     let query = db.from('news')
       .select('*')
       .order('publication_datetime', { ascending: false })
