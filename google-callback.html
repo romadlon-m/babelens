@@ -68,6 +68,25 @@
         return;
       }
 
+      const intent = sessionStorage.getItem('oauth_intent');
+      sessionStorage.removeItem('oauth_intent');
+
+      if (intent === 'login') {
+        const { error: logError } = await window.db.from('user_events').insert({
+          user_id: session.user.id,
+          event_type: 'login',
+          payload: { method: 'google' }
+        });
+        if (logError) console.error(logError);
+      } else if (intent === 'link') {
+        const { error: logError } = await window.db.from('user_events').insert({
+          user_id: session.user.id,
+          event_type: 'google_linked',
+          payload: {}
+        });
+        if (logError) console.error(logError);
+      }
+
       window.location.replace('index.html');
     })();
   </script>
