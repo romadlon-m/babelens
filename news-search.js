@@ -124,6 +124,14 @@ async function search(page = 1) {
     if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
     if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
     if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
+    if (lastParams.keyword) {
+      const kw = lastParams.keyword.replace(/%/g, '');
+      const parts = [];
+      if (lastParams.f_title)   parts.push(`title.ilike.%${kw}%`);
+      if (lastParams.f_summary) parts.push(`summary.ilike.%${kw}%`);
+      if (lastParams.f_full)    parts.push(`content.ilike.%${kw}%`);
+      if (parts.length) query = query.or(parts.join(','));
+    }
 
     const { data: rows, error } = await query;
 
@@ -138,16 +146,7 @@ async function search(page = 1) {
     from += BATCH;
   }
 
-  let filtered = allRows;
-  if (lastParams.keyword) {
-    const kw = lastParams.keyword.toLowerCase();
-    filtered = allRows.filter(r =>
-      (lastParams.f_title   && r.title?.toLowerCase().includes(kw)) ||
-      (lastParams.f_summary && r.summary?.toLowerCase().includes(kw)) ||
-      (lastParams.f_full    && r.content?.toLowerCase().includes(kw))
-    );
-  }
-  currentRows = filtered;
+  currentRows = allRows;
   renderPage(1);
 }
 
