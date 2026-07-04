@@ -148,6 +148,15 @@ async function search(page = 1) {
 
   currentRows = allRows;
   renderPage(1);
+
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    db.from('user_events').insert({
+      user_id: session.user.id,
+      event_type: 'search',
+      payload: lastParams
+    }).then(({ error }) => { if (error) console.error(error); });
+  }
 }
 
 
@@ -263,6 +272,7 @@ function renderPage(page = 1) {
           <button
             class="card-btn"
             onclick="toggleArticle(this)"
+            data-url="${r.url}"
           >
             Artikel Lengkap
           </button>
@@ -364,6 +374,19 @@ function toggleArticle(btn) {
   btn.textContent = article.classList.contains("show")
     ? "Sembunyikan"
     : "Artikel Lengkap";
+
+  if (article.classList.contains("show")) {
+    (async () => {
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        db.from('user_events').insert({
+          user_id: session.user.id,
+          event_type: 'article_expand',
+          payload: { url: btn.dataset.url }
+        }).then(({ error }) => { if (error) console.error(error); });
+      }
+    })();
+  }
 }
 
 
@@ -564,4 +587,15 @@ function exportToExcel() {
 
   const filename = `babelens_${date_from.value}_${date_to.value}.xlsx`;
   XLSX.writeFile(wb, filename);
+
+  (async () => {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      db.from('user_events').insert({
+        user_id: session.user.id,
+        event_type: 'export_excel',
+        payload: { row_count: currentRows.length, filters: lastParams }
+      }).then(({ error }) => { if (error) console.error(error); });
+    }
+  })();
 }

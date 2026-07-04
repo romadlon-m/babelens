@@ -143,6 +143,7 @@
         return;
       }
 
+      sessionStorage.setItem('oauth_intent', 'link');
       const { error } = await window.db.auth.linkIdentity({
         provider: 'google',
         options: {

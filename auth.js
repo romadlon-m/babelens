@@ -19,12 +19,30 @@ async function requireAuth() {
     window.location.replace('change-password.html');
     return null;
   }
+
+  if (!sessionStorage.getItem('session_logged')) {
+    sessionStorage.setItem('session_logged', '1');
+    window.db.from('user_events').insert({
+      user_id: session.user.id,
+      event_type: 'session_resume',
+      payload: {}
+    }).then(({ error }) => { if (error) console.error(error); });
+  }
+
   return { session, profile };
 }
 
 async function signIn(nipLama, password) {
   const email = `${nipLama}@babelens.internal`;
-  return window.db.auth.signInWithPassword({ email, password });
+  const result = await window.db.auth.signInWithPassword({ email, password });
+  if (!result.error && result.data.session) {
+    window.db.from('user_events').insert({
+      user_id: result.data.session.user.id,
+      event_type: 'login',
+      payload: { method: 'password' }
+    }).then(({ error }) => { if (error) console.error(error); });
+  }
+  return result;
 }
 
 async function signOut() {
@@ -43,3 +61,7 @@ async function getCurrentProfile() {
   console.log('[getCurrentProfile]', { data, error });
   return data;
 }
+
+window.db.auth.onAuthStateChange((event, session) => {
+  console.log('AUTH EVENT:', event);
+});

@@ -48,6 +48,7 @@ async function handleLogin() {
 }
 
 async function handleGoogleLogin() {
+  sessionStorage.setItem('oauth_intent', 'login');
   const { error } = await window.db.auth.signInWithOAuth({
     provider: 'google',
     options: {
