@@ -42,7 +42,8 @@ async function handleChangePassword() {
     .update({ must_change_password: false })
     .eq('id', session.user.id);
 
-  window.location.replace('index.html');
+  sessionStorage.setItem('setup_success', 'true');
+  window.location.replace('settings.html');
 }
 
 function showChangeError(msg) {

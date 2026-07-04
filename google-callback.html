@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Menghubungkan Akun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:28px;">
+      <img src="assets/images/babelens-logo.png" alt="Babelens" style="height:52px;">
+      <div style="font-size:13px;color:var(--muted);line-height:1.4;font-weight:500;">Lensa Berita<br>Bangka Belitung</div>
+    </div>
+
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:600;color:var(--text);">Menghubungkan Akun Google</h2>
+    <p id="status-text" style="color:var(--muted);font-size:14px;margin:0 0 24px;">Menghubungkan akun Google Anda...</p>
+  </div>
+
+  <script>
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const errorCode = params.get('error_code');
+      if (errorCode === 'identity_already_exists') {
+        sessionStorage.setItem('google_link_error', 'already_linked');
+        window.location.replace('settings.html');
+        return;
+      }
+      if (params.get('error')) {
+        sessionStorage.setItem('google_link_error', 'failed');
+        window.location.replace('settings.html');
+        return;
+      }
+
+      const { data: { session } } = await window.db.auth.getSession();
+      if (!session) {
+        window.location.replace('login.html');
+        return;
+      }
+
+      const { data: profile } = await window.db
+        .from('profiles')
+        .select('id, must_change_password')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile) {
+        sessionStorage.setItem('login_error', 'not_registered');
+        try {
+          await fetch(
+            'https://cyqqohycenkoludiefgq.supabase.co/functions/v1/delete-unregistered-user',
+            {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${session.access_token}` }
+            }
+          );
+        } catch (e) {
+          console.error('cleanup failed', e);
+        }
+        await window.db.auth.signOut();
+        window.location.replace('login.html');
+        return;
+      }
+
+      window.location.replace('index.html');
+    })();
+  </script>
+</body>
+</html>
