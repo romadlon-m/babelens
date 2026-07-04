@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="user-dropdown-wrapper">
                       <button class="user-dropdown-btn" id="userDropdownBtn">${displayName} <span class="dropdown-arrow">▾</span></button>
                       <div class="user-dropdown" id="userDropdown">
-                        <a href="change-password.html" class="user-dropdown-item">🔑 Ubah Kata Sandi</a>
+                        <a href="settings.html" class="user-dropdown-item">⚙️ Pengaturan</a>
                         <button class="user-dropdown-item user-dropdown-danger" onclick="signOut()">🚪 Keluar</button>
                       </div>
                     </div>

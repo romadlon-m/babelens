@@ -47,6 +47,17 @@ async function handleLogin() {
   }
 }
 
+async function handleGoogleLogin() {
+  const { error } = await window.db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + '/google-callback.html' }
+  });
+
+  if (error) {
+    showLoginError('Gagal masuk dengan Google. Silakan coba lagi.');
+  }
+}
+
 function showLoginError(msg) {
   const el = document.getElementById('login-error');
   el.textContent = msg;
@@ -60,4 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('password').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleLogin();
   });
+
+  const loginError = sessionStorage.getItem('login_error');
+  if (loginError === 'not_registered') {
+    sessionStorage.removeItem('login_error');
+    showLoginError('Akun Google Anda belum terhubung ke NIP manapun. Silakan masuk dengan NIP dan kata sandi terlebih dahulu.');
+  }
 });

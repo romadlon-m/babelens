@@ -1,2 +1,6 @@
 .DS_Store
 Thumbs.db
+.env
+.env.local
+supabase/.env
+supabase/functions/.env
