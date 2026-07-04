@@ -50,7 +50,10 @@ async function handleLogin() {
 async function handleGoogleLogin() {
   const { error } = await window.db.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin + '/google-callback.html' }
+    options: {
+      redirectTo: window.location.href.split('/').slice(0, -1).join('/') + '/google-callback.html',
+      flowType: 'pkce'
+    }
   });
 
   if (error) {
