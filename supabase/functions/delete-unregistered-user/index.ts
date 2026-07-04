@@ -20,11 +20,11 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const secretKey = Deno.env.get('PROJECT_SECRET_KEY')!
+    const publishableKey = Deno.env.get('PROJECT_PUBLISHABLE_KEY')!
 
     // Step 1: verify the caller's JWT — derive user id from token, never trust request body
-    const userClient = createClient(supabaseUrl, anonKey, {
+    const userClient = createClient(supabaseUrl, publishableKey, {
       global: { headers: { Authorization: authHeader } }
     })
     const { data: { user }, error: userError } = await userClient.auth.getUser()
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    const adminClient = createClient(supabaseUrl, secretKey)
 
     // Step 2: refuse to delete users who are already registered
     const { data: profile, error: profileError } = await adminClient
