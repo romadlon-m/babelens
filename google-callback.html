@@ -79,10 +79,11 @@
         });
         if (logError) console.error(logError);
       } else if (intent === 'link') {
+        const googleIdentity = session.user.identities?.find(i => i.provider === 'google');
         const { error: logError } = await window.db.from('user_events').insert({
           user_id: session.user.id,
           event_type: 'google_linked',
-          payload: {}
+          payload: { email: googleIdentity?.identity_data?.email || null }
         });
         if (logError) console.error(logError);
       }
