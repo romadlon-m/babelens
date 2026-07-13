@@ -29,6 +29,7 @@ const LAPUS_LABELS = {
 // ====================================
 let lastParams = {};
 let currentRows = [];
+let hiddenCount = 0;
 
 function getPageSize() {
   return parseInt(sessionStorage.getItem('page_size') || '10', 10);
@@ -109,18 +110,56 @@ async function search(page = 1) {
 
   const BATCH = 1000;
   const eventTimes = lastParams.event_time ? lastParams.event_time.split(',') : [];
-  let allRows = [];
-  let from = 0;
 
-  while (true) {
+  async function fetchRows() {
+    let allRows = [];
+    let from = 0;
+
+    while (true) {
+      let query = db.from('news')
+        .select('*')
+        .order('publication_datetime', { ascending: false })
+        .range(from, from + BATCH - 1);
+
+      if (lastParams.region)       query = query.eq('region_final', lastParams.region);
+      if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
+      if (lastParams.pdrb_relevan) query = query.eq('pdrb_relevan', 'YA');
+      if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
+      if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
+      if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
+      if (lastParams.keyword) {
+        const kw = lastParams.keyword.replace(/%/g, '');
+        const parts = [];
+        if (lastParams.f_title)   parts.push(`title.ilike.%${kw}%`);
+        if (lastParams.f_summary) parts.push(`summary.ilike.%${kw}%`);
+        if (lastParams.f_full)    parts.push(`content.ilike.%${kw}%`);
+        if (parts.length) query = query.or(parts.join(','));
+      }
+
+      const { data: rows, error } = await query;
+
+      if (error) {
+        console.error(error);
+        result.innerHTML = `<div class="news-card">Gagal memuat data.</div>`;
+        return null;
+      }
+
+      allRows = allRows.concat(rows || []);
+      if (!rows || rows.length < BATCH) break;
+      from += BATCH;
+    }
+
+    return allRows;
+  }
+
+  async function fetchHiddenTotal() {
+    if (!lastParams.pdrb_relevan) return 0;
+
     let query = db.from('news')
-      .select('*')
-      .order('publication_datetime', { ascending: false })
-      .range(from, from + BATCH - 1);
+      .select('*', { count: 'exact', head: true });
 
     if (lastParams.region)       query = query.eq('region_final', lastParams.region);
     if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
-    if (lastParams.pdrb_relevan) query = query.eq('pdrb_relevan', 'YA');
     if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
     if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
     if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
@@ -133,17 +172,18 @@ async function search(page = 1) {
       if (parts.length) query = query.or(parts.join(','));
     }
 
-    const { data: rows, error } = await query;
+    const { count } = await query;
+    return count || 0;
+  }
 
-    if (error) {
-      console.error(error);
-      result.innerHTML = `<div class="news-card">Gagal memuat data.</div>`;
-      return;
-    }
+  const [allRows, totalCount] = await Promise.all([fetchRows(), fetchHiddenTotal()]);
 
-    allRows = allRows.concat(rows || []);
-    if (!rows || rows.length < BATCH) break;
-    from += BATCH;
+  if (allRows === null) return;
+
+  if (lastParams.pdrb_relevan) {
+    hiddenCount = Math.max(0, totalCount - allRows.length);
+  } else {
+    hiddenCount = 0;
   }
 
   currentRows = allRows;
@@ -176,8 +216,13 @@ function renderPage(page = 1) {
   const showingEnd = start + rows.length;
 
   meta.innerHTML = `
-    Ditemukan <b>${totalFound}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages}</b> • Menampilkan <b>${showingStart}</b>–<b>${showingEnd}</b>
+    Ditemukan <b>${totalFound.toLocaleString('id-ID')}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages.toLocaleString('id-ID')}</b> • Menampilkan <b>${showingStart.toLocaleString('id-ID')}</b>–<b>${showingEnd.toLocaleString('id-ID')}</b>
   `;
+
+  const pdrbNotice = document.getElementById('pdrb-notice');
+  pdrbNotice.innerHTML = hiddenCount > 0
+    ? `<div class="pdrb-notice-bar"><b>${hiddenCount.toLocaleString('id-ID')}</b> berita non-PDRB tersembunyi — <a href="#" onclick="showAllPdrb(event)">Nonaktifkan filter PDRB</a></div>`
+    : '';
 
   if (!rows.length) {
     result.innerHTML = `<div class="news-card">Tidak ada hasil ditemukan.</div>`;
@@ -236,7 +281,7 @@ function renderPage(page = 1) {
           ${r.lapus ? `
             <span
               class="badge badge-blue tooltip"
-              data-tooltip="${lapusTooltip} — Dibuat menggunakan model Machine Learning terlatih."
+              data-tooltip="${lapusTooltip} — Dibuat menggunakan model Machine Learning terlatih. Harap verifikasi jika diperlukan."
             >
               Lapus: ${r.lapus}
             </span>
@@ -391,6 +436,17 @@ function toggleArticle(btn) {
 
 
 // ====================================
+// TAMPILKAN SEMUA (NONAKTIFKAN FILTER PDRB)
+// ====================================
+function showAllPdrb(e) {
+  e.preventDefault();
+  pdrb_only.checked = false;
+  localStorage.setItem("babelens_pdrb_filter", "false");
+  search(1);
+}
+
+
+// ====================================
 // RESET
 // ====================================
 function resetSearch() {
@@ -399,6 +455,7 @@ function resetSearch() {
   region.value = "";
   lapus.value = "";
   pdrb_only.checked = true;
+  localStorage.setItem("babelens_pdrb_filter", "true");
   f_title.checked = true;
   f_summary.checked = true;
   f_full.checked = false;
@@ -427,10 +484,15 @@ function resetSearch() {
 // ====================================
 // EVENT OTOMATIS PENCARIAN
 // ====================================
-["region", "lapus", "date_from", "date_to", "pdrb_only", "f_title", "f_summary", "f_full"]
+["region", "lapus", "date_from", "date_to", "f_title", "f_summary", "f_full"]
   .forEach(id => {
     document.getElementById(id).addEventListener("change", () => search(1));
   });
+
+pdrb_only.addEventListener("change", () => {
+  localStorage.setItem("babelens_pdrb_filter", pdrb_only.checked);
+  search(1);
+});
 
 document.querySelectorAll(".event_filter").forEach(cb => {
   cb.addEventListener("change", () => search(1));
@@ -531,6 +593,17 @@ window.onload = async () => {
 
   document.getElementById("page_size_select").value = getPageSize();
 
+  if (localStorage.getItem("babelens_pdrb_filter") === "false") {
+    pdrb_only.checked = false;
+  }
+
+  document.querySelectorAll('#feedback-stars span').forEach(s => {
+    s.addEventListener('click', () => {
+      feedbackRating = parseInt(s.dataset.value);
+      updateStars(feedbackRating);
+    });
+  });
+
   search(1);
 };
 
@@ -598,4 +671,62 @@ function exportToExcel() {
       }).then(({ error }) => { if (error) console.error(error); });
     }
   })();
+}
+
+
+// ====================================
+// UMPAN BALIK
+// ====================================
+let feedbackRating = 0;
+
+function openFeedback() {
+  feedbackRating = 0;
+  document.getElementById('feedback-message').value = '';
+  document.getElementById('feedback-status').textContent = '';
+  document.getElementById('feedback-submit').disabled = false;
+  updateStars(0);
+  document.getElementById('feedback-overlay').classList.add('open');
+}
+
+function closeFeedback(e, force = false) {
+  if (force || (e && e.target === document.getElementById('feedback-overlay'))) {
+    document.getElementById('feedback-overlay').classList.remove('open');
+  }
+}
+
+function updateStars(value) {
+  document.querySelectorAll('#feedback-stars span').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.value) <= value);
+  });
+}
+
+async function submitFeedback() {
+  if (!feedbackRating) {
+    document.getElementById('feedback-status').textContent = 'Pilih rating bintang dulu.';
+    return;
+  }
+
+  const submitBtn = document.getElementById('feedback-submit');
+  submitBtn.disabled = true;
+  document.getElementById('feedback-status').textContent = 'Mengirim...';
+
+  const { data: { session } } = await db.auth.getSession();
+
+  const { error } = await db.from('feedback').insert({
+    user_id: session?.user?.id || null,
+    rating: feedbackRating,
+    message: document.getElementById('feedback-message').value.trim() || null,
+    page: 'news'
+  });
+
+  if (error) {
+    document.getElementById('feedback-status').textContent = 'Gagal mengirim. Coba lagi.';
+    console.error('Feedback error:', JSON.stringify(error));
+    submitBtn.disabled = false;
+  } else {
+    document.getElementById('feedback-status').innerHTML =
+      '✓ Masukan kamu sudah kami terima. Terima kasih telah membantu Babelens menjadi lebih baik!';
+    document.getElementById('feedback-submit').disabled = true;
+    setTimeout(() => closeFeedback(null, true), 3000);
+  }
 }

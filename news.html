@@ -114,15 +114,6 @@
       <div class="filter-divider"></div>
 
       <div class="filter-group">
-        <label class="checkbox-row">
-          <input type="checkbox" id="pdrb_only" checked>
-          <span>Hanya PDRB Relevan</span>
-        </label>
-      </div>
-
-      <div class="filter-divider"></div>
-
-      <div class="filter-group">
         <label>Status Kejadian</label>
         <label class="checkbox-row">
           <input class="event_filter" type="checkbox" value="Sudah Terjadi" checked>
@@ -157,29 +148,39 @@
 
       <!-- TOPBAR -->
       <header class="topbar">
-        <div class="topbar-left">
-          <div><h2>Pencarian Berita</h2></div>
-        </div>
-        <div class="meta-bar">
-          <div id="meta"></div>
-          <div class="page-size">
-            <label for="page_size_select">Jumlah Berita per Halaman</label>
-            <select id="page_size_select">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="250">250</option>
-            </select>
+        <div class="topbar-row">
+          <div class="topbar-left">
+            <div><h2>Pencarian Berita</h2></div>
+            <label class="pdrb-toggle-label">
+              <input type="checkbox" id="pdrb_only" checked>
+              <span class="pdrb-toggle-track">
+                <span class="pdrb-toggle-thumb"></span>
+              </span>
+              <span class="pdrb-toggle-text">Hanya PDRB Relevan</span>
+            </label>
           </div>
-          <button
-            class="export-btn"
-            onclick="exportToExcel()"
-            title="Unduh hasil pencarian dalam format Excel"
-          >
-            Unduh Excel
-          </button>
+          <div class="meta-bar">
+            <div id="meta"></div>
+            <div class="page-size">
+              <label for="page_size_select">Jumlah Berita per Halaman</label>
+              <select id="page_size_select">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="250">250</option>
+              </select>
+            </div>
+            <button
+              class="export-btn"
+              onclick="exportToExcel()"
+              title="Unduh hasil pencarian dalam format Excel"
+            >
+              Unduh Excel
+            </button>
+          </div>
         </div>
+        <div id="pdrb-notice"></div>
       </header>
 
       <!-- RESULTS -->
@@ -198,5 +199,32 @@
     requireAuth().then(r => { if (r) document.body.style.visibility = 'visible'; });
   </script>
   <script src="news-search.js"></script>
+
+  <!-- FEEDBACK BUTTON -->
+  <div id="feedback-wrapper">
+    <span id="feedback-label">Beri masukan</span>
+    <button id="feedback-btn" onclick="openFeedback()"
+      title="Beri masukan untuk membantu kami meningkatkan Babelens">💬</button>
+  </div>
+
+  <!-- FEEDBACK MODAL -->
+  <div id="feedback-overlay" onclick="closeFeedback(event)">
+    <div class="feedback-modal">
+      <div class="feedback-modal-header">
+        <span>Beri Masukan</span>
+        <button onclick="closeFeedback(null, true)">✕</button>
+      </div>
+      <div class="feedback-stars" id="feedback-stars">
+        <span data-value="1">★</span>
+        <span data-value="2">★</span>
+        <span data-value="3">★</span>
+        <span data-value="4">★</span>
+        <span data-value="5">★</span>
+      </div>
+      <textarea id="feedback-message" placeholder="Contoh: hasil pencarian kurang relevan, label PDRB tidak akurat, dll." rows="4"></textarea>
+      <button id="feedback-submit" onclick="submitFeedback()">Kirim</button>
+      <div id="feedback-status"></div>
+    </div>
+  </div>
 </body>
 </html>
