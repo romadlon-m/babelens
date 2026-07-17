@@ -103,11 +103,13 @@
           <option value="J">J - Informasi dan Komunikasi</option>
           <option value="K">K - Jasa Keuangan dan Asuransi</option>
           <option value="L">L - Real Estat</option>
-          <option value="M,N">M,N - Jasa Perusahaan</option>
+          <!-- IMPORTANT: value must be "MN" (no comma) — must match the lapus column in Supabase DB. Do NOT change to "M,N". -->
+          <option value="MN">M,N - Jasa Perusahaan</option>
           <option value="O">O - Administrasi Pemerintahan, Pertahanan dan Jaminan Sosial Wajib</option>
           <option value="P">P - Jasa Pendidikan</option>
           <option value="Q">Q - Jasa Kesehatan dan Kegiatan Sosial</option>
-          <option value="R,S,T,U">R,S,T,U - Jasa lainnya</option>
+          <!-- IMPORTANT: value must be "RSTU" (no commas) — must match the lapus column in Supabase DB. Do NOT change to "R,S,T,U". -->
+          <option value="RSTU">R,S,T,U - Jasa lainnya</option>
         </select>
       </div>
 

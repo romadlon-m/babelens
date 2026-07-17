@@ -627,7 +627,6 @@ function exportToExcel() {
     "Kategori": r.category || "-",
     "Status Kejadian": r.event_time || "-",
     "PDRB Relevan": r.pdrb_relevan || "-",
-    "Justifikasi PDRB": r.justifikasi_pdrb || "-",
     "Lap. Usaha": r.lapus || "-",
     "Lap. Usaha 2": r.lapus_second || "-",
     "Ringkasan": r.summary || "-",
@@ -650,7 +649,6 @@ function exportToExcel() {
     { wch: 20 },  // Kategori
     { wch: 18 },  // Status Kejadian
     { wch: 15 },  // PDRB Relevan
-    { wch: 40 },  // Justifikasi PDRB
     { wch: 15 },  // Lap. Usaha
     { wch: 15 },  // Lap. Usaha 2
     { wch: 60 },  // Ringkasan
