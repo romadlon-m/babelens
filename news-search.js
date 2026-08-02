@@ -763,6 +763,10 @@ function exportToExcel() {
     const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
     const lapusArr = r.kategori_lapus || [];
     const pengArr  = r.komponen_pengeluaran || [];
+
+    const lapusLabel = code => code ? `${code} - ${LAPUS_LABELS[code] || code}` : "-";
+    const pengLabel  = code => code ? `${code} - ${PENGELUARAN_LABELS[code] || code}` : "-";
+
     return {
       "No": i + 1,
       "Judul": r.title || "-",
@@ -773,11 +777,11 @@ function exportToExcel() {
       "Status Kejadian": r.event_time || "-",
       "PDRB Relevan": isRelevant ? "YA" : "TIDAK",
       "LU Relevan": r.lu_relevan || "-",
-      "Lap. Usaha": lapusArr[0] || "-",
-      "Lap. Usaha 2": lapusArr[1] || "-",
+      "Lap. Usaha": lapusLabel(lapusArr[0]),
+      "Lap. Usaha 2": lapusLabel(lapusArr[1]),
       "Pengeluaran Relevan": r.pengeluaran_relevan || "-",
-      "Komp. Pengeluaran": pengArr[0] || "-",
-      "Komp. Pengeluaran 2": pengArr[1] || "-",
+      "Komp. Pengeluaran": pengLabel(pengArr[0]),
+      "Komp. Pengeluaran 2": pengLabel(pengArr[1]),
       "Ringkasan": r.summary || "-",
       "URL": r.url || "-",
       "Kutipan": r.title
@@ -800,11 +804,11 @@ function exportToExcel() {
     { wch: 18 },  // Status Kejadian
     { wch: 15 },  // PDRB Relevan
     { wch: 12 },  // LU Relevan
-    { wch: 15 },  // Lap. Usaha
-    { wch: 15 },  // Lap. Usaha 2
+    { wch: 45 },  // Lap. Usaha
+    { wch: 45 },  // Lap. Usaha 2
     { wch: 18 },  // Pengeluaran Relevan
-    { wch: 20 },  // Komp. Pengeluaran
-    { wch: 20 },  // Komp. Pengeluaran 2
+    { wch: 40 },  // Komp. Pengeluaran
+    { wch: 40 },  // Komp. Pengeluaran 2
     { wch: 60 },  // Ringkasan
     { wch: 40 },  // URL
     { wch: 80 },  // Kutipan
