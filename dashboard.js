@@ -58,6 +58,25 @@ const LAPUS_SHORT_LABELS = {
 };
 
 // ====================================
+// HELPER: cek relevansi PDRB (LU atau Pengeluaran)
+// ====================================
+function isPdrbRelevan(r) {
+  return r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
+}
+
+// ====================================
+// HELPER: flatten array lapus dari semua artikel
+// ====================================
+function countByLapus(data) {
+  return data.reduce((acc, r) => {
+    (r.kategori_lapus || []).forEach(val => {
+      acc[val] = (acc[val] || 0) + 1;
+    });
+    return acc;
+  }, {});
+}
+
+// ====================================
 // INIT
 // ====================================
 window.onload = async () => {
@@ -67,26 +86,21 @@ window.onload = async () => {
     .limit(1);
 
   const defaultStartDate = '2026-01-01';
-  let maxDate = defaultStartDate;
   let minDate = defaultStartDate;
 
-  if (data && data.length > 0) {
-    const latest = new Date(data[0].publication_datetime);
-    maxDate = latest.toISOString().split('T')[0];
-    if (new Date(maxDate) < new Date(defaultStartDate)) {
-      minDate = maxDate;
-    }
-  } else {
-    const today = new Date();
-    maxDate = today.toISOString().split('T')[0];
-  }
+  // LABEL CUTOFF: Tanggal artikel terlabeli terbaru dari pelabelan 22k (Copilot, Juli 2026).
+  // Artikel setelah tanggal ini belum memiliki lu_relevan/pengeluaran_relevan (NULL)
+  // dan akan tampil dengan badge "Dalam Proses Analisis".
+  // Update nilai ini setelah batch pelabelan berikutnya selesai diupload ke Supabase.
+  // Terakhir diupdate: 2 Agustus 2026 (pelabelan batch 1, ~22k artikel).
+  const LABEL_CUTOFF = '2026-07-18';
 
   const datasetMin = '2025-10-01';
   const dashFrom = document.getElementById('dash_from');
   const dashTo = document.getElementById('dash_to');
   dashFrom.value = minDate;
   dashFrom.min = datasetMin;
-  dashTo.value = maxDate;
+  dashTo.value = LABEL_CUTOFF;
 
   document.getElementById('dash_region').addEventListener('change', applyFiltersAndRender);
   document.getElementById('dash_pdrb_only').addEventListener('change', applyFiltersAndRender);
@@ -102,7 +116,7 @@ async function loadDashboard() {
   const dateTo = document.getElementById('dash_to').value;
 
   let query = db.from('news')
-    .select('publication_datetime, lapus, region_final, pdrb_relevan, event_time');
+    .select('publication_datetime, kategori_lapus, region_final, lu_relevan, pengeluaran_relevan, event_time');
 
   if (dateFrom) query = query.gte('publication_datetime', dateFrom);
   if (dateTo)   query = query.lte('publication_datetime', dateTo + 'T23:59:59');
@@ -123,7 +137,7 @@ function applyFiltersAndRender() {
 
   let filtered = rawData;
   if (region)   filtered = filtered.filter(r => r.region_final === region);
-  if (pdrbOnly) filtered = filtered.filter(r => r.pdrb_relevan === 'YA');
+  if (pdrbOnly) filtered = filtered.filter(r => isPdrbRelevan(r));
 
   lastFilteredData = filtered;
   renderStats(filtered);
@@ -139,8 +153,8 @@ function applyFiltersAndRender() {
 // ====================================
 function renderStats(data) {
   const total = data.length;
-  const pdrb = data.filter(r => r.pdrb_relevan === 'YA').length;
-  const lapusSet = new Set(data.map(r => r.lapus).filter(Boolean));
+  const pdrb = data.filter(r => isPdrbRelevan(r)).length;
+  const lapusSet = new Set(data.flatMap(r => r.kategori_lapus || []));
   const wilayahSet = new Set(data.map(r => r.region_final).filter(Boolean));
 
   document.getElementById('stat-total').textContent = total.toLocaleString('id-ID');
@@ -178,7 +192,7 @@ function renderTren(data) {
     const d = new Date(r.publication_datetime);
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
     monthlyTotal[key] = (monthlyTotal[key] || 0) + 1;
-    if (r.pdrb_relevan === 'YA') {
+    if (isPdrbRelevan(r)) {
       monthlyRelevant[key] = (monthlyRelevant[key] || 0) + 1;
     }
   });
@@ -260,7 +274,7 @@ function renderTren(data) {
 // CHART: LAPANGAN USAHA
 // ====================================
 function renderLapus(data) {
-  const counts = countBy(data.filter(r => r.lapus), 'lapus');
+  const counts = countByLapus(data);
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const chart = echarts.init(document.getElementById('chart-lapus'));
@@ -335,7 +349,7 @@ function renderWilayah(data) {
 // CHART: PDRB RELEVAN (DONUT)
 // ====================================
 function renderPdrb(data) {
-  const ya = data.filter(r => r.pdrb_relevan === 'YA').length;
+  const ya = data.filter(r => isPdrbRelevan(r)).length;
   const tidak = data.length - ya;
   const total = ya + tidak;
   const relevanPct = total > 0 ? ((ya / total) * 100).toFixed(2) + '%' : '0%';
@@ -387,7 +401,7 @@ function openLapusModal() {
   const modal = document.getElementById('lapus-modal');
   modal.classList.add('open');
 
-  const counts = countBy(lastFilteredData.filter(r => r.lapus), 'lapus');
+  const counts = countByLapus(lastFilteredData);
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
   const el = document.getElementById('chart-lapus-all');

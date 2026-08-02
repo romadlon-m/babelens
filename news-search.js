@@ -39,6 +39,13 @@ function getPageSize() {
 let defaultMinDate = null;
 let defaultMaxDate = null;
 
+// LABEL CUTOFF: Tanggal artikel terlabeli terbaru dari pelabelan 22k (Copilot, Juli 2026).
+// Artikel setelah tanggal ini belum memiliki lu_relevan/pengeluaran_relevan (NULL)
+// dan akan tampil dengan badge "Dalam Proses Analisis".
+// Update nilai ini setelah batch pelabelan berikutnya selesai diupload ke Supabase.
+// Terakhir diupdate: 2 Agustus 2026 (pelabelan batch 1, ~22k artikel).
+const LABEL_CUTOFF = '2026-07-18';
+
 
 // ====================================
 // NEWS SEARCH SKELETON LOADER
@@ -122,8 +129,8 @@ async function search(page = 1) {
         .range(from, from + BATCH - 1);
 
       if (lastParams.region)       query = query.eq('region_final', lastParams.region);
-      if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
-      if (lastParams.pdrb_relevan) query = query.eq('pdrb_relevan', 'YA');
+      if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
+      if (lastParams.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
       if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
       if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
       if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
@@ -159,7 +166,7 @@ async function search(page = 1) {
       .select('*', { count: 'exact', head: true });
 
     if (lastParams.region)       query = query.eq('region_final', lastParams.region);
-    if (lastParams.lapus)        query = query.eq('lapus', lastParams.lapus);
+    if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
     if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
     if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
     if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
@@ -237,7 +244,16 @@ function renderPage(page = 1) {
     const formattedDate = formatDateIndo(r.publication_datetime);
     const citationText = `${r.title} (${r.source}, ${formattedDate})`;
     const summaryText = `${r.title}\n${r.summary}`;
-    const lapusTooltip = LAPUS_LABELS[r.lapus] || r.lapus || "-";
+
+    // Relevansi PDRB: Ya jika relevan LU atau Pengeluaran
+    // NULL berarti artikel belum terlabeli (di luar rentang pelabelan batch 1)
+    const isLabeled = r.lu_relevan !== null && r.lu_relevan !== undefined;
+    const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
+
+    // Lapangan Usaha: array → join untuk display, tooltip label panjang
+    const lapusArr = r.kategori_lapus || [];
+    const lapusShort = lapusArr.join(', ') || '-';
+    const lapusLong = lapusArr.map(k => `${k} - ${LAPUS_LABELS[k] || k}`).join('\n');
 
     html += `
       <article class="news-card">
@@ -272,18 +288,18 @@ function renderPage(page = 1) {
         <div class="badges">
 
           <span
-            class="badge tooltip ${r.pdrb_relevan === "YA" ? "badge-green" : "badge-gray"}"
-            data-tooltip="Relevansi PDRB dibuat menggunakan klasifikasi AI. Harap verifikasi jika diperlukan."
+            class="badge tooltip ${isLabeled ? (isRelevant ? "badge-green" : "badge-gray") : "badge-gray"}"
+            data-tooltip="${isLabeled ? "Relevansi PDRB dibuat menggunakan klasifikasi AI. Harap verifikasi jika diperlukan." : "Artikel ini belum melalui proses analisis PDRB. Label akan tersedia pada batch berikutnya."}"
           >
-            PDRB: ${r.pdrb_relevan || "TIDAK"}
+            ${isLabeled ? `PDRB: ${isRelevant ? "YA" : "TIDAK"}` : "Dalam Proses Analisis"}
           </span>
 
-          ${r.lapus ? `
+          ${lapusArr.length > 0 ? `
             <span
               class="badge badge-blue tooltip"
-              data-tooltip="${lapusTooltip} — Dibuat menggunakan model Machine Learning terlatih. Harap verifikasi jika diperlukan."
+              data-tooltip="${lapusLong} — Dibuat menggunakan model Machine Learning terlatih. Harap verifikasi jika diperlukan."
             >
-              Lapus: ${r.lapus}
+              Lapus: ${lapusShort}
             </span>
           ` : ""}
 
@@ -464,14 +480,15 @@ function resetSearch() {
 
   const datasetMin = "2025-10-01";
   const maxD = defaultMaxDate || new Date().toISOString().split('T')[0];
+  const defaultDateTo = LABEL_CUTOFF < maxD ? LABEL_CUTOFF : maxD;
   const minD = (() => {
-    const d = new Date(maxD);
+    const d = new Date(defaultDateTo);
     d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
   })();
 
   date_from.value = minD;
-  date_to.value = maxD;
+  date_to.value = defaultDateTo;
   date_from.min = datasetMin;
   date_to.min = date_from.value || datasetMin;
   date_from.max = maxD;
@@ -582,8 +599,12 @@ window.onload = async () => {
   defaultMinDate = minDate;
   defaultMaxDate = maxDate;
 
+  // Default date_to dikunci ke LABEL_CUTOFF agar artikel belum terlabeli
+  // tidak muncul di rentang default. User tetap bisa geser manual ke tanggal lebih baru.
+  const defaultDateTo = LABEL_CUTOFF < maxDate ? LABEL_CUTOFF : maxDate;
+
   date_from.value = minDate;
-  date_to.value = maxDate;
+  date_to.value = defaultDateTo;
   date_from.max = maxDate;
   date_to.max = maxDate;
 
@@ -618,23 +639,27 @@ function exportToExcel() {
     return;
   }
 
-  const exportData = currentRows.map((r, i) => ({
-    "No": i + 1,
-    "Judul": r.title || "-",
-    "Tanggal": r.publication_datetime ? formatDateIndo(r.publication_datetime) : "-",
-    "Sumber": r.source || "-",
-    "Wilayah": r.region_final || "-",
-    "Kategori": r.category || "-",
-    "Status Kejadian": r.event_time || "-",
-    "PDRB Relevan": r.pdrb_relevan || "-",
-    "Lap. Usaha": r.lapus || "-",
-    "Lap. Usaha 2": r.lapus_second || "-",
-    "Ringkasan": r.summary || "-",
-    "URL": r.url || "-",
-    "Kutipan": r.title
-      ? `${r.title} (${r.source || "-"}, ${r.publication_datetime ? formatDateIndo(r.publication_datetime) : "-"})`
-      : "-",
-  }));
+  const exportData = currentRows.map((r, i) => {
+    const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
+    const lapusArr = r.kategori_lapus || [];
+    return {
+      "No": i + 1,
+      "Judul": r.title || "-",
+      "Tanggal": r.publication_datetime ? formatDateIndo(r.publication_datetime) : "-",
+      "Sumber": r.source || "-",
+      "Wilayah": r.region_final || "-",
+      "Kategori": r.category || "-",
+      "Status Kejadian": r.event_time || "-",
+      "PDRB Relevan": isRelevant ? "YA" : "TIDAK",
+      "Lap. Usaha": lapusArr[0] || "-",
+      "Lap. Usaha 2": lapusArr[1] || "-",
+      "Ringkasan": r.summary || "-",
+      "URL": r.url || "-",
+      "Kutipan": r.title
+        ? `${r.title} (${r.source || "-"}, ${r.publication_datetime ? formatDateIndo(r.publication_datetime) : "-"})`
+        : "-",
+    };
+  });
 
   const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
