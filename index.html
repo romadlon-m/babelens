@@ -6,11 +6,136 @@
   <title>Babelens - Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Running text ticker ───────────────────────────── */
+    .running-text-bar {
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      height: 32px;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+    .running-text-label {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #16a34a;
+      padding: 0 10px;
+      border-right: 1px solid #bbf7d0;
+      white-space: nowrap;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    .running-text-track {
+      flex: 1;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    .running-text-inner {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      animation: marquee-scroll 50s linear infinite;
+    }
+    .running-text-inner:hover { animation-play-state: paused; }
+    @keyframes marquee-scroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .running-text-item {
+      font-size: 12px;
+      color: #374151;
+      text-decoration: none;
+      padding: 0 6px;
+      transition: color 0.15s;
+    }
+    .running-text-item:hover { color: #16a34a; text-decoration: underline; }
+    .running-text-sep {
+      color: #9ca3af;
+      padding: 0 6px;
+      font-size: 11px;
+    }
+
+    /* ── Chart rows ────────────────────────────────────── */
+    .charts-rows-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+    .charts-row {
+      display: flex;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Row 1 flex ratios */
+    #wrap-tren    { flex: 3; min-width: 0; }
+    #wrap-wilayah { flex: 1.6; min-width: 0; transition: flex 0.2s; }
+    #wrap-status  { flex: 1; min-width: 0; }
+    #wrap-tren.tren-expanded { flex: 4.6; }
+    #wrap-wilayah.hidden { display: none; }
+
+    /* Row 2 flex ratios */
+    #wrap-lapus       { flex: 1; min-width: 0; }
+    #wrap-pengeluaran { flex: 1; min-width: 0; }
+
+    /* ── Pengeluaran modal (reuses lapus-modal styles) ── */
+    .peng-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .peng-modal-overlay.open { display: flex; }
+    .peng-modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      width: min(680px, 92vw);
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    @media (max-width: 767px) {
+      .peng-modal { max-height: 90vh; padding: 16px; }
+    }
+    .peng-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .peng-modal-title { font-size: 15px; font-weight: 700; color: #1f2937; }
+    .peng-modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #6b7280;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .peng-modal-close:hover { color: #111827; }
+    .peng-modal-chart { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  </style>
 </head>
 <body class="dashboard-page">
 
@@ -35,6 +160,20 @@
       <div id="sidebar-container"></div>
 
       <div class="filter-divider"></div>
+
+      <!-- PRESET PERIODE -->
+      <div class="filter-group">
+        <label>Pilih Periode</label>
+        <select id="dash_preset">
+          <option value="">— Pilih Periode —</option>
+          <optgroup label="Umum">
+            <option value="year" selected>Tahun Ini</option>
+            <option value="all">Semua Data</option>
+          </optgroup>
+          <optgroup label="Triwulan" id="preset-group-tw"></optgroup>
+          <optgroup label="Bulanan" id="preset-group-bln"></optgroup>
+        </select>
+      </div>
 
       <!-- FILTER TANGGAL -->
       <div class="filter-group">
@@ -95,7 +234,10 @@
           <div class="stat-card">
             <div class="stat-icon">📈</div>
             <div>
-              <div class="stat-label">PDRB Relevan</div>
+              <div class="stat-label">
+                PDRB Relevan
+                <span class="tooltip tooltip-down info-icon" id="stat-pdrb-info" data-tooltip="">i</span>
+              </div>
               <div class="stat-value" id="stat-pdrb">—</div>
             </div>
           </div>
@@ -116,12 +258,21 @@
         </div>
       </div>
 
-      <!-- CHARTS 2-COLUMN LAYOUT -->
-      <div class="charts-2col">
+      <!-- RUNNING TEXT -->
+      <div id="running-text-bar" class="running-text-bar" style="display:none">
+        <span class="running-text-label">Terkini</span>
+        <div class="running-text-track">
+          <div id="running-text-inner" class="running-text-inner"></div>
+        </div>
+      </div>
 
-        <!-- LEFT COLUMN: Jumlah (55%) + Lapus (45%) -->
-        <div class="charts-col">
-          <div class="chart-card chart-col-item" style="flex:55">
+      <!-- CHARTS -->
+      <div class="charts-rows-wrap">
+
+        <!-- ROW 1: Tren | Wilayah | Status -->
+        <div class="charts-row">
+
+          <div class="chart-card" id="wrap-tren">
             <div class="chart-card-header">
               <div class="chart-title">Jumlah Berita per Bulan</div>
               <div class="chart-legend-inline">
@@ -131,34 +282,41 @@
             </div>
             <div id="chart-tren" class="chart-container"></div>
           </div>
-          <div class="chart-card chart-col-item" style="flex:45">
+
+          <div class="chart-card" id="wrap-wilayah">
+            <div class="chart-title">Distribusi per Wilayah</div>
+            <div id="chart-wilayah" class="chart-container"></div>
+          </div>
+
+          <div class="chart-card" id="wrap-status">
+            <div class="chart-title">Status Kejadian</div>
+            <div id="chart-status" class="chart-container"></div>
+          </div>
+
+        </div>
+
+        <!-- ROW 2: Lapus | Pengeluaran -->
+        <div class="charts-row">
+
+          <div class="chart-card" id="wrap-lapus">
             <div class="chart-card-header">
               <div class="chart-title">5 Lapangan Usaha Terbanyak</div>
               <button class="lihat-semua-btn" onclick="openLapusModal()">Lihat Semua</button>
             </div>
             <div id="chart-lapus" class="chart-container chart-container-lapus"></div>
           </div>
+
+          <div class="chart-card" id="wrap-pengeluaran">
+            <div class="chart-card-header">
+              <div class="chart-title">5 Komponen Pengeluaran Terbanyak</div>
+              <button class="lihat-semua-btn" onclick="openPengModal()">Lihat Semua</button>
+            </div>
+            <div id="chart-pengeluaran" class="chart-container chart-container-lapus"></div>
+          </div>
+
         </div>
 
-        <!-- RIGHT COLUMN: Wilayah (60%) + [PDRB + Status side by side] (40%) -->
-        <div class="charts-col">
-          <div class="chart-card chart-col-item" style="flex:55">
-            <div class="chart-title">Distribusi per Wilayah</div>
-            <div id="chart-wilayah" class="chart-container"></div>
-          </div>
-          <div class="chart-row-pair" style="flex:45">
-            <div class="chart-card chart-col-item">
-              <div class="chart-title">Relevansi PDRB</div>
-              <div id="chart-pdrb" class="chart-container"></div>
-            </div>
-            <div class="chart-card chart-col-item">
-              <div class="chart-title">Status Kejadian</div>
-              <div id="chart-status" class="chart-container"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      </div><!-- /.charts-rows-wrap -->
 
     </main>
 
@@ -172,6 +330,17 @@
         <button class="lapus-modal-close" onclick="closeLapusModalDirect()">&times;</button>
       </div>
       <div id="chart-lapus-all" class="lapus-modal-chart"></div>
+    </div>
+  </div>
+
+  <!-- PENGELUARAN MODAL -->
+  <div id="peng-modal" class="peng-modal-overlay" onclick="closePengModal(event)">
+    <div class="peng-modal">
+      <div class="peng-modal-header">
+        <span class="peng-modal-title">Semua Komponen Pengeluaran</span>
+        <button class="peng-modal-close" onclick="closePengModalDirect()">&times;</button>
+      </div>
+      <div id="chart-peng-all" class="peng-modal-chart"></div>
     </div>
   </div>
 

@@ -24,7 +24,7 @@
 
 body {
   margin: 0;
-  font-family: "Inter", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   background: var(--bg);
   color: var(--text);
   display: flex;
@@ -422,6 +422,47 @@ select {
   100% { background-position: 0 50%; }
 }
 
+/* Scope chips (news search) */
+.scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.scope-chip {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--muted);
+  transition: 0.15s;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.scope-chip.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.scope-chip:hover:not(.active) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Tooltip downward (for elements near top of viewport) */
+.tooltip.tooltip-down::after {
+  top: 130%;
+  bottom: auto;
+  z-index: 200;
+}
+
 /* BADGES */
 .badges {
   display: flex;
@@ -578,7 +619,7 @@ select {
   font-size: 12px;
   line-height: 1.5;
   width: max-content;
-  max-width: 260px;
+  max-width: 320px;
   white-space: normal;
   opacity: 0;
   pointer-events: none;
@@ -747,7 +788,7 @@ select {
 }
 
 .dashboard-page .stat-label { white-space: normal; line-height: 1.2; }
-.dashboard-page .stat-card { min-width: 0; overflow: hidden; }
+.dashboard-page .stat-card { min-width: 0; overflow: visible; }
 .dashboard-page .stat-icon { flex-shrink: 0; }
 .dashboard-page .stat-value { font-size: clamp(1rem, 2vw, 1.4rem); }
 
@@ -1056,6 +1097,22 @@ select {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  max-width: 280px;
+}
+
+.user-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .user-dropdown-btn {
+    max-width: 140px;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
 }
 
 .user-dropdown-btn:hover {
@@ -1152,11 +1209,19 @@ select {
   border-radius: 16px;
   padding: 24px;
   width: 760px;
-  max-width: 90vw;
-  max-height: 80vh;
+  max-width: 92vw;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 767px) {
+  .lapus-modal {
+    max-height: 90vh;
+    padding: 16px;
+    border-radius: 12px;
+  }
 }
 
 .lapus-modal-header {
@@ -1194,9 +1259,67 @@ select {
 
 .lapus-modal-chart {
   flex: 1;
-  min-height: 360px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
+
+/* ============================================================
+   DASHBOARD — compact overrides (fits at 100% browser zoom)
+   ============================================================ */
+.dashboard-page .main-content {
+  padding: 8px 12px 12px;
+}
+
+.dashboard-page .dash-header-row {
+  margin-bottom: 8px;
+}
+
+.dashboard-page .dash-title {
+  font-size: 18px;
+}
+
+.dashboard-page .stat-value {
+  font-size: clamp(0.9rem, 1.6vw, 1.2rem);
+}
+
+.dashboard-page .stat-icon {
+  font-size: 22px;
+}
+
+.dashboard-page .charts-rows-wrap {
+  gap: 6px;
+}
+
+.dashboard-page .charts-row {
+  gap: 6px;
+}
+
+.dashboard-page .charts-row .chart-card {
+  padding: 12px;
+}
+
+.dashboard-page .charts-row .chart-card-header {
+  margin-bottom: 8px;
+}
+
+.dashboard-page .charts-row .chart-title {
+  margin-bottom: 8px;
+}
+
+.dashboard-page .running-text-bar {
+  height: 26px;
+  margin-bottom: 6px;
+}
+
+.dashboard-page .running-text-item {
+  font-size: 11px;
+}
+
+.dashboard-page .legend-item {
+  font-size: 11px;
+}
 
 /* ============================================================
    RESPONSIVE — tablet (< 1024px)
@@ -1234,6 +1357,36 @@ select {
   .chart-row-pair .chart-col-item .chart-container {
     height: 220px;
   }
+
+  /* New row-based layout at tablet */
+  .charts-rows-wrap {
+    flex: none;
+    overflow: visible;
+    height: auto;
+  }
+
+  .charts-row {
+    flex-wrap: wrap;
+  }
+
+  .charts-row .chart-card {
+    min-width: 280px;
+  }
+
+  .charts-row .chart-container {
+    flex: none;
+    height: 220px;
+  }
+
+  /* Row 1 widths: tren full, wilayah+status side by side */
+  #wrap-tren    { flex: 1 1 100%; }
+  #wrap-wilayah { flex: 1 1 55%; }
+  #wrap-status  { flex: 1 1 40%; }
+  #wrap-tren.tren-expanded { flex: 1 1 100%; }
+
+  /* Row 2: lapus + pengeluaran side by side */
+  #wrap-lapus       { flex: 1 1 45%; }
+  #wrap-pengeluaran { flex: 1 1 45%; }
 
   /* main-content scrolls vertically */
   .dashboard-page .main-content {
@@ -1343,15 +1496,52 @@ select {
   .chart-row-pair .chart-col-item .chart-container {
     height: 200px;
   }
+
+  /* New row-based layout on mobile: all stack */
+  .charts-rows-wrap {
+    flex: none;
+    overflow: visible;
+    height: auto;
+  }
+
+  .charts-row {
+    flex-direction: column;
+  }
+
+  .charts-row .chart-container {
+    flex: none;
+    height: 200px;
+  }
+
+  #wrap-tren, #wrap-wilayah, #wrap-status,
+  #wrap-lapus, #wrap-pengeluaran {
+    flex: none;
+    width: 100%;
+  }
+
+  #wrap-tren.tren-expanded { width: 100%; }
+
+  .running-text-bar { display: none !important; }
 }
 
 /* ============================================================
    DASHBOARD — desktop full-height chart layout (≥ 1024px)
    ============================================================ */
 @media (min-width: 1024px) {
+  html:has(body.dashboard-page) { height: 100%; overflow: hidden; }
+  body.dashboard-page { height: 100%; overflow: hidden; }
+
   .dashboard-page .app-body { flex: 1; min-height: 0; overflow: hidden; }
   .dashboard-page .main-content { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
   .dashboard-page .dash-header-row { flex-shrink: 0; }
+
+  /* New row-based chart layout */
+  .dashboard-page .charts-rows-wrap { flex: 1; min-height: 0; overflow: hidden; }
+  .dashboard-page .charts-row { flex: 1; min-height: 0; overflow: hidden; }
+  .dashboard-page .charts-row .chart-card { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .dashboard-page .charts-row .chart-container { flex: 1; height: 100%; min-height: 0; }
+
+  /* Legacy classes kept for any other pages still using them */
   .dashboard-page .charts-2col { flex: 1; min-height: 0; overflow: hidden; }
   .dashboard-page .charts-col { flex: 1; min-height: 0; overflow: hidden; }
   .dashboard-page .chart-col-item { flex: 1; min-height: 0; overflow: hidden; }
