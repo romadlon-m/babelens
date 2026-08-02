@@ -24,9 +24,30 @@ const LAPUS_LABELS = {
 };
 
 
-// ====================================
-// GLOBAL STATE
-// ====================================
+const PENGELUARAN_LABELS = {
+  '1a': 'Makanan dan Minuman Non Alkohol',
+  '1b': 'Minuman Beralkohol dan Rokok',
+  '1c': 'Pakaian',
+  '1d': 'Perumahan, Air, Listrik, Energi',
+  '1e': 'Perabot dan Perlengkapan Rumah Tangga',
+  '1f': 'Kesehatan',
+  '1g': 'Transportasi',
+  '1h': 'Komunikasi',
+  '1i': 'Rekreasi dan Budaya',
+  '1j': 'Pendidikan',
+  '1k': 'Hotel dan Penginapan',
+  '1l': 'Barang Pribadi dan Jasa Lainnya',
+  '1':  'Pengeluaran Konsumsi Rumah Tangga',
+  '2':  'Pengeluaran Konsumsi LNPRT',
+  '3':  'Pengeluaran Konsumsi Pemerintah',
+  '4':  'Pembentukan Modal Tetap Bruto',
+  '5':  'Perubahan Inventori',
+  '6':  'Ekspor Luar Negeri',
+  '7':  'Impor Luar Negeri'
+};
+
+
+
 let lastParams = {};
 let currentRows = [];
 let hiddenCount = 0;
@@ -77,6 +98,85 @@ function formatDateIndo(dateString) {
 
 
 // ====================================
+// SCOPE CHIP TOGGLE
+// ====================================
+function toggleScope(id, btn) {
+  const cb = document.getElementById(id);
+  cb.checked = !cb.checked;
+  btn.classList.toggle('active', cb.checked);
+  search(1);
+}
+
+// ====================================
+// PRESET PERIODE (NEWS SEARCH)
+// ====================================
+function buildNewsPresetOptions() {
+  const now      = new Date();
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth(); // 0-indexed
+
+  const BULAN_NAMA = [
+    'Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember'
+  ];
+
+  // ── Triwulan ──────────────────────────────────────────
+  const groupTw = document.getElementById('news-preset-group-tw');
+  const quarters = [
+    { label: `Triwulan I ${thisYear}  (Jan–Mar)`,  from: `${thisYear}-01-01`, to: `${thisYear}-03-31`, endMonth: 2  },
+    { label: `Triwulan II ${thisYear} (Apr–Jun)`,  from: `${thisYear}-04-01`, to: `${thisYear}-06-30`, endMonth: 5  },
+    { label: `Triwulan III ${thisYear} (Jul–Sep)`, from: `${thisYear}-07-01`, to: `${thisYear}-09-30`, endMonth: 8  },
+    { label: `Triwulan IV ${thisYear} (Okt–Des)`,  from: `${thisYear}-10-01`, to: `${thisYear}-12-31`, endMonth: 11 }
+  ];
+  quarters.forEach(q => {
+    const opt = document.createElement('option');
+    opt.value = `tw|${q.from}|${q.to}`;
+    opt.textContent = q.label;
+    if (thisMonth < q.endMonth - 2) opt.disabled = true;
+    groupTw.appendChild(opt);
+  });
+
+  // ── Bulanan: Januari s.d. bulan ini ──────────────────
+  const groupBln = document.getElementById('news-preset-group-bln');
+  for (let m = 0; m <= thisMonth; m++) {
+    const opt     = document.createElement('option');
+    const mm      = String(m + 1).padStart(2, '0');
+    const lastDay = new Date(thisYear, m + 1, 0).getDate();
+    opt.value     = `bln|${thisYear}-${mm}-01|${thisYear}-${mm}-${lastDay}`;
+    opt.textContent = `${BULAN_NAMA[m]} ${thisYear}`;
+    groupBln.appendChild(opt);
+  }
+}
+
+function applyNewsPreset() {
+  const val      = document.getElementById('news_preset').value;
+  const maxDate = defaultMaxDate || new Date().toISOString().split('T')[0];
+  const now     = new Date();
+  const y       = now.getFullYear();
+
+  if (!val) return;
+
+  let from, to;
+
+  if (val === '30d') {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    from = d.toISOString().split('T')[0];
+    to   = maxDate;
+  } else if (val === 'year') {
+    from = `${y}-01-01`;
+    to   = maxDate;
+  } else {
+    const [, f, t] = val.split('|');
+    from = f;
+    to   = t > maxDate ? maxDate : t;
+  }
+
+  date_from.value = from;
+  date_to.value   = to;
+  search(1);
+}
+
+// ====================================
 // CARI
 // ====================================
 async function search(page = 1) {
@@ -102,6 +202,7 @@ async function search(page = 1) {
     keyword: keyword.value,
     region: region.value,
     lapus: lapus.value,
+    pengeluaran: document.getElementById('pengeluaran_filter').value,
     pdrb_relevan: pdrb_only.checked,
     event_time: Array.from(
       document.querySelectorAll(".event_filter:checked")
@@ -130,6 +231,7 @@ async function search(page = 1) {
 
       if (lastParams.region)       query = query.eq('region_final', lastParams.region);
       if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
+      if (lastParams.pengeluaran)  query = query.contains('komponen_pengeluaran', [lastParams.pengeluaran]);
       if (lastParams.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
       if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
       if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
@@ -167,6 +269,7 @@ async function search(page = 1) {
 
     if (lastParams.region)       query = query.eq('region_final', lastParams.region);
     if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
+    if (lastParams.pengeluaran)  query = query.contains('komponen_pengeluaran', [lastParams.pengeluaran]);
     if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
     if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
     if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
@@ -255,6 +358,11 @@ function renderPage(page = 1) {
     const lapusShort = lapusArr.join(', ') || '-';
     const lapusLong = lapusArr.map(k => `${k} - ${LAPUS_LABELS[k] || k}`).join('\n');
 
+    // Komponen Pengeluaran
+    const pengArr  = r.komponen_pengeluaran || [];
+    const pengShort = pengArr.join(', ') || '-';
+    const pengLong  = pengArr.map(k => `${k} - ${PENGELUARAN_LABELS[k] || k}`).join('\n');
+
     html += `
       <article class="news-card">
 
@@ -289,7 +397,9 @@ function renderPage(page = 1) {
 
           <span
             class="badge tooltip ${isLabeled ? (isRelevant ? "badge-green" : "badge-gray") : "badge-gray"}"
-            data-tooltip="${isLabeled ? "Relevansi PDRB dibuat menggunakan klasifikasi AI. Harap verifikasi jika diperlukan." : "Artikel ini belum melalui proses analisis PDRB. Label akan tersedia pada batch berikutnya."}"
+            data-tooltip="${isLabeled
+              ? `PDRB: ${isRelevant ? 'YA' : 'TIDAK'} · LU: ${r.lu_relevan || '-'} · Pengeluaran: ${r.pengeluaran_relevan || '-'} — Label dibuat otomatis oleh AI. Relevansi mencakup keterkaitan langsung maupun tidak langsung dengan PDRB — gunakan sebagai panduan awal, bukan keputusan final.`
+              : "Belum dianalisis. Label akan tersedia pada batch berikutnya."}"
           >
             ${isLabeled ? `PDRB: ${isRelevant ? "YA" : "TIDAK"}` : "Dalam Proses Analisis"}
           </span>
@@ -300,6 +410,16 @@ function renderPage(page = 1) {
               data-tooltip="${lapusLong} — Dibuat menggunakan model Machine Learning terlatih. Harap verifikasi jika diperlukan."
             >
               Lapus: ${lapusShort}
+            </span>
+          ` : ""}
+
+          ${pengArr.length > 0 ? `
+            <span
+              class="badge badge-blue tooltip"
+              data-tooltip="${pengLong} — Dibuat menggunakan klasifikasi AI. Harap verifikasi jika diperlukan."
+              style="background:#fef3c7;color:#92400e;"
+            >
+              Peng: ${pengShort}
             </span>
           ` : ""}
 
@@ -470,29 +590,29 @@ function resetSearch() {
   keyword.value = "";
   region.value = "";
   lapus.value = "";
-  pdrb_only.checked = true;
+  document.getElementById('pengeluaran_filter').value = "";
+  document.getElementById('news_preset').value = "30d";  pdrb_only.checked = true;
   localStorage.setItem("babelens_pdrb_filter", "true");
   f_title.checked = true;
   f_summary.checked = true;
   f_full.checked = false;
+  // Sync chips ke state checkbox
+  document.querySelectorAll('.scope-chip').forEach(chip => {
+    const cb = document.getElementById(chip.dataset.cb);
+    if (cb) chip.classList.toggle('active', cb.checked);
+  });
 
   document.querySelectorAll(".event_filter").forEach(cb => cb.checked = true);
 
-  const datasetMin = "2025-10-01";
   const maxD = defaultMaxDate || new Date().toISOString().split('T')[0];
-  const defaultDateTo = LABEL_CUTOFF < maxD ? LABEL_CUTOFF : maxD;
   const minD = (() => {
-    const d = new Date(defaultDateTo);
+    const d = new Date(maxD);
     d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
   })();
 
   date_from.value = minD;
-  date_to.value = defaultDateTo;
-  date_from.min = datasetMin;
-  date_to.min = date_from.value || datasetMin;
-  date_from.max = maxD;
-  date_to.max = maxD;
+  date_to.value   = maxD;
 
   search(1);
 }
@@ -501,10 +621,12 @@ function resetSearch() {
 // ====================================
 // EVENT OTOMATIS PENCARIAN
 // ====================================
-["region", "lapus", "date_from", "date_to", "f_title", "f_summary", "f_full"]
+["region", "lapus", "pengeluaran_filter", "date_from", "date_to"]
   .forEach(id => {
     document.getElementById(id).addEventListener("change", () => search(1));
   });
+
+document.getElementById('news_preset').addEventListener('change', applyNewsPreset);
 
 pdrb_only.addEventListener("change", () => {
   localStorage.setItem("babelens_pdrb_filter", pdrb_only.checked);
@@ -599,12 +721,8 @@ window.onload = async () => {
   defaultMinDate = minDate;
   defaultMaxDate = maxDate;
 
-  // Default date_to dikunci ke LABEL_CUTOFF agar artikel belum terlabeli
-  // tidak muncul di rentang default. User tetap bisa geser manual ke tanggal lebih baru.
-  const defaultDateTo = LABEL_CUTOFF < maxDate ? LABEL_CUTOFF : maxDate;
-
   date_from.value = minDate;
-  date_to.value = defaultDateTo;
+  date_to.value   = maxDate;
   date_from.max = maxDate;
   date_to.max = maxDate;
 
@@ -613,6 +731,8 @@ window.onload = async () => {
   date_to.min = date_from.value || datasetMin;
 
   document.getElementById("page_size_select").value = getPageSize();
+
+  buildNewsPresetOptions();
 
   if (localStorage.getItem("babelens_pdrb_filter") === "false") {
     pdrb_only.checked = false;
@@ -642,6 +762,7 @@ function exportToExcel() {
   const exportData = currentRows.map((r, i) => {
     const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
     const lapusArr = r.kategori_lapus || [];
+    const pengArr  = r.komponen_pengeluaran || [];
     return {
       "No": i + 1,
       "Judul": r.title || "-",
@@ -651,8 +772,12 @@ function exportToExcel() {
       "Kategori": r.category || "-",
       "Status Kejadian": r.event_time || "-",
       "PDRB Relevan": isRelevant ? "YA" : "TIDAK",
+      "LU Relevan": r.lu_relevan || "-",
       "Lap. Usaha": lapusArr[0] || "-",
       "Lap. Usaha 2": lapusArr[1] || "-",
+      "Pengeluaran Relevan": r.pengeluaran_relevan || "-",
+      "Komp. Pengeluaran": pengArr[0] || "-",
+      "Komp. Pengeluaran 2": pengArr[1] || "-",
       "Ringkasan": r.summary || "-",
       "URL": r.url || "-",
       "Kutipan": r.title
@@ -674,8 +799,12 @@ function exportToExcel() {
     { wch: 20 },  // Kategori
     { wch: 18 },  // Status Kejadian
     { wch: 15 },  // PDRB Relevan
+    { wch: 12 },  // LU Relevan
     { wch: 15 },  // Lap. Usaha
     { wch: 15 },  // Lap. Usaha 2
+    { wch: 18 },  // Pengeluaran Relevan
+    { wch: 20 },  // Komp. Pengeluaran
+    { wch: 20 },  // Komp. Pengeluaran 2
     { wch: 60 },  // Ringkasan
     { wch: 40 },  // URL
     { wch: 80 },  // Kutipan

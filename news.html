@@ -35,30 +35,38 @@
 
       <div class="filter-divider"></div>
 
-      <!-- FILTERS -->
+      <!-- KATA KUNCI + SCOPE CHIPS -->
       <div class="filter-group">
         <label>Kata Kunci</label>
         <input id="keyword" type="text" enterkeyhint="search" placeholder="Cari kata kunci...">
-      </div>
-
-      <div class="filter-group">
-        <small class="filter-hint">Cari kata kunci di:</small>
-        <label class="checkbox-row">
-          <input type="checkbox" id="f_title" checked>
-          <span>Judul</span>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="f_summary" checked>
-          <span>Ringkasan</span>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="f_full">
-          <span>Artikel Lengkap</span>
-        </label>
+        <div class="scope-chips">
+          <button type="button" class="scope-chip active" data-cb="f_title"   onclick="toggleScope('f_title', this)">Judul</button>
+          <button type="button" class="scope-chip active" data-cb="f_summary" onclick="toggleScope('f_summary', this)">Ringkasan</button>
+          <button type="button" class="scope-chip"        data-cb="f_full"    onclick="toggleScope('f_full', this)">Artikel Lengkap</button>
+        </div>
+        <!-- Hidden checkboxes — dipakai JS, disinkron oleh chip -->
+        <input type="checkbox" id="f_title"   checked style="display:none">
+        <input type="checkbox" id="f_summary" checked style="display:none">
+        <input type="checkbox" id="f_full"          style="display:none">
       </div>
 
       <div class="filter-divider"></div>
 
+      <!-- PILIH PERIODE -->
+      <div class="filter-group">
+        <label>Pilih Periode</label>
+        <select id="news_preset">
+          <option value="">— Pilih Periode —</option>
+          <optgroup label="Umum">
+            <option value="30d" selected>30 Hari Terakhir</option>
+            <option value="year">Tahun Ini</option>
+          </optgroup>
+          <optgroup label="Triwulan" id="news-preset-group-tw"></optgroup>
+          <optgroup label="Bulanan"  id="news-preset-group-bln"></optgroup>
+        </select>
+      </div>
+
+      <!-- TANGGAL -->
       <div class="filter-row">
         <div class="filter-group">
           <label>Tanggal Awal</label>
@@ -113,6 +121,36 @@
         </select>
       </div>
 
+      <div class="filter-group">
+        <label>Komponen Pengeluaran</label>
+        <select id="pengeluaran_filter">
+          <option value="">Semua Komponen</option>
+          <optgroup label="Subkomponen PKRT">
+            <option value="1a">1a - Makanan dan Minuman Non Alkohol</option>
+            <option value="1b">1b - Minuman Beralkohol dan Rokok</option>
+            <option value="1c">1c - Pakaian</option>
+            <option value="1d">1d - Perumahan, Air, Listrik, Energi</option>
+            <option value="1e">1e - Perabot dan Perlengkapan RT</option>
+            <option value="1f">1f - Kesehatan</option>
+            <option value="1g">1g - Transportasi</option>
+            <option value="1h">1h - Komunikasi</option>
+            <option value="1i">1i - Rekreasi dan Budaya</option>
+            <option value="1j">1j - Pendidikan</option>
+            <option value="1k">1k - Hotel dan Penginapan</option>
+            <option value="1l">1l - Barang Pribadi dan Jasa Lainnya</option>
+          </optgroup>
+          <optgroup label="Komponen Utama">
+            <option value="1">1 - Pengeluaran Konsumsi RT</option>
+            <option value="2">2 - Pengeluaran Konsumsi LNPRT</option>
+            <option value="3">3 - Pengeluaran Konsumsi Pemerintah</option>
+            <option value="4">4 - Pembentukan Modal Tetap Bruto</option>
+            <option value="5">5 - Perubahan Inventori</option>
+            <option value="6">6 - Ekspor Luar Negeri</option>
+            <option value="7">7 - Impor Luar Negeri</option>
+          </optgroup>
+        </select>
+      </div>
+
       <div class="filter-divider"></div>
 
       <div class="filter-group">
@@ -159,6 +197,7 @@
                 <span class="pdrb-toggle-thumb"></span>
               </span>
               <span class="pdrb-toggle-text">Hanya PDRB Relevan</span>
+              <span class="tooltip tooltip-down info-icon" data-tooltip="Label dibuat otomatis oleh AI. Relevansi mencakup keterkaitan langsung maupun tidak langsung dengan PDRB — gunakan sebagai panduan awal, bukan keputusan final.">i</span>
             </label>
           </div>
           <div class="meta-bar">

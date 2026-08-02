@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   const displayName = profile?.nama || 'Pengguna';
                   widget.innerHTML = `
                     <div class="user-dropdown-wrapper">
-                      <button class="user-dropdown-btn" id="userDropdownBtn">${displayName} <span class="dropdown-arrow">▾</span></button>
+                      <button class="user-dropdown-btn" id="userDropdownBtn"><span class="user-name-text">${displayName}</span> <span class="dropdown-arrow">▾</span></button>
                       <div class="user-dropdown" id="userDropdown">
                         <a href="settings.html" class="user-dropdown-item">⚙️ Pengaturan</a>
                         <button class="user-dropdown-item user-dropdown-danger" onclick="signOut()">🚪 Keluar</button>
