@@ -591,8 +591,8 @@ function resetSearch() {
   region.value = "";
   lapus.value = "";
   document.getElementById('pengeluaran_filter').value = "";
-  document.getElementById('news_preset').value = "30d";  pdrb_only.checked = true;
-  localStorage.setItem("babelens_pdrb_filter", "true");
+  document.getElementById('news_preset').value = "30d";  pdrb_only.checked = false;
+  localStorage.setItem("babelens_pdrb_filter", "false");
   f_title.checked = true;
   f_summary.checked = true;
   f_full.checked = false;
@@ -734,9 +734,7 @@ window.onload = async () => {
 
   buildNewsPresetOptions();
 
-  if (localStorage.getItem("babelens_pdrb_filter") === "false") {
-    pdrb_only.checked = false;
-  }
+  pdrb_only.checked = localStorage.getItem("babelens_pdrb_filter") === "true";
 
   document.querySelectorAll('#feedback-stars span').forEach(s => {
     s.addEventListener('click', () => {
