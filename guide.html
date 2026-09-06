@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260906"></script>
-  <link rel="stylesheet" href="style.css?v=20260906">
+  <link rel="stylesheet" href="style.css?v=20260906d">
   <style>
     /* ── Guide-specific overrides ────────────── */
     .section-header {
@@ -84,22 +84,14 @@
   <!-- GLOBAL HEADER -->
   <header class="app-header">
     <div class="app-header-left">
-      <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
       <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
       <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
     </div>
+    <div id="nav-placeholder" class="app-header-nav"></div>
     <div id="header-user-widget"></div>
   </header>
 
   <div class="app-body">
-
-    <!-- MOBILE OVERLAY -->
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="sidebar">
-      <div id="sidebar-container"></div>
-    </aside>
 
     <!-- MAIN -->
     <main class="main-content">
@@ -250,7 +242,7 @@
 
   </div><!-- /.app-body -->
 
-  <script src="sidebar.js?v=20260906"></script>
+  <script src="sidebar.js?v=20260906b"></script>
   <script>
     requireAuth().then(r => { if (r) document.body.style.visibility = 'visible'; });
   </script>
