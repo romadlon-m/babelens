@@ -37,13 +37,23 @@
 
       <!-- KATA KUNCI + SCOPE CHIPS -->
       <div class="filter-group">
-        <label>Kata Kunci</label>
-        <input id="keyword" type="text" enterkeyhint="search" placeholder="Cari kata kunci...">
+        <label>Kata Kunci
+          <span class="tooltip tooltip-down tooltip-left info-icon" data-tooltip="Ketik lebih dari satu kata dan semuanya akan dicari sekaligus. Mau cari frasa yang persis sama? Pakai tanda kutip, contoh: &quot;harga telur&quot;">i</span>
+        </label>
+        <div class="keyword-search-box">
+          <input id="keyword" type="text" enterkeyhint="search" placeholder="Cari kata kunci... (tekan Enter)">
+          <button type="button" id="keyword_clear" class="keyword-clear-btn" title="Hapus kata kunci" aria-label="Hapus kata kunci">&times;</button>
+          <button type="button" id="keyword_search_btn" class="keyword-search-btn" title="Cari" aria-label="Cari">🔍</button>
+        </div>
         <div class="scope-chips">
           <button type="button" class="scope-chip active" data-cb="f_title"   onclick="toggleScope('f_title', this)">Judul</button>
           <button type="button" class="scope-chip active" data-cb="f_summary" onclick="toggleScope('f_summary', this)">Ringkasan</button>
           <button type="button" class="scope-chip"        data-cb="f_full"    onclick="toggleScope('f_full', this)">Artikel Lengkap</button>
         </div>
+        <button type="button" id="quick-keyword-toggle" class="quick-keyword-toggle">
+          Saran kata kunci <span class="quick-keyword-toggle-arrow">▾</span>
+        </button>
+        <div id="quick-keyword-chips" class="scope-chips"></div>
         <!-- Hidden checkboxes — dipakai JS, disinkron oleh chip -->
         <input type="checkbox" id="f_title"   checked style="display:none">
         <input type="checkbox" id="f_summary" checked style="display:none">
@@ -202,6 +212,13 @@
           </div>
           <div class="meta-bar">
             <div id="meta"></div>
+            <div class="page-size">
+              <label for="sort_select">Urutkan</label>
+              <select id="sort_select">
+                <option value="desc">Terbaru</option>
+                <option value="asc">Terlama</option>
+              </select>
+            </div>
             <div class="page-size">
               <label for="page_size_select">Jumlah Berita per Halaman</label>
               <select id="page_size_select">
