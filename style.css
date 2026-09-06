@@ -1228,6 +1228,8 @@ select {
 }
 
 #header-user-widget {
+  display: flex;
+  align-items: center;
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -1632,7 +1634,12 @@ select {
 
   .meta-bar {
     width: 100%;
+    flex-wrap: wrap;
     justify-content: flex-start;
+  }
+
+  .meta-bar #meta {
+    flex-basis: 100%;
   }
 
   /* Header: fall back to two rows — top row (logo+widget), nav wraps to its own full-width row below */
