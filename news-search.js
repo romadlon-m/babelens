@@ -1,5 +1,10 @@
 const db = window.db;
 
+const QUICK_KEYWORDS = [
+  'timah', 'lada', 'kaolin', 'sawit', 'ekspor', 'investasi',
+  'ekonomi', 'pariwisata', 'inflasi', 'umkm', 'tambang', 'perikanan'
+];
+
 // ====================================
 // LAPUS LABELS
 // ====================================
@@ -108,6 +113,48 @@ function toggleScope(id, btn) {
 }
 
 // ====================================
+// CHIP KATA KUNCI POPULER
+// ====================================
+function renderQuickKeywordChips() {
+  const wrap = document.getElementById('quick-keyword-chips');
+  if (!wrap) return;
+
+  wrap.innerHTML = QUICK_KEYWORDS.map(kw => `
+    <button type="button" class="scope-chip" data-kw="${kw}" onclick="applyQuickKeyword('${kw}', this)">${kw}</button>
+  `).join('');
+}
+
+function applyQuickKeyword(kw, btn) {
+  keyword.value = kw;
+  updateKeywordClearVisibility();
+  document.querySelectorAll('#quick-keyword-chips .scope-chip').forEach(chip => {
+    chip.classList.toggle('active', chip === btn);
+  });
+  search(1);
+}
+
+function toggleQuickKeywordChips() {
+  const wrap = document.getElementById('quick-keyword-chips');
+  const btn = document.getElementById('quick-keyword-toggle');
+  const willShow = !wrap.classList.contains('chips-visible');
+  wrap.classList.toggle('chips-visible', willShow);
+  btn.classList.toggle('open', willShow);
+}
+
+// ====================================
+// URUTKAN HASIL
+// ====================================
+let sortOrder = 'desc';
+
+function sortCurrentRows() {
+  currentRows.sort((a, b) => {
+    const da = new Date(a.publication_datetime).getTime();
+    const dbb = new Date(b.publication_datetime).getTime();
+    return sortOrder === 'asc' ? da - dbb : dbb - da;
+  });
+}
+
+// ====================================
 // PRESET PERIODE (NEWS SEARCH)
 // ====================================
 function buildNewsPresetOptions() {
@@ -177,6 +224,58 @@ function applyNewsPreset() {
 }
 
 // ====================================
+// FILTER KATA KUNCI (AND antar kata, OR antar kolom scope)
+// ====================================
+function splitKeywordWords(keyword) {
+  // %,()  are stripped: % is an ILIKE wildcard, and ,() have special
+  // meaning inside PostgREST's .or() filter DSL used by applyKeywordFilter.
+  const cleaned = (keyword || '').replace(/[%,()]/g, '');
+  const tokens = [];
+  const re = /"([^"]+)"|(\S+)/g;
+  let match;
+  while ((match = re.exec(cleaned)) !== null) {
+    const token = (match[1] || match[2] || '').trim().replace(/\s+/g, ' ');
+    if (token) tokens.push(token);
+  }
+  return tokens;
+}
+
+function applyKeywordFilter(query, params) {
+  if (!params.keyword) return query;
+
+  const words = splitKeywordWords(params.keyword);
+
+  words.forEach(word => {
+    const parts = [];
+    if (params.f_title)   parts.push(`title.ilike.%${word}%`);
+    if (params.f_summary) parts.push(`summary.ilike.%${word}%`);
+    if (params.f_full)    parts.push(`content.ilike.%${word}%`);
+    if (parts.length) query = query.or(parts.join(','));
+  });
+
+  return query;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightKeyword(text, words) {
+  const escaped = escapeHtml(String(text ?? ''));
+  if (!words || !words.length) return escaped;
+  const pattern = words.map(escapeRegExp).join('|');
+  if (!pattern) return escaped;
+  const re = new RegExp(`(${pattern})`, 'gi');
+  return escaped.replace(re, '<mark class="keyword-highlight">$1</mark>');
+}
+
+// ====================================
 // CARI
 // ====================================
 async function search(page = 1) {
@@ -236,14 +335,7 @@ async function search(page = 1) {
       if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
       if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
       if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
-      if (lastParams.keyword) {
-        const kw = lastParams.keyword.replace(/%/g, '');
-        const parts = [];
-        if (lastParams.f_title)   parts.push(`title.ilike.%${kw}%`);
-        if (lastParams.f_summary) parts.push(`summary.ilike.%${kw}%`);
-        if (lastParams.f_full)    parts.push(`content.ilike.%${kw}%`);
-        if (parts.length) query = query.or(parts.join(','));
-      }
+      query = applyKeywordFilter(query, lastParams);
 
       const { data: rows, error } = await query;
 
@@ -273,14 +365,7 @@ async function search(page = 1) {
     if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
     if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
     if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
-    if (lastParams.keyword) {
-      const kw = lastParams.keyword.replace(/%/g, '');
-      const parts = [];
-      if (lastParams.f_title)   parts.push(`title.ilike.%${kw}%`);
-      if (lastParams.f_summary) parts.push(`summary.ilike.%${kw}%`);
-      if (lastParams.f_full)    parts.push(`content.ilike.%${kw}%`);
-      if (parts.length) query = query.or(parts.join(','));
-    }
+    query = applyKeywordFilter(query, lastParams);
 
     const { count } = await query;
     return count || 0;
@@ -297,6 +382,7 @@ async function search(page = 1) {
   }
 
   currentRows = allRows;
+  sortCurrentRows();
   renderPage(1);
 
   const { data: { session } } = await db.auth.getSession();
@@ -325,8 +411,14 @@ function renderPage(page = 1) {
   const showingStart = totalFound === 0 ? 0 : start + 1;
   const showingEnd = start + rows.length;
 
+  const keywordWords = splitKeywordWords(lastParams.keyword);
+
+  const keywordNotice = lastParams.keyword
+    ? ` • Kata kunci: "<b>${highlightKeyword(lastParams.keyword, keywordWords)}</b>"`
+    : '';
+
   meta.innerHTML = `
-    Ditemukan <b>${totalFound.toLocaleString('id-ID')}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages.toLocaleString('id-ID')}</b> • Menampilkan <b>${showingStart.toLocaleString('id-ID')}</b>–<b>${showingEnd.toLocaleString('id-ID')}</b>
+    Ditemukan <b>${totalFound.toLocaleString('id-ID')}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages.toLocaleString('id-ID')}</b> • Menampilkan <b>${showingStart.toLocaleString('id-ID')}</b>–<b>${showingEnd.toLocaleString('id-ID')}</b>${keywordNotice}
   `;
 
   const pdrbNotice = document.getElementById('pdrb-notice');
@@ -335,7 +427,27 @@ function renderPage(page = 1) {
     : '';
 
   if (!rows.length) {
-    result.innerHTML = `<div class="news-card">Tidak ada hasil ditemukan.</div>`;
+    const hasKeyword = !!lastParams.keyword;
+    const hasFilters = !!(
+      lastParams.region || lastParams.lapus || lastParams.pengeluaran || lastParams.pdrb_relevan
+    );
+
+    let hint = 'Coba ubah kata kunci atau perlonggar filter pencarian.';
+    if (hasKeyword && hasFilters) {
+      hint = `Tidak ada artikel yang cocok dengan kata kunci "<b>${escapeHtml(lastParams.keyword)}</b>" dan filter yang aktif. Coba kurangi filter atau ubah kata kunci.`;
+    } else if (hasKeyword) {
+      hint = `Tidak ada artikel yang memuat semua kata dari "<b>${escapeHtml(lastParams.keyword)}</b>". Coba kata kunci yang lebih singkat atau berbeda.`;
+    } else if (hasFilters) {
+      hint = 'Coba perlonggar filter yang aktif (wilayah, lapangan usaha, komponen pengeluaran, atau Hanya PDRB Relevan).';
+    }
+
+    result.innerHTML = `
+      <div class="news-card no-results-card">
+        <div class="no-results-icon">🔍</div>
+        <div class="no-results-title">Tidak ada hasil ditemukan</div>
+        <div class="no-results-hint">${hint}</div>
+      </div>
+    `;
     pager.innerHTML = "";
     return;
   }
@@ -347,6 +459,10 @@ function renderPage(page = 1) {
     const formattedDate = formatDateIndo(r.publication_datetime);
     const citationText = `${r.title} (${r.source}, ${formattedDate})`;
     const summaryText = `${r.title}\n${r.summary}`;
+
+    const highlightedTitle = highlightKeyword(r.title, keywordWords);
+    const highlightedSummary = highlightKeyword(r.summary || "-", keywordWords);
+    const highlightedContent = highlightKeyword(r.content || "-", keywordWords);
 
     // Relevansi PDRB: Ya jika relevan LU atau Pengeluaran
     // NULL berarti artikel belum terlabeli (di luar rentang pelabelan batch 1)
@@ -370,7 +486,7 @@ function renderPage(page = 1) {
           <div>
             <h3 class="news-title">
               <a href="${r.url}" target="_blank">
-                ${r.title}
+                ${highlightedTitle}
               </a>
             </h3>
             <div class="news-meta">
@@ -384,7 +500,7 @@ function renderPage(page = 1) {
         </div>
 
         <div class="news-summary">
-          ${r.summary || "-"}
+          ${highlightedSummary}
           <span
             class="tooltip info-icon"
             data-tooltip="Ringkasan dibuat menggunakan AI. Harap verifikasi jika diperlukan."
@@ -460,7 +576,7 @@ function renderPage(page = 1) {
 
         </div>
 
-        <div class="full-article">${r.content || "-"}</div>
+        <div class="full-article">${highlightedContent}</div>
 
       </article>
     `;
@@ -527,7 +643,32 @@ function renderPager(page, totalPages) {
     html += `<button onclick="renderPage(${totalPages})" title="Halaman Terakhir">»</button>`;
   }
 
+  if (totalPages > 5) {
+    html += `
+      <span class="pager-jump">
+        <label for="jump_page_input">ke hal.</label>
+        <input
+          type="number"
+          id="jump_page_input"
+          min="1"
+          max="${totalPages}"
+          placeholder="${page}"
+          onkeydown="if (event.key === 'Enter') jumpToPage(${totalPages})"
+        >
+        <button type="button" onclick="jumpToPage(${totalPages})" title="Ke halaman ini" aria-label="Ke halaman ini">→</button>
+      </span>
+    `;
+  }
+
   pager.innerHTML = html;
+}
+
+function jumpToPage(totalPages) {
+  const input = document.getElementById('jump_page_input');
+  let target = parseInt(input.value, 10);
+  if (!target || target < 1) target = 1;
+  if (target > totalPages) target = totalPages;
+  renderPage(target);
 }
 
 
@@ -588,6 +729,7 @@ function showAllPdrb(e) {
 function resetSearch() {
 
   keyword.value = "";
+  updateKeywordClearVisibility();
   region.value = "";
   lapus.value = "";
   document.getElementById('pengeluaran_filter').value = "";
@@ -601,6 +743,13 @@ function resetSearch() {
     const cb = document.getElementById(chip.dataset.cb);
     if (cb) chip.classList.toggle('active', cb.checked);
   });
+
+  document.querySelectorAll('#quick-keyword-chips .scope-chip').forEach(chip => {
+    chip.classList.remove('active');
+  });
+
+  sortOrder = 'desc';
+  document.getElementById('sort_select').value = 'desc';
 
   document.querySelectorAll(".event_filter").forEach(cb => cb.checked = true);
 
@@ -627,6 +776,12 @@ function resetSearch() {
   });
 
 document.getElementById('news_preset').addEventListener('change', applyNewsPreset);
+
+document.getElementById('sort_select').addEventListener('change', function () {
+  sortOrder = this.value;
+  sortCurrentRows();
+  renderPage(1);
+});
 
 pdrb_only.addEventListener("change", () => {
   localStorage.setItem("babelens_pdrb_filter", pdrb_only.checked);
@@ -659,6 +814,30 @@ document.getElementById("page_size_select").addEventListener("change", function 
 keyword.addEventListener("keydown", e => {
   if (e.key === "Enter") search(1);
 });
+
+const keywordClearBtn = document.getElementById('keyword_clear');
+const keywordSearchBtn = document.getElementById('keyword_search_btn');
+
+document.getElementById('quick-keyword-toggle').addEventListener('click', toggleQuickKeywordChips);
+
+function updateKeywordClearVisibility() {
+  keywordClearBtn.classList.toggle('visible', keyword.value.length > 0);
+}
+
+keyword.addEventListener('input', updateKeywordClearVisibility);
+updateKeywordClearVisibility();
+
+keywordClearBtn.addEventListener('click', () => {
+  keyword.value = '';
+  updateKeywordClearVisibility();
+  document.querySelectorAll('#quick-keyword-chips .scope-chip').forEach(chip => {
+    chip.classList.remove('active');
+  });
+  keyword.focus();
+  search(1);
+});
+
+keywordSearchBtn.addEventListener('click', () => search(1));
 
 function updatePagerVisibility() {
   const pager = document.getElementById("pager");
@@ -733,6 +912,7 @@ window.onload = async () => {
   document.getElementById("page_size_select").value = getPageSize();
 
   buildNewsPresetOptions();
+  renderQuickKeywordChips();
 
   pdrb_only.checked = localStorage.getItem("babelens_pdrb_filter") === "true";
 

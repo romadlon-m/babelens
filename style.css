@@ -212,12 +212,32 @@ select {
   align-items: center;
   gap: 16px;
   justify-content: space-between;
-  width: 70%;
+  flex: 1;
+  min-width: 0;
+}
+
+.meta-bar #meta {
+  min-width: 0;
+}
+
+.meta-bar > .page-size,
+.meta-bar > .export-btn {
+  flex-shrink: 0;
 }
 
 /* SIDEBAR ACTIONS */
 .sidebar-actions {
   margin-top: 8px;
+}
+
+.news-page .sidebar-actions {
+  position: sticky;
+  bottom: -24px;
+  margin: 16px -24px -24px;
+  padding: 12px 24px 24px;
+  background: white;
+  border-top: 1px solid var(--border);
+  z-index: 5;
 }
 
 .secondary-btn {
@@ -340,6 +360,34 @@ select {
   transition: 0.2s;
 }
 
+.no-results-card {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.news-card.no-results-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.no-results-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.no-results-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.no-results-hint {
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
 .news-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
@@ -422,6 +470,102 @@ select {
   100% { background-position: 0 50%; }
 }
 
+/* Keyword highlight in result cards */
+.keyword-highlight {
+  background: #fef08a;
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+/* Keyword search box (news search) */
+.keyword-search-box {
+  position: relative;
+}
+
+.keyword-search-box input {
+  padding-right: 66px;
+}
+
+.keyword-clear-btn,
+.keyword-search-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.keyword-clear-btn {
+  right: 34px;
+  font-size: 18px;
+  color: var(--muted);
+  display: none;
+}
+
+.keyword-clear-btn.visible {
+  display: flex;
+}
+
+.keyword-clear-btn:hover {
+  background: #f3f4f6;
+  color: var(--text);
+}
+
+.keyword-search-btn {
+  right: 4px;
+  font-size: 14px;
+  color: var(--primary);
+}
+
+.keyword-search-btn:hover {
+  background: var(--primary-light);
+}
+
+/* Quick keyword chips toggle */
+.quick-keyword-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.quick-keyword-toggle:hover {
+  color: var(--primary);
+}
+
+.quick-keyword-toggle-arrow {
+  transition: transform 0.15s;
+  font-size: 10px;
+}
+
+.quick-keyword-toggle.open .quick-keyword-toggle-arrow {
+  transform: rotate(180deg);
+}
+
+#quick-keyword-chips {
+  display: none;
+  margin-top: 8px;
+}
+
+#quick-keyword-chips.chips-visible {
+  display: flex;
+}
+
 /* Scope chips (news search) */
 .scope-chips {
   display: flex;
@@ -461,6 +605,13 @@ select {
   top: 130%;
   bottom: auto;
   z-index: 200;
+}
+
+/* Tooltip left-anchored (for elements near the left edge of a clipped/narrow container, e.g. the sidebar) */
+.tooltip.tooltip-left::after {
+  left: 0;
+  transform: none;
+  max-width: 200px;
 }
 
 /* BADGES */
@@ -596,6 +747,41 @@ select {
   visibility: visible;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+/* Jump-to-page control */
+.pager-jump {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pager-jump input {
+  width: 56px;
+  padding: 8px 6px;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.pager-jump button {
+  border: 1px solid var(--border);
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.pager-jump button:hover {
+  background: var(--primary-light);
 }
 
 /* ============================================================
@@ -824,6 +1010,10 @@ select {
 .news-page select {
   padding: 4px 8px;
   font-size: 13px;
+}
+
+.news-page .keyword-search-box input[type="text"] {
+  padding-right: 62px;
 }
 
 .news-page .filter-divider {
@@ -1425,6 +1615,17 @@ select {
   .topbar {
     position: static;
     top: auto;
+  }
+
+  .topbar-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .meta-bar {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   /* Header: hide tagline */
