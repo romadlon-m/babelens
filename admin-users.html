@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Kelola Pengguna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js?v=20260907"></script>
+  <link rel="stylesheet" href="style.css?v=20260907b">
+</head>
+<body class="admin-page" style="visibility:hidden;">
+
+  <!-- GLOBAL HEADER -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
+      <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
+    </div>
+    <div id="nav-placeholder" class="app-header-nav"></div>
+    <div id="header-user-widget"></div>
+  </header>
+
+  <div class="app-body">
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="topbar-left">
+            <div><h2>Kelola Pengguna</h2></div>
+          </div>
+          <button class="primary-btn" onclick="openAdminModal()">+ Tambah Pengguna</button>
+        </div>
+      </header>
+
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" id="tab-btn-recent" onclick="switchAdminTab('recent')">Sudah Pernah Login</button>
+        <button class="admin-tab-btn" id="tab-btn-all" onclick="switchAdminTab('all')">Seluruh Pegawai</button>
+      </div>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>NIP</th>
+              <th>Nama</th>
+              <th>Email Google</th>
+              <th>Status</th>
+              <th>Login Terakhir</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody">
+            <tr><td colspan="6">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+  </div><!-- /.app-body -->
+
+  <!-- ADD USER MODAL -->
+  <div id="admin-modal-overlay" onclick="closeAdminModal(event)">
+    <div class="feedback-modal">
+      <div class="feedback-modal-header">
+        <span>Tambah Pengguna</span>
+        <button onclick="closeAdminModal(null, true)">✕</button>
+      </div>
+      <div class="admin-modal-field">
+        <label for="admin-new-nip">NIP (9 digit)</label>
+        <input type="text" id="admin-new-nip" maxlength="9" inputmode="numeric" placeholder="3400xxxxx">
+      </div>
+      <div class="admin-modal-field">
+        <label for="admin-new-nama">Nama</label>
+        <input type="text" id="admin-new-nama" placeholder="Nama lengkap">
+      </div>
+      <button id="admin-modal-submit" class="primary-btn" onclick="submitNewUser()">Simpan</button>
+      <div id="admin-status"></div>
+    </div>
+  </div>
+
+  <script src="sidebar.js?v=20260907"></script>
+  <script src="admin-users.js?v=20260907b"></script>
+  <script>
+    requireAuth().then(r => {
+      if (!r) return;
+      if (!r.profile?.is_admin) {
+        window.location.replace('index.html');
+        return;
+      }
+      document.body.style.visibility = 'visible';
+      loadAdminUsers();
+    });
+  </script>
+</body>
+</html>

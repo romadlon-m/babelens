@@ -81,10 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
           : Promise.resolve(null);
         profilePromise.then(profile => {
           const displayName = profile?.nama || 'Pengguna';
+          const adminLink = profile?.is_admin
+            ? '<a href="admin-users.html" class="user-dropdown-item">🛠️ Kelola Pengguna</a>'
+            : '';
           widget.innerHTML = `
             <div class="user-dropdown-wrapper">
               <button class="user-dropdown-btn" id="userDropdownBtn"><span class="user-name-text">${displayName}</span> <span class="dropdown-arrow">▾</span></button>
               <div class="user-dropdown" id="userDropdown">
+                ${adminLink}
                 <a href="settings.html" class="user-dropdown-item">⚙️ Pengaturan</a>
                 <button class="user-dropdown-item user-dropdown-danger" onclick="signOut()">🚪 Keluar</button>
               </div>
