@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Labeling Pengeluaran</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js?v=20260913"></script>
+  <link rel="stylesheet" href="style.css?v=20260913">
+</head>
+<body class="labeling-page" style="visibility:hidden;">
+
+  <!-- GLOBAL HEADER -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
+      <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
+    </div>
+    <div id="nav-placeholder" class="app-header-nav"></div>
+    <div id="header-user-widget"></div>
+  </header>
+
+  <div class="app-body">
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="topbar-left">
+            <div><h2>Labeling — Pengeluaran</h2></div>
+          </div>
+        </div>
+      </header>
+
+      <div id="labeling-queue-count" class="labeling-queue-counter">Sisa antrean: memuat...</div>
+
+      <div class="labeling-format-hint">
+        Tempel hasil AI persis satu baris dengan format:
+        <code>[No]|||[Ya/Tidak]|||[Komponen atau -]|||[Alasan]|||[Naik/Turun/Netral/-]</code>
+      </div>
+
+      <div id="labeling-card" class="labeling-card" hidden>
+        <h3 id="labeling-title"></h3>
+        <div id="labeling-meta" class="labeling-meta"></div>
+        <div id="labeling-content" class="labeling-content"></div>
+      </div>
+
+      <div id="labeling-empty" class="labeling-empty-state" hidden>
+        🎉 Antrean Pengeluaran kosong. Tidak ada berita yang perlu dilabel saat ini.
+      </div>
+
+      <div class="labeling-actions">
+        <button id="btn-copy-prompt" class="primary-btn">📋 Copy Prompt + Artikel</button>
+        <button id="btn-skip" class="secondary-btn">⏭️ Lewati</button>
+      </div>
+
+      <div class="labeling-step-label">Tempel hasil AI di sini</div>
+      <textarea id="result-textarea" class="labeling-textarea" placeholder="1|||Ya|||4|||Alasan singkat...|||Naik"></textarea>
+      <div id="validation-msg" class="labeling-validation-msg"></div>
+
+      <div class="labeling-actions">
+        <button id="btn-validate" class="primary-btn">Validasi</button>
+        <button id="btn-submit" class="primary-btn" hidden>Kirim</button>
+      </div>
+    </main>
+  </div><!-- /.app-body -->
+
+  <script src="sidebar.js?v=20260913"></script>
+  <script src="labeling-common.js?v=20260913"></script>
+  <script src="labeling-pengeluaran.js?v=20260913"></script>
+  <script>
+    requireAuth().then(r => {
+      if (!r) return;
+      if (!r.profile?.is_labeler) {
+        window.location.replace('index.html');
+        return;
+      }
+      document.body.style.visibility = 'visible';
+      initLabelingPage({ jenis: 'pengeluaran', parseLine: parsePengeluaranLine });
+    });
+  </script>
+</body>
+</html>

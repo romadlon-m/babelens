@@ -1,0 +1,266 @@
+// Shared engine for the 3 labeling pages (labeling-screener.html / labeling-lapus.html /
+// labeling-pengeluaran.html). Each page only supplies a `jenis` and a `parseLine()`
+// function (see labeling-screener.js / labeling-lapus.js / labeling-pengeluaran.js) —
+// everything else (queue counter, claim/skip/submit, prompt fetch, copy-to-clipboard)
+// lives here so the three pages stay in sync. Mirrors the shared-script precedent of
+// auth.js/sidebar.js rather than duplicating this logic 3x.
+//
+// See news-scraper-babel/LABELING_TOOL_PLAN.md (private repo) for the full design.
+
+const SUBMIT_LABEL_FN_URL = 'https://cyqqohycenkoludiefgq.supabase.co/functions/v1/submit-label';
+const LOCK_TIMEOUT_MINUTES = 25;
+
+function labelingEscapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+// Shared by the 3 page-specific parseLine() implementations: takes the pasted
+// textarea value, keeps only the first non-empty line (tolerates a stray leading/
+// trailing blank line from copy-paste), and splits on the "|||" separator.
+function labelingSplitPipes(raw, expectedCount) {
+  const lines = (raw || '').split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) throw new Error('Tempel hasil AI terlebih dahulu.');
+  if (lines.length > 1) throw new Error('Hanya boleh satu baris hasil (satu artikel per submit).');
+  const parts = lines[0].split('|||').map(p => p.trim());
+  if (parts.length !== expectedCount) {
+    throw new Error(`Format salah: harus ada tepat ${expectedCount} bagian dipisah "|||", ditemukan ${parts.length}.`);
+  }
+  return parts;
+}
+
+function labelingFormatDate(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function labelingFormatArticleForPrompt(row) {
+  return `1. Judul: ${row.title || '-'}\nTanggal: ${labelingFormatDate(row.publication_datetime)}\nSumber: ${row.source || '-'}\nIsi: ${row.content || row.summary || '-'}`;
+}
+
+async function labelingCopyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    // Fallback for browsers/contexts without Clipboard API permission.
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+async function labelingFetchActivePrompt(jenis) {
+  const { data, error } = await window.db
+    .from('label_prompts')
+    .select('id, isi_prompt, versi')
+    .eq('jenis', jenis)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) throw new Error('Gagal memuat prompt aktif: ' + error.message);
+  if (!data) throw new Error(`Belum ada prompt aktif untuk jenis "${jenis}".`);
+  return data;
+}
+
+async function labelingQueueCount(jenis) {
+  const cutoff = new Date(Date.now() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
+  let query = window.db.from('news').select('id', { count: 'exact', head: true });
+  if (jenis === 'screener') {
+    query = query.is('screener_passed', null).or(`screener_assigned_to.is.null,screener_assigned_at.lt.${cutoff}`);
+  } else if (jenis === 'lapus') {
+    query = query.eq('screener_passed', true).is('lu_relevan', null)
+      .or(`lapus_assigned_to.is.null,lapus_assigned_at.lt.${cutoff}`);
+  } else {
+    query = query.eq('screener_passed', true).is('pengeluaran_relevan', null)
+      .or(`pengeluaran_assigned_to.is.null,pengeluaran_assigned_at.lt.${cutoff}`);
+  }
+  const { count, error } = await query;
+  if (error) throw new Error('Gagal menghitung antrean: ' + error.message);
+  return count ?? 0;
+}
+
+async function labelingClaimNext(jenis) {
+  const { data, error } = await window.db.rpc('claim_next_news_for_labeling', { p_jenis: jenis });
+  if (error) throw new Error('Gagal mengambil antrean: ' + error.message);
+  if (!data || data.id == null) return null;
+  return data;
+}
+
+async function labelingReleaseLock(newsId, jenis) {
+  const { error } = await window.db.rpc('release_news_lock', { p_news_id: newsId, p_jenis: jenis });
+  if (error) throw new Error('Gagal melepas kunci: ' + error.message);
+}
+
+async function labelingSubmit(newsId, jenis, hasil) {
+  const { data: { session } } = await window.db.auth.getSession();
+  if (!session) throw new Error('Sesi tidak valid, silakan login ulang.');
+  const res = await fetch(SUBMIT_LABEL_FN_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ news_id: newsId, jenis, hasil })
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || 'Gagal mengirim label');
+  return body;
+}
+
+/**
+ * Wires up a labeling page. `config`:
+ *   - jenis: 'screener' | 'lapus' | 'pengeluaran'
+ *   - parseLine(rawText): returns { hasil } on success or throws Error(message) on
+ *     invalid input. `hasil` must match the shape submit-label expects for the jenis.
+ */
+function initLabelingPage(config) {
+  const { jenis, parseLine } = config;
+
+  const els = {
+    queueCount: document.getElementById('labeling-queue-count'),
+    card: document.getElementById('labeling-card'),
+    empty: document.getElementById('labeling-empty'),
+    title: document.getElementById('labeling-title'),
+    meta: document.getElementById('labeling-meta'),
+    content: document.getElementById('labeling-content'),
+    btnCopy: document.getElementById('btn-copy-prompt'),
+    textarea: document.getElementById('result-textarea'),
+    btnValidate: document.getElementById('btn-validate'),
+    btnSubmit: document.getElementById('btn-submit'),
+    btnSkip: document.getElementById('btn-skip'),
+    validationMsg: document.getElementById('validation-msg')
+  };
+
+  let currentRow = null;
+  let activePrompt = null;
+  let pendingHasil = null;
+
+  function resetResultArea() {
+    els.textarea.value = '';
+    els.validationMsg.textContent = '';
+    els.validationMsg.className = 'labeling-validation-msg';
+    els.btnSubmit.hidden = true;
+    pendingHasil = null;
+  }
+
+  function renderRow(row) {
+    currentRow = row;
+    if (!row) {
+      els.card.hidden = true;
+      els.empty.hidden = false;
+      resetResultArea();
+      return;
+    }
+    els.empty.hidden = true;
+    els.card.hidden = false;
+    els.title.textContent = row.title || '(tanpa judul)';
+    els.meta.innerHTML = [
+      `📅 ${labelingEscapeHtml(labelingFormatDate(row.publication_datetime))}`,
+      `📰 ${labelingEscapeHtml(row.source || '-')}`,
+      row.category ? `🏷️ ${labelingEscapeHtml(row.category)}` : ''
+    ].filter(Boolean).map(s => `<span>${s}</span>`).join('');
+    els.content.textContent = row.content || row.summary || '(tidak ada isi)';
+    resetResultArea();
+  }
+
+  async function refreshQueueCount() {
+    try {
+      const n = await labelingQueueCount(jenis);
+      els.queueCount.innerHTML = `Sisa antrean: <strong>${n}</strong> baris`;
+    } catch (err) {
+      els.queueCount.textContent = 'Sisa antrean: (gagal memuat)';
+      console.error(err);
+    }
+  }
+
+  async function loadNext() {
+    els.card.hidden = true;
+    els.empty.hidden = true;
+    try {
+      const row = await labelingClaimNext(jenis);
+      renderRow(row);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleCopy() {
+    if (!currentRow || !activePrompt) return;
+    const text = activePrompt.isi_prompt + '\n' + labelingFormatArticleForPrompt(currentRow);
+    const ok = await labelingCopyToClipboard(text);
+    const original = els.btnCopy.textContent;
+    els.btnCopy.textContent = ok ? '✅ Disalin!' : '❌ Gagal menyalin';
+    setTimeout(() => { els.btnCopy.textContent = original; }, 1800);
+  }
+
+  function handleValidate() {
+    els.validationMsg.className = 'labeling-validation-msg';
+    try {
+      const { hasil } = parseLine(els.textarea.value);
+      pendingHasil = hasil;
+      els.validationMsg.textContent = '✅ Format valid, siap dikirim.';
+      els.validationMsg.classList.add('ok');
+      els.btnSubmit.hidden = false;
+    } catch (err) {
+      pendingHasil = null;
+      els.validationMsg.textContent = '❌ ' + err.message;
+      els.validationMsg.classList.add('error');
+      els.btnSubmit.hidden = true;
+    }
+  }
+
+  async function handleSubmit() {
+    if (!currentRow || !pendingHasil) return;
+    els.btnSubmit.disabled = true;
+    els.btnSkip.disabled = true;
+    try {
+      await labelingSubmit(currentRow.id, jenis, pendingHasil);
+      await refreshQueueCount();
+      await loadNext();
+    } catch (err) {
+      alert('Gagal mengirim: ' + err.message);
+    } finally {
+      els.btnSubmit.disabled = false;
+      els.btnSkip.disabled = false;
+    }
+  }
+
+  async function handleSkip() {
+    if (!currentRow) return;
+    els.btnSkip.disabled = true;
+    try {
+      await labelingReleaseLock(currentRow.id, jenis);
+      await refreshQueueCount();
+      await loadNext();
+    } catch (err) {
+      alert('Gagal melewati: ' + err.message);
+    } finally {
+      els.btnSkip.disabled = false;
+    }
+  }
+
+  els.btnCopy.addEventListener('click', handleCopy);
+  els.btnValidate.addEventListener('click', handleValidate);
+  els.btnSubmit.addEventListener('click', handleSubmit);
+  els.btnSkip.addEventListener('click', handleSkip);
+
+  (async () => {
+    try {
+      activePrompt = await labelingFetchActivePrompt(jenis);
+    } catch (err) {
+      alert(err.message);
+    }
+    await refreshQueueCount();
+    await loadNext();
+  })();
+}

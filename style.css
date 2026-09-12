@@ -2180,3 +2180,128 @@ select {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ============================================================
+   LABELING TOOL (labeling-screener.html / labeling-lapus.html /
+   labeling-pengeluaran.html) — see news-scraper-babel/LABELING_TOOL_PLAN.md
+   (private repo) for the full design rationale.
+   ============================================================ */
+.labeling-page .main-content {
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.labeling-queue-counter {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.labeling-queue-counter strong {
+  color: var(--text);
+}
+
+.labeling-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 18px;
+}
+
+.labeling-card h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.labeling-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.labeling-content {
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.labeling-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.labeling-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 18px 0 8px;
+}
+
+.labeling-textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  resize: vertical;
+}
+
+.labeling-validation-msg {
+  font-size: 13px;
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+
+.labeling-validation-msg.error {
+  color: #dc2626;
+}
+
+.labeling-validation-msg.ok {
+  color: var(--green);
+}
+
+.labeling-empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 60px 20px;
+  font-size: 14px;
+}
+
+.labeling-format-hint {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--primary-light);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.labeling-format-hint code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+@media (max-width: 767px) {
+  .labeling-actions {
+    flex-direction: column;
+  }
+  .labeling-actions button {
+    width: 100%;
+  }
+}

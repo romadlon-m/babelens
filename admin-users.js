@@ -80,7 +80,89 @@ function switchAdminTab(tab) {
   adminActiveTab = tab;
   document.getElementById('tab-btn-recent').classList.toggle('active', tab === 'recent');
   document.getElementById('tab-btn-all').classList.toggle('active', tab === 'all');
+  document.getElementById('tab-btn-labeling').classList.toggle('active', tab === 'labeling');
+
+  const usersView = document.getElementById('admin-users-view');
+  const labelingView = document.getElementById('admin-labeling-view');
+
+  if (tab === 'labeling') {
+    usersView.hidden = true;
+    labelingView.hidden = false;
+    loadLabelingReport();
+    return;
+  }
+
+  usersView.hidden = false;
+  labelingView.hidden = true;
   renderActiveTab();
+}
+
+const JENIS_LABELS = { screener: 'Screener', lapus: 'Lapangan Usaha', pengeluaran: 'Pengeluaran' };
+
+function formatReportDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Monitoring produktivitas intern (LABELING_TOOL_PLAN.md bagian 7): jumlah submit per
+// intern/jenis/hari, dihitung dari labeling_log. Nama diambil dari adminUsersCache
+// (dimuat lewat Edge Function admin-users) karena RLS profiles tidak mengizinkan
+// klien admin membaca profil user lain langsung — labeling_log sendiri sudah
+// mengizinkan admin membaca semua baris (lihat migrasi labeling_tool_schema).
+async function loadLabelingReport() {
+  const tbody = document.getElementById('admin-labeling-tbody');
+  tbody.innerHTML = '<tr><td colspan="4">Memuat data...</td></tr>';
+
+  try {
+    if (!adminUsersCache.length) {
+      const { users } = await callAdminFn('list');
+      adminUsersCache = users || [];
+    }
+    const nameById = {};
+    adminUsersCache.forEach(u => { nameById[u.id] = u.nama; });
+
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const { data, error } = await window.db
+      .from('labeling_log')
+      .select('labeler_id, jenis, created_at')
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const counts = {}; // key: date|labeler_id|jenis -> count
+    (data || []).forEach(row => {
+      const date = formatReportDate(row.created_at);
+      const key = `${date}|||${row.labeler_id}|||${row.jenis}`;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const rows = Object.entries(counts).map(([key, count]) => {
+      const [date, labelerId, jenis] = key.split('|||');
+      return { date, labelerId, jenis, count };
+    }).sort((a, b) => {
+      if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
+      return (nameById[a.labelerId] || '').localeCompare(nameById[b.labelerId] || '', 'id');
+    });
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.date)}</td>
+        <td>${escapeHtml(nameById[r.labelerId] || r.labelerId)}</td>
+        <td>${escapeHtml(JENIS_LABELS[r.jenis] || r.jenis)}</td>
+        <td>${r.count}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
+  }
 }
 
 async function loadAdminUsers() {

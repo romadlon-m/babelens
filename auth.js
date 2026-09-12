@@ -11,7 +11,7 @@ async function requireAuth() {
   }
   const { data: profile } = await window.db
     .from('profiles')
-    .select('must_change_password, nip_lama, nama, is_admin')
+    .select('must_change_password, nip_lama, nama, is_admin, is_labeler')
     .eq('id', session.user.id)
     .single();
 
@@ -55,7 +55,7 @@ async function getCurrentProfile() {
   if (!session) return null;
   const { data, error } = await window.db
     .from('profiles')
-    .select('id, nip_lama, nama, must_change_password, is_admin')
+    .select('id, nip_lama, nama, must_change_password, is_admin, is_labeler')
     .eq('id', session.user.id)
     .single();
   console.log('[getCurrentProfile]', { data, error });
