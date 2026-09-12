@@ -81,6 +81,110 @@ const PENGELUARAN_PROVINSI_TO_KABKOTA = {
   '1l': '1.g'
 };
 
+// Level pengeluaran mengikuti filter wilayah yang sudah aktif: satu kab/kota
+// dipilih -> skema Kab/Kota (7 kelompok); tanpa filter, atau "Bangka Belitung"
+// (opsi provinsi penuh, bukan kab/kota) -> skema Provinsi (12 kode). Sama aturan
+// dengan dashboard.js — lihat CLAUDE.md item 3.
+function getPengeluaranGranularity(region) {
+  return (region && region !== 'Bangka Belitung') ? 'kabkota' : 'provinsi';
+}
+
+// Kode agregat non-PKRT ('1'-'7') tidak punya padanan Kab/Kota — jatuhkan ke
+// label Provinsi supaya tetap deskriptif.
+function pengeluaranLabel(code, granularity) {
+  if (granularity === 'kabkota') {
+    const kabkotaCode = PENGELUARAN_PROVINSI_TO_KABKOTA[code];
+    if (kabkotaCode) return PENGELUARAN_KABKOTA_LABELS[kabkotaCode] || PENGELUARAN_LABELS[code] || code;
+  }
+  return PENGELUARAN_LABELS[code] || code;
+}
+
+// Kode yang ditampilkan (bukan cuma label deskripsinya) juga ikut diterjemahkan ke
+// kode kelompok di mode Kab/Kota ('1f' -> '1.d') — awalnya kode asli sengaja
+// dipertahankan supaya tidak "lossy", tapi ternyata bikin bingung: user melihat
+// kode gaya Provinsi ('1i', '1k') di badge yang justru berlabel "(Kab/Kota)".
+// Kode agregat non-PKRT tidak punya padanan, tetap ditampilkan apa adanya.
+function pengeluaranDisplayCode(code, granularity) {
+  if (granularity === 'kabkota') return PENGELUARAN_PROVINSI_TO_KABKOTA[code] || code;
+  return code;
+}
+
+// Markup asli filter "Komponen Pengeluaran" (skema Provinsi, ditulis langsung di
+// news.html) — ditangkap sekali di sini supaya bisa dikembalikan persis tanpa
+// menduplikasi isinya di JS.
+let pengeluaranFilterProvinsiHtml = null;
+
+// Granularitas terakhir yang sudah dirender — dipakai supaya rebuild + reset
+// pilihan HANYA terjadi kalau granularitasnya benar-benar berubah (Provinsi <->
+// Kab/Kota), bukan setiap kali wilayah berganti (mis. Bangka Tengah -> Bangka
+// Selatan sama-sama Kab/Kota, daftar 7 opsinya identik — filter yang sudah dipilih
+// semestinya tetap, tidak perlu ikut ke-reset).
+let previousPengeluaranGranularity = null;
+
+// kabkotaCode -> [kode Provinsi anggotanya], kebalikan dari PENGELUARAN_PROVINSI_TO_KABKOTA.
+const PENGELUARAN_KABKOTA_TO_PROVINSI = {};
+Object.entries(PENGELUARAN_PROVINSI_TO_KABKOTA).forEach(([code, kabkotaCode]) => {
+  (PENGELUARAN_KABKOTA_TO_PROVINSI[kabkotaCode] = PENGELUARAN_KABKOTA_TO_PROVINSI[kabkotaCode] || []).push(code);
+});
+
+// Nilai filter "Komponen Pengeluaran" bisa berupa kode Provinsi tunggal (mis. '1f',
+// dipilih di mode Provinsi) atau kode kelompok Kab/Kota (mis. '1.d', dipilih di mode
+// Kab/Kota). Kode kelompok harus dicocokkan ke SALAH SATU kode Provinsi anggotanya
+// (.overlaps — operator array "&&"), beda dari kode tunggal yang dicocokkan persis
+// (.contains — operator array "@>").
+function applyPengeluaranFilter(query, value) {
+  if (!value) return query;
+  const kabkotaMembers = PENGELUARAN_KABKOTA_TO_PROVINSI[value];
+  return kabkotaMembers
+    ? query.overlaps('komponen_pengeluaran', kabkotaMembers)
+    : query.contains('komponen_pengeluaran', [value]);
+}
+
+// Ubah PILIHAN filter "Komponen Pengeluaran" (bukan cuma tampilan) menurut wilayah
+// yang aktif: satu kab/kota dipilih -> 7 opsi kelompok Kab/Kota (1.a-1.g) saja,
+// tanpa kode Provinsi di baliknya — karena user Kab/Kota memang menghafal huruf
+// a-g itu sendiri, bukan kode Provinsi. Tanpa filter/"Bangka Belitung" -> kembali
+// ke 12 kode Provinsi asli. Pilihan sebelumnya di-reset ke "Semua Komponen" saat
+// berganti mode karena "1f" (kode tunggal) dan "1.d" (kelompok) beda jenis pilihan
+// — lihat applyPengeluaranFilter() soal bagaimana kelompok diterjemahkan ke query.
+function renderPengeluaranFilterOptions() {
+  const select = document.getElementById('pengeluaran_filter');
+  if (pengeluaranFilterProvinsiHtml === null) {
+    pengeluaranFilterProvinsiHtml = select.innerHTML;
+  }
+
+  const granularity = getPengeluaranGranularity(region.value);
+  if (granularity === previousPengeluaranGranularity) return;
+  previousPengeluaranGranularity = granularity;
+
+  if (granularity === 'provinsi') {
+    select.innerHTML = pengeluaranFilterProvinsiHtml;
+  } else {
+    let html = '<option value="">Semua Komponen</option>';
+    html += '<optgroup label="Subkomponen PKRT (Kab/Kota)">';
+    Object.keys(PENGELUARAN_KABKOTA_LABELS).forEach(kabkotaCode => {
+      html += `<option value="${kabkotaCode}">${kabkotaCode} - ${PENGELUARAN_KABKOTA_LABELS[kabkotaCode]}</option>`;
+    });
+    html += '</optgroup>';
+    html += '<optgroup label="Komponen Utama">';
+    ['1', '2', '3', '4', '5', '6', '7'].forEach(code => {
+      html += `<option value="${code}">${code} - ${PENGELUARAN_LABELS[code] || code}</option>`;
+    });
+    html += '</optgroup>';
+
+    select.innerHTML = html;
+  }
+
+  select.value = "";
+
+  const labelEl = document.getElementById('pengeluaran_filter_label');
+  if (labelEl) {
+    labelEl.textContent = granularity === 'kabkota'
+      ? 'Komponen Pengeluaran (Kab/Kota)'
+      : 'Komponen Pengeluaran (Provinsi)';
+  }
+}
+
 let lastParams = {};
 let currentRows = [];
 let hiddenCount = 0;
@@ -358,7 +462,7 @@ async function search(page = 1) {
 
       if (lastParams.region)       query = query.eq('region_final', lastParams.region);
       if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
-      if (lastParams.pengeluaran)  query = query.contains('komponen_pengeluaran', [lastParams.pengeluaran]);
+      query = applyPengeluaranFilter(query, lastParams.pengeluaran);
       if (lastParams.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
       if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
       if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
@@ -389,7 +493,7 @@ async function search(page = 1) {
 
     if (lastParams.region)       query = query.eq('region_final', lastParams.region);
     if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
-    if (lastParams.pengeluaran)  query = query.contains('komponen_pengeluaran', [lastParams.pengeluaran]);
+    query = applyPengeluaranFilter(query, lastParams.pengeluaran);
     if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
     if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
     if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
@@ -444,6 +548,14 @@ function renderPage(page = 1) {
   const keywordNotice = lastParams.keyword
     ? ` • Kata kunci: "<b>${highlightKeyword(lastParams.keyword, keywordWords)}</b>"`
     : '';
+
+  // Skema komponen pengeluaran (Provinsi/Kab-Kota) mengikuti filter wilayah aktif —
+  // sama aturan dengan dashboard.js. Dihitung sekali di sini (semua kartu pada satu
+  // hasil pencarian berbagi granularitas yang sama, filter wilayah single-select),
+  // ditampilkan per-kartu di badge "Peng: ..." bukan di meta-bar — lihat pemakaian
+  // di bawah pada bagian render kartu.
+  const pengGranularity = getPengeluaranGranularity(lastParams.region);
+  const pengLevelLabel  = pengGranularity === 'kabkota' ? 'Kab/Kota' : 'Provinsi';
 
   meta.innerHTML = `
     Ditemukan <b>${totalFound.toLocaleString('id-ID')}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages.toLocaleString('id-ID')}</b> • Menampilkan <b>${showingStart.toLocaleString('id-ID')}</b>–<b>${showingEnd.toLocaleString('id-ID')}</b>${keywordNotice}
@@ -502,10 +614,22 @@ function renderPage(page = 1) {
     const lapusShort = lapusArr.join(', ') || '-';
     const lapusLong = lapusArr.map(k => `${k} - ${LAPUS_LABELS[k] || k}`).join('\n');
 
-    // Komponen Pengeluaran
+    // Komponen Pengeluaran. Skema (Provinsi/Kab-Kota) ikut ditandai di label badge
+    // dan tooltip — lihat getPengeluaranGranularity() soal aturan Provinsi vs Kab/Kota.
+    // Kode yang ditampilkan diterjemahkan ke kode kelompok di mode Kab/Kota
+    // (pengeluaranDisplayCode) — kalau 2 kode artikel jatuh ke kelompok yang sama
+    // (mis. 1f & 1j -> 1.d), dedupe pakai Map supaya tidak muncul kelompok dobel.
     const pengArr  = r.komponen_pengeluaran || [];
-    const pengShort = pengArr.join(', ') || '-';
-    const pengLong  = pengArr.map(k => `${k} - ${PENGELUARAN_LABELS[k] || k}`).join('\n');
+    const pengGroups = new Map();
+    pengArr.forEach(k => {
+      const displayCode = pengeluaranDisplayCode(k, pengGranularity);
+      if (!pengGroups.has(displayCode)) pengGroups.set(displayCode, pengeluaranLabel(k, pengGranularity));
+    });
+    const pengShort = pengGroups.size ? [...pengGroups.keys()].join(', ') : '-';
+    const pengLong  = [...pengGroups.entries()].map(([code, label]) => `${code} - ${label}`).join('\n');
+    const pengSchemeLine = pengGranularity === 'kabkota'
+      ? `Skema: Kab/Kota — ${lastParams.region} (7 kelompok resmi BPS, lebih ringkas dari rincian Provinsi).`
+      : 'Skema: Provinsi (12 kategori resmi BPS).';
 
     html += `
       <article class="news-card">
@@ -560,10 +684,10 @@ function renderPage(page = 1) {
           ${pengArr.length > 0 ? `
             <span
               class="badge badge-blue tooltip"
-              data-tooltip="${pengLong} — Dibuat menggunakan klasifikasi AI. Harap verifikasi jika diperlukan."
+              data-tooltip="${pengLong}\n${pengSchemeLine} Dibuat menggunakan klasifikasi AI. Harap verifikasi jika diperlukan."
               style="background:#fef3c7;color:#92400e;"
             >
-              Peng: ${pengShort}
+              Peng: ${pengShort} (${pengLevelLabel})
             </span>
           ` : ""}
 
@@ -759,6 +883,7 @@ function resetSearch() {
   keyword.value = "";
   updateKeywordClearVisibility();
   region.value = "";
+  renderPengeluaranFilterOptions();
   lapus.value = "";
   document.getElementById('pengeluaran_filter').value = "";
   document.getElementById('news_preset').value = "30d";  pdrb_only.checked = false;
@@ -800,7 +925,10 @@ function resetSearch() {
 // ====================================
 ["region", "lapus", "pengeluaran_filter", "date_from", "date_to"]
   .forEach(id => {
-    document.getElementById(id).addEventListener("change", () => search(1));
+    document.getElementById(id).addEventListener("change", () => {
+      if (id === "region") renderPengeluaranFilterOptions();
+      search(1);
+    });
   });
 
 document.getElementById('news_preset').addEventListener('change', applyNewsPreset);
@@ -944,6 +1072,11 @@ window.onload = async () => {
 
   pdrb_only.checked = localStorage.getItem("babelens_pdrb_filter") === "true";
 
+  // Browser bisa mengembalikan nilai <select> sebelumnya saat reload (bfcache/
+  // autofill) tanpa memicu event "change" — pastikan grouping filter pengeluaran
+  // tetap sinkron dengan wilayah yang benar-benar aktif saat halaman dimuat.
+  renderPengeluaranFilterOptions();
+
   document.querySelectorAll('#feedback-stars span').forEach(s => {
     s.addEventListener('click', () => {
       feedbackRating = parseInt(s.dataset.value);
@@ -965,13 +1098,33 @@ function exportToExcel() {
     return;
   }
 
+  // Skema pengeluaran (Provinsi/Kab-Kota) mengikuti filter wilayah aktif, sama
+  // aturan dengan dashboard.js dan meta-bar pencarian. Ditandai di NAMA KOLOM
+  // (bukan baris judul terpisah) supaya keterangannya tetap melekat ke data kalau
+  // user menyortir/menyalin sebagian baris di Excel.
+  const pengGranularity = getPengeluaranGranularity(lastParams.region);
+  const pengColSuffix = pengGranularity === 'kabkota' ? ' (Kab/Kota)' : ' (Provinsi)';
+  const pengColName    = `Komp. Pengeluaran${pengColSuffix}`;
+  const pengColName2   = `Komp. Pengeluaran 2${pengColSuffix}`;
+
   const exportData = currentRows.map((r, i) => {
     const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
     const lapusArr = r.kategori_lapus || [];
     const pengArr  = r.komponen_pengeluaran || [];
 
     const lapusLabel = code => code ? `${code} - ${LAPUS_LABELS[code] || code}` : "-";
-    const pengLabel  = code => code ? `${code} - ${PENGELUARAN_LABELS[code] || code}` : "-";
+
+    // Dedupe ke kode kelompok Kab/Kota sebelum dipecah ke 2 kolom — kalau kedua kode
+    // Provinsi artikel jatuh ke kelompok yang sama (mis. 1g & 1i -> 1.e), harusnya
+    // cuma muncul sekali di kolom pertama, bukan diulang di kolom kedua. Sama pola
+    // dengan dedupe di badge kartu (renderPage()) — lihat pengeluaranDisplayCode().
+    const pengGroups = new Map();
+    pengArr.forEach(k => {
+      const displayCode = pengeluaranDisplayCode(k, pengGranularity);
+      if (!pengGroups.has(displayCode)) pengGroups.set(displayCode, pengeluaranLabel(k, pengGranularity));
+    });
+    const pengEntries = [...pengGroups.entries()];
+    const pengLabel = entry => entry ? `${entry[0]} - ${entry[1]}` : "-";
 
     return {
       "No": i + 1,
@@ -986,8 +1139,8 @@ function exportToExcel() {
       "Lap. Usaha": lapusLabel(lapusArr[0]),
       "Lap. Usaha 2": lapusLabel(lapusArr[1]),
       "Pengeluaran Relevan": r.pengeluaran_relevan || "-",
-      "Komp. Pengeluaran": pengLabel(pengArr[0]),
-      "Komp. Pengeluaran 2": pengLabel(pengArr[1]),
+      [pengColName]: pengLabel(pengEntries[0]),
+      [pengColName2]: pengLabel(pengEntries[1]),
       "Ringkasan": r.summary || "-",
       "URL": r.url || "-",
       "Kutipan": r.title
