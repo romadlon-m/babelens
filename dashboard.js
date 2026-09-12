@@ -112,6 +112,36 @@ const PENGELUARAN_SHORT_LABELS = {
   '7':  'Impor LN'
 };
 
+// PENGELUARAN_KABKOTA_LABELS: taksonomi BPS level Kab/Kota (7 kelompok, lebih kasar
+// dari 12 kode Provinsi di PENGELUARAN_LABELS di atas). Mapping ke kode Provinsi
+// dikonfirmasi cocok secara isi untuk 6/7 kelompok (lihat news-scraper-babel/CLAUDE.md
+// item 3) — kelompok 1.f "Hotel dan Restoran" cuma dipetakan dari 1k "Hotel dan
+// Penginapan" karena tidak ada kode Provinsi untuk restoran/makan-di-luar sama sekali;
+// artikel yang murni soal restoran tidak akan pernah muncul di grup ini sampai BPS
+// mengonfirmasi ke mana itu seharusnya masuk.
+const PENGELUARAN_KABKOTA_LABELS = {
+  '1.a': 'Makanan, Minuman, dan Rokok',
+  '1.b': 'Pakaian dan Alas Kaki',
+  '1.c': 'Perumahan, Perkakas, Perlengkapan dan Penyelenggaraan Rumah Tangga',
+  '1.d': 'Kesehatan dan Pendidikan',
+  '1.e': 'Transportasi, Komunikasi, Rekreasi, dan Budaya',
+  '1.f': 'Hotel dan Restoran',
+  '1.g': 'Lainnya'
+};
+
+// Kode Provinsi (PENGELUARAN_LABELS) -> kode Kab/Kota (PENGELUARAN_KABKOTA_LABELS).
+// Kode level agregat ('1', '2', ... '7') sengaja tidak dipetakan — taksonomi
+// Kab/Kota ini cuma pecahan dari '1' (Pengeluaran Konsumsi Rumah Tangga).
+const PENGELUARAN_PROVINSI_TO_KABKOTA = {
+  '1a': '1.a', '1b': '1.a',
+  '1c': '1.b',
+  '1d': '1.c', '1e': '1.c',
+  '1f': '1.d', '1j': '1.d',
+  '1g': '1.e', '1h': '1.e', '1i': '1.e',
+  '1k': '1.f',
+  '1l': '1.g'
+};
+
 // ====================================
 // HELPERS
 // ====================================
@@ -126,11 +156,42 @@ function countByLapus(data) {
   }, {});
 }
 
-function countByPengeluaran(data) {
+function countByPengeluaran(data, granularity) {
   return data.reduce((acc, r) => {
-    (r.komponen_pengeluaran || []).forEach(v => { acc[v] = (acc[v] || 0) + 1; });
+    (r.komponen_pengeluaran || []).forEach(v => {
+      const key = granularity === 'kabkota' ? (PENGELUARAN_PROVINSI_TO_KABKOTA[v] || v) : v;
+      acc[key] = (acc[key] || 0) + 1;
+    });
     return acc;
   }, {});
+}
+
+// Level pengeluaran mengikuti filter wilayah yang sudah ada: satu kab/kota dipilih
+// -> skema resmi BPS Kab/Kota (7 kelompok, lebih ringkas); tanpa filter, atau
+// "Bangka Belitung" (opsi provinsi penuh di #dash_region, bukan kab/kota) -> skema
+// Provinsi (12 kode, lebih rinci). Lihat CLAUDE.md item 3 soal kenapa granularitasnya
+// beda (bukan soal role user, murni skema BPS resmi).
+function getPengeluaranGranularity(region) {
+  return (region && region !== 'Bangka Belitung') ? 'kabkota' : 'provinsi';
+}
+
+// Update judul chart + modal + tooltip info supaya perubahan skema (12 kode jadi
+// 7 kelompok) terlihat disengaja, bukan seperti data hilang/bug.
+function updatePengeluaranLevelUI(granularity, region) {
+  const titleEl      = document.getElementById('pengeluaran-chart-title');
+  const infoEl       = document.getElementById('pengeluaran-level-info');
+  const modalTitleEl = document.getElementById('peng-modal-title');
+
+  const suffix = granularity === 'kabkota'
+    ? `(tingkat Kab/Kota — ${region})`
+    : '(tingkat Provinsi)';
+  const tooltipText = granularity === 'kabkota'
+    ? `Menampilkan skema resmi BPS level Kab/Kota (7 kelompok) karena Anda memfilter ke wilayah "${region}". Skema ini lebih ringkas dari rincian tingkat Provinsi (12 kategori).`
+    : 'Menampilkan skema resmi BPS level Provinsi (12 kategori). Pilih satu wilayah Kab/Kota di filter untuk melihat rincian sesuai skema resmi BPS di level tersebut.';
+
+  if (titleEl)      titleEl.textContent = `5 Komponen Pengeluaran Terbanyak ${suffix}`;
+  if (infoEl)       infoEl.dataset.tooltip = tooltipText;
+  if (modalTitleEl) modalTitleEl.textContent = `Semua Komponen Pengeluaran ${suffix}`;
 }
 
 function countBy(data, key) {
@@ -527,7 +588,13 @@ function renderLapus(data) {
 // CHART: KOMPONEN PENGELUARAN (TOP 5)
 // ====================================
 function renderPengeluaran(data) {
-  const counts = countByPengeluaran(data);
+  const region      = document.getElementById('dash_region').value;
+  const granularity = getPengeluaranGranularity(region);
+  const labels      = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_LABELS;
+  const shortLabels = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_SHORT_LABELS;
+  updatePengeluaranLevelUI(granularity, region);
+
+  const counts = countByPengeluaran(data, granularity);
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const el    = document.getElementById('chart-pengeluaran');
@@ -542,7 +609,7 @@ function renderPengeluaran(data) {
       axisPointer: { type: 'shadow' },
       formatter: p => {
         const code = p[0].name;
-        return `${PENGELUARAN_LABELS[code] || code} (${code})<br/><b>${fmt(p[0].value)}</b>`;
+        return `${labels[code] || code} (${code})<br/><b>${fmt(p[0].value)}</b>`;
       }
     },
     xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
@@ -550,7 +617,7 @@ function renderPengeluaran(data) {
       type: 'category',
       data: sorted.map(x => x[0]).reverse(),
       axisLabel: {
-        formatter: code => `${code} · ${PENGELUARAN_SHORT_LABELS[code] || code}`,
+        formatter: code => `${code} · ${shortLabels[code] || code}`,
         fontSize: 11,
         width: labelWidth,
         overflow: 'truncate',
@@ -714,7 +781,13 @@ let pengModalChart = null;
 function openPengModal() {
   document.getElementById('peng-modal').classList.add('open');
 
-  const counts = countByPengeluaran(lastFilteredData);
+  const region      = document.getElementById('dash_region').value;
+  const granularity = getPengeluaranGranularity(region);
+  const labels      = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_LABELS;
+  const shortLabels = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_SHORT_LABELS;
+  updatePengeluaranLevelUI(granularity, region);
+
+  const counts = countByPengeluaran(lastFilteredData, granularity);
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
   const el = document.getElementById('chart-peng-all');
@@ -732,7 +805,7 @@ function openPengModal() {
       axisPointer: { type: 'shadow' },
       formatter: p => {
         const code = p[0].name;
-        return `${PENGELUARAN_LABELS[code] || code} (${code})<br/><b>${fmt(p[0].value)}</b>`;
+        return `${labels[code] || code} (${code})<br/><b>${fmt(p[0].value)}</b>`;
       }
     },
     xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
@@ -741,7 +814,7 @@ function openPengModal() {
       data: sorted.map(x => x[0]).reverse(),
       axisLabel: {
         fontSize: 12,
-        formatter: code => `${code} · ${PENGELUARAN_SHORT_LABELS[code] || code}`,
+        formatter: code => `${code} · ${shortLabels[code] || code}`,
         overflow: 'truncate',
         ellipsis: '...',
         width: 160
