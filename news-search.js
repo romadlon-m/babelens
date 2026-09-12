@@ -51,7 +51,35 @@ const PENGELUARAN_LABELS = {
   '7':  'Impor Luar Negeri'
 };
 
+// PENGELUARAN_KABKOTA_LABELS: taksonomi BPS level Kab/Kota (7 kelompok, lebih kasar
+// dari 12 kode Provinsi di PENGELUARAN_LABELS di atas). Mapping ke kode Provinsi
+// dikonfirmasi cocok secara isi untuk 6/7 kelompok (lihat news-scraper-babel/CLAUDE.md
+// item 3) — kelompok 1.f "Hotel dan Restoran" cuma dipetakan dari 1k "Hotel dan
+// Penginapan" karena tidak ada kode Provinsi untuk restoran/makan-di-luar sama sekali;
+// artikel yang murni soal restoran tidak akan pernah muncul di grup ini sampai BPS
+// mengonfirmasi ke mana itu seharusnya masuk.
+const PENGELUARAN_KABKOTA_LABELS = {
+  '1.a': 'Makanan, Minuman, dan Rokok',
+  '1.b': 'Pakaian dan Alas Kaki',
+  '1.c': 'Perumahan, Perkakas, Perlengkapan dan Penyelenggaraan Rumah Tangga',
+  '1.d': 'Kesehatan dan Pendidikan',
+  '1.e': 'Transportasi, Komunikasi, Rekreasi, dan Budaya',
+  '1.f': 'Hotel dan Restoran',
+  '1.g': 'Lainnya'
+};
 
+// Kode Provinsi (PENGELUARAN_LABELS) -> kode Kab/Kota (PENGELUARAN_KABKOTA_LABELS).
+// Kode level agregat ('1', '2', ... '7') sengaja tidak dipetakan — taksonomi
+// Kab/Kota ini cuma pecahan dari '1' (Pengeluaran Konsumsi Rumah Tangga).
+const PENGELUARAN_PROVINSI_TO_KABKOTA = {
+  '1a': '1.a', '1b': '1.a',
+  '1c': '1.b',
+  '1d': '1.c', '1e': '1.c',
+  '1f': '1.d', '1j': '1.d',
+  '1g': '1.e', '1h': '1.e', '1i': '1.e',
+  '1k': '1.f',
+  '1l': '1.g'
+};
 
 let lastParams = {};
 let currentRows = [];

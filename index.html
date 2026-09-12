@@ -307,7 +307,10 @@
 
           <div class="chart-card" id="wrap-pengeluaran">
             <div class="chart-card-header">
-              <div class="chart-title">5 Komponen Pengeluaran Terbanyak</div>
+              <div class="chart-title">
+                <span id="pengeluaran-chart-title">5 Komponen Pengeluaran Terbanyak</span>
+                <span class="tooltip tooltip-down info-icon" id="pengeluaran-level-info" data-tooltip="">i</span>
+              </div>
               <button class="lihat-semua-btn" onclick="openPengModal()">Lihat Semua</button>
             </div>
             <div id="chart-pengeluaran" class="chart-container chart-container-lapus"></div>
@@ -336,7 +339,7 @@
   <div id="peng-modal" class="peng-modal-overlay" onclick="closePengModal(event)">
     <div class="peng-modal">
       <div class="peng-modal-header">
-        <span class="peng-modal-title">Semua Komponen Pengeluaran</span>
+        <span class="peng-modal-title" id="peng-modal-title">Semua Komponen Pengeluaran</span>
         <button class="peng-modal-close" onclick="closePengModalDirect()">&times;</button>
       </div>
       <div id="chart-peng-all" class="peng-modal-chart"></div>
@@ -344,6 +347,6 @@
   </div>
 
   <script src="sidebar.js?v=20260907"></script>
-  <script src="dashboard.js?v=20260906"></script>
+  <script src="dashboard.js?v=20260912"></script>
 </body>
 </html>
