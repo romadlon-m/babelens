@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="auth.js?v=20260907"></script>
-  <link rel="stylesheet" href="style.css?v=20260907b">
+  <script src="auth.js?v=20260913"></script>
+  <link rel="stylesheet" href="style.css?v=20260913">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -39,9 +39,10 @@
       <div class="admin-tabs">
         <button class="admin-tab-btn active" id="tab-btn-recent" onclick="switchAdminTab('recent')">Sudah Pernah Login</button>
         <button class="admin-tab-btn" id="tab-btn-all" onclick="switchAdminTab('all')">Seluruh Pegawai</button>
+        <button class="admin-tab-btn" id="tab-btn-labeling" onclick="switchAdminTab('labeling')">Aktivitas Labeling</button>
       </div>
 
-      <div class="admin-table-wrapper">
+      <div id="admin-users-view" class="admin-table-wrapper">
         <table class="admin-table">
           <thead>
             <tr>
@@ -55,6 +56,24 @@
           </thead>
           <tbody id="admin-users-tbody">
             <tr><td colspan="6">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Monitoring produktivitas intern labeling (LABELING_TOOL_PLAN.md bagian 7):
+           hitungan submit per intern/jenis/hari dari tabel labeling_log. -->
+      <div id="admin-labeling-view" class="admin-table-wrapper" hidden>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Nama</th>
+              <th>Jenis</th>
+              <th>Jumlah Submit</th>
+            </tr>
+          </thead>
+          <tbody id="admin-labeling-tbody">
+            <tr><td colspan="4">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -82,8 +101,8 @@
     </div>
   </div>
 
-  <script src="sidebar.js?v=20260907"></script>
-  <script src="admin-users.js?v=20260907b"></script>
+  <script src="sidebar.js?v=20260913"></script>
+  <script src="admin-users.js?v=20260913"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

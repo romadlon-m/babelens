@@ -84,11 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const adminLink = profile?.is_admin
             ? '<a href="admin-users.html" class="user-dropdown-item">🛠️ Kelola Pengguna</a>'
             : '';
+          const labelerLink = profile?.is_labeler
+            ? '<a href="labeling-screener.html" class="user-dropdown-item">🏷️ Labeling PDRB</a>'
+            : '';
           widget.innerHTML = `
             <div class="user-dropdown-wrapper">
               <button class="user-dropdown-btn" id="userDropdownBtn"><span class="user-name-text">${displayName}</span> <span class="dropdown-arrow">▾</span></button>
               <div class="user-dropdown" id="userDropdown">
                 ${adminLink}
+                ${labelerLink}
                 <a href="settings.html" class="user-dropdown-item">⚙️ Pengaturan</a>
                 <button class="user-dropdown-item user-dropdown-danger" onclick="signOut()">🚪 Keluar</button>
               </div>
