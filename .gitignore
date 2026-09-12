@@ -4,4 +4,5 @@ Thumbs.db
 .env.local
 supabase/.env
 supabase/functions/.env
+supabase/.temp/
 CLAUDE.md

@@ -30,6 +30,19 @@ function labelingSplitPipes(raw, expectedCount) {
   return parts;
 }
 
+// "No" in the pasted AI result is the news.id embedded by labelingFormatArticleForPrompt()
+// (not a sequential counter) — checking it here catches an intern pasting back a result
+// for a different article than the one currently on screen.
+function labelingCheckNo(noRaw, expectedId) {
+  const no = parseInt(noRaw, 10);
+  if (!Number.isFinite(no)) {
+    throw new Error(`Kolom ke-1 (No) harus berupa ID berita (angka), ditemukan "${noRaw}".`);
+  }
+  if (no !== expectedId) {
+    throw new Error(`Kolom ke-1 (No = ${no}) tidak cocok dengan artikel yang sedang ditampilkan (ID ${expectedId}). Pastikan hasil AI ini untuk artikel yang benar.`);
+  }
+}
+
 function labelingFormatDate(iso) {
   if (!iso) return '-';
   const d = new Date(iso);
@@ -38,7 +51,7 @@ function labelingFormatDate(iso) {
 }
 
 function labelingFormatArticleForPrompt(row) {
-  return `1. Judul: ${row.title || '-'}\nTanggal: ${labelingFormatDate(row.publication_datetime)}\nSumber: ${row.source || '-'}\nIsi: ${row.content || row.summary || '-'}`;
+  return `${row.id}. Judul: ${row.title || '-'}\nTanggal: ${labelingFormatDate(row.publication_datetime)}\nSumber: ${row.source || '-'}\nIsi: ${row.content || row.summary || '-'}`;
 }
 
 async function labelingCopyToClipboard(text) {
@@ -58,6 +71,16 @@ async function labelingCopyToClipboard(text) {
     document.body.removeChild(ta);
     return ok;
   }
+}
+
+// Marks the current stage active in the shared 3-item subnav markup (identical
+// on all 3 labeling-*.html pages, like sidebar.js's setActiveNav() for the top nav).
+function renderLabelingSubnav(jenis) {
+  const nav = document.getElementById('labeling-subnav');
+  if (!nav) return;
+  nav.querySelectorAll('.labeling-subnav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.jenis === jenis);
+  });
 }
 
 async function labelingFetchActivePrompt(jenis) {
@@ -126,6 +149,8 @@ async function labelingSubmit(newsId, jenis, hasil) {
 function initLabelingPage(config) {
   const { jenis, parseLine } = config;
 
+  renderLabelingSubnav(jenis);
+
   const els = {
     queueCount: document.getElementById('labeling-queue-count'),
     card: document.getElementById('labeling-card'),
@@ -135,7 +160,6 @@ function initLabelingPage(config) {
     content: document.getElementById('labeling-content'),
     btnCopy: document.getElementById('btn-copy-prompt'),
     textarea: document.getElementById('result-textarea'),
-    btnValidate: document.getElementById('btn-validate'),
     btnSubmit: document.getElementById('btn-submit'),
     btnSkip: document.getElementById('btn-skip'),
     validationMsg: document.getElementById('validation-msg')
@@ -143,14 +167,11 @@ function initLabelingPage(config) {
 
   let currentRow = null;
   let activePrompt = null;
-  let pendingHasil = null;
 
   function resetResultArea() {
     els.textarea.value = '';
     els.validationMsg.textContent = '';
     els.validationMsg.className = 'labeling-validation-msg';
-    els.btnSubmit.hidden = true;
-    pendingHasil = null;
   }
 
   function renderRow(row) {
@@ -203,32 +224,33 @@ function initLabelingPage(config) {
     setTimeout(() => { els.btnCopy.textContent = original; }, 1800);
   }
 
-  function handleValidate() {
+  // Validasi dan Kirim digabung jadi satu klik: kalau format salah, submit tidak
+  // pernah dipanggil (berhenti di error, tidak ada request jaringan). Sengaja tidak
+  // dipisah lagi jadi 2 tombol — intern sempat lupa klik "Kirim" setelah "Validasi"
+  // sehingga hasil labelingnya tidak pernah tersimpan.
+  async function handleValidateAndSubmit() {
     els.validationMsg.className = 'labeling-validation-msg';
+
+    let hasil;
     try {
-      const { hasil } = parseLine(els.textarea.value);
-      pendingHasil = hasil;
-      els.validationMsg.textContent = '✅ Format valid, siap dikirim.';
-      els.validationMsg.classList.add('ok');
-      els.btnSubmit.hidden = false;
+      ({ hasil } = parseLine(els.textarea.value, currentRow?.id));
     } catch (err) {
-      pendingHasil = null;
       els.validationMsg.textContent = '❌ ' + err.message;
       els.validationMsg.classList.add('error');
-      els.btnSubmit.hidden = true;
+      return;
     }
-  }
+    if (!currentRow) return;
 
-  async function handleSubmit() {
-    if (!currentRow || !pendingHasil) return;
+    els.validationMsg.textContent = 'Mengirim...';
     els.btnSubmit.disabled = true;
     els.btnSkip.disabled = true;
     try {
-      await labelingSubmit(currentRow.id, jenis, pendingHasil);
+      await labelingSubmit(currentRow.id, jenis, hasil);
       await refreshQueueCount();
       await loadNext();
     } catch (err) {
-      alert('Gagal mengirim: ' + err.message);
+      els.validationMsg.textContent = '❌ Gagal mengirim: ' + err.message;
+      els.validationMsg.classList.add('error');
     } finally {
       els.btnSubmit.disabled = false;
       els.btnSkip.disabled = false;
@@ -250,8 +272,7 @@ function initLabelingPage(config) {
   }
 
   els.btnCopy.addEventListener('click', handleCopy);
-  els.btnValidate.addEventListener('click', handleValidate);
-  els.btnSubmit.addEventListener('click', handleSubmit);
+  els.btnSubmit.addEventListener('click', handleValidateAndSubmit);
   els.btnSkip.addEventListener('click', handleSkip);
 
   (async () => {

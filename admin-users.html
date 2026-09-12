@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913">
+  <link rel="stylesheet" href="style.css?v=20260913d">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -40,6 +40,7 @@
         <button class="admin-tab-btn active" id="tab-btn-recent" onclick="switchAdminTab('recent')">Sudah Pernah Login</button>
         <button class="admin-tab-btn" id="tab-btn-all" onclick="switchAdminTab('all')">Seluruh Pegawai</button>
         <button class="admin-tab-btn" id="tab-btn-labeling" onclick="switchAdminTab('labeling')">Aktivitas Labeling</button>
+        <button class="admin-tab-btn" id="tab-btn-detail" onclick="switchAdminTab('detail')">Detail Baris</button>
       </div>
 
       <div id="admin-users-view" class="admin-table-wrapper">
@@ -77,6 +78,59 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Per-baris detail (drill-down dari Aktivitas Labeling di atas, atau dilihat
+           bebas): status label per baris `news`, filter jenis/status, dan filter
+           intern tertentu saat masuk lewat klik nama di tab Aktivitas Labeling. -->
+      <div id="admin-detail-view" class="admin-table-wrapper" hidden>
+        <div class="admin-detail-filters">
+          <div class="filter-group">
+            <label for="detail-jenis">Jenis</label>
+            <select id="detail-jenis" onchange="onDetailFilterChange()">
+              <option value="screener">Screener</option>
+              <option value="lapus">Lapangan Usaha</option>
+              <option value="pengeluaran">Pengeluaran</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="detail-status">Status</label>
+            <select id="detail-status" onchange="onDetailFilterChange()">
+              <option value="semua">Semua</option>
+              <option value="belum">Belum dilabel</option>
+              <option value="sudah">Sudah dilabel</option>
+              <option value="perlu_relabel">Perlu direlabel (prompt lama)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="detail-labeler-select">Intern</label>
+            <select id="detail-labeler-select" onchange="onDetailFilterChange()">
+              <option value="">Semua Intern</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Tanggal</th>
+              <th>Judul</th>
+              <th>Sumber</th>
+              <th>Label</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="admin-detail-tbody">
+            <tr><td colspan="6">Memuat data...</td></tr>
+          </tbody>
+        </table>
+
+        <div class="admin-detail-pagination">
+          <button class="card-btn" id="detail-prev-btn" onclick="changeDetailPage(-1)">‹ Sebelumnya</button>
+          <span id="detail-page-info"></span>
+          <button class="card-btn" id="detail-next-btn" onclick="changeDetailPage(1)">Berikutnya ›</button>
+        </div>
+      </div>
     </main>
 
   </div><!-- /.app-body -->
@@ -102,7 +156,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913"></script>
-  <script src="admin-users.js?v=20260913"></script>
+  <script src="admin-users.js?v=20260913d"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

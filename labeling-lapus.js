@@ -3,15 +3,17 @@
 //
 // Expected format (LABELING_TOOL_PLAN.md section 6):
 //   [No]|||[Ya/Tidak]|||[Kategori atau -]|||[Alasan]|||[Naik/Turun/Netral/-]
+// [No] harus persis ID berita (news.id), lihat catatan di labeling-screener.js.
 //
 // Kode kategori duplikat sengaja dari dashboard.js/news-search.js (LAPUS_LABELS) —
 // repo ini sudah tidak punya modul bersama untuk daftar taksonomi, lihat CLAUDE.md.
 const LAPUS_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'MN', 'O', 'P', 'Q', 'RSTU'];
 const ARAH_VALUES = ['Naik', 'Turun', 'Netral'];
 
-function parseLapusLine(raw) {
+function parseLapusLine(raw, expectedId) {
   const parts = labelingSplitPipes(raw, 5);
-  const [, relevanRaw, kategoriRaw, alasan, arahRaw] = parts;
+  const [noRaw, relevanRaw, kategoriRaw, alasan, arahRaw] = parts;
+  labelingCheckNo(noRaw, expectedId);
 
   const relevanNorm = relevanRaw.toLowerCase();
   let relevan;

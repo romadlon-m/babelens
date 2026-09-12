@@ -81,20 +81,26 @@ function switchAdminTab(tab) {
   document.getElementById('tab-btn-recent').classList.toggle('active', tab === 'recent');
   document.getElementById('tab-btn-all').classList.toggle('active', tab === 'all');
   document.getElementById('tab-btn-labeling').classList.toggle('active', tab === 'labeling');
+  document.getElementById('tab-btn-detail').classList.toggle('active', tab === 'detail');
 
   const usersView = document.getElementById('admin-users-view');
   const labelingView = document.getElementById('admin-labeling-view');
+  const detailView = document.getElementById('admin-detail-view');
+
+  usersView.hidden = tab !== 'recent' && tab !== 'all';
+  labelingView.hidden = tab !== 'labeling';
+  detailView.hidden = tab !== 'detail';
 
   if (tab === 'labeling') {
-    usersView.hidden = true;
-    labelingView.hidden = false;
     loadLabelingReport();
-    return;
+  } else if (tab === 'detail') {
+    ensureLabelerOptionsLoaded().then(() => {
+      syncDetailFilterInputs();
+      loadDetailRows();
+    });
+  } else {
+    renderActiveTab();
   }
-
-  usersView.hidden = false;
-  labelingView.hidden = true;
-  renderActiveTab();
 }
 
 const JENIS_LABELS = { screener: 'Screener', lapus: 'Lapangan Usaha', pengeluaran: 'Pengeluaran' };
@@ -152,17 +158,140 @@ async function loadLabelingReport() {
       return;
     }
 
-    tbody.innerHTML = rows.map(r => `
+    tbody.innerHTML = rows.map(r => {
+      const nama = nameById[r.labelerId] || r.labelerId;
+      return `
       <tr>
         <td>${escapeHtml(r.date)}</td>
-        <td>${escapeHtml(nameById[r.labelerId] || r.labelerId)}</td>
+        <td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="${escapeHtml(r.jenis)}">${escapeHtml(nama)}</button></td>
         <td>${escapeHtml(JENIS_LABELS[r.jenis] || r.jenis)}</td>
         <td>${r.count}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="4">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
   }
+}
+
+// Delegated so it survives every loadLabelingReport() re-render, and so intern
+// names (may contain quotes/apostrophes) never need inline-onclick escaping.
+document.addEventListener('DOMContentLoaded', () => {
+  const tbody = document.getElementById('admin-labeling-tbody');
+  if (!tbody) return;
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.admin-link-btn');
+    if (!btn) return;
+    openDetailForLabeler(btn.dataset.labelerId, btn.dataset.jenis);
+  });
+});
+
+// --- Detail Baris tab: per-`news`-row labeling status, server-side filtered and
+// paginated via the admin_labeling_detail RPC (see supabase/migrations/
+// 20260913140000_labeling_admin_detail.sql) so this stays fast as `news` grows. ---
+
+const detailState = { jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0 };
+let labelerOptions = [];
+let labelerOptionsLoaded = false;
+
+// Populates the "Intern" <select> once (profiles isn't admin-readable directly via
+// RLS, see loadLabelingReport()'s comment, hence the admin_list_labelers RPC).
+async function ensureLabelerOptionsLoaded() {
+  if (labelerOptionsLoaded) return;
+  try {
+    const { data, error } = await window.db.rpc('admin_list_labelers');
+    if (error) throw error;
+    labelerOptions = data || [];
+    const select = document.getElementById('detail-labeler-select');
+    select.innerHTML = '<option value="">Semua Intern</option>' +
+      labelerOptions.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.nama)}</option>`).join('');
+    labelerOptionsLoaded = true;
+  } catch (err) {
+    console.error('Gagal memuat daftar intern:', err);
+  }
+}
+
+function openDetailForLabeler(labelerId, jenis) {
+  detailState.labelerId = labelerId;
+  detailState.jenis = jenis;
+  detailState.status = 'sudah';
+  detailState.page = 1;
+  switchAdminTab('detail');
+}
+
+function onDetailFilterChange() {
+  detailState.jenis = document.getElementById('detail-jenis').value;
+  detailState.status = document.getElementById('detail-status').value;
+  detailState.labelerId = document.getElementById('detail-labeler-select').value || null;
+  detailState.page = 1;
+  loadDetailRows();
+}
+
+function changeDetailPage(delta) {
+  const maxPage = Math.max(1, Math.ceil(detailState.total / detailState.pageSize));
+  const next = detailState.page + delta;
+  if (next < 1 || next > maxPage) return;
+  detailState.page = next;
+  loadDetailRows();
+}
+
+function syncDetailFilterInputs() {
+  document.getElementById('detail-jenis').value = detailState.jenis;
+  document.getElementById('detail-status').value = detailState.status;
+  document.getElementById('detail-labeler-select').value = detailState.labelerId || '';
+}
+
+async function loadDetailRows() {
+  const tbody = document.getElementById('admin-detail-tbody');
+  tbody.innerHTML = '<tr><td colspan="6">Memuat data...</td></tr>';
+
+  try {
+    const { data, error } = await window.db.rpc('admin_labeling_detail', {
+      p_jenis: detailState.jenis,
+      p_status: detailState.status,
+      p_labeler_id: detailState.labelerId,
+      p_page: detailState.page,
+      p_page_size: detailState.pageSize
+    });
+    if (error) throw error;
+    detailState.total = data.total || 0;
+    renderDetailRows(data.rows || []);
+    renderDetailPagination();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderDetailRows(rows) {
+  const tbody = document.getElementById('admin-detail-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6">Tidak ada baris yang cocok dengan filter ini.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const statusBadge = r.label_value == null
+      ? '<span class="badge badge-gray">Belum dilabel</span>'
+      : r.needs_relabel
+        ? '<span class="badge" style="background:#fef3c7;color:#b45309;">Perlu direlabel</span>'
+        : '<span class="badge badge-green">Sudah dilabel</span>';
+    return `
+      <tr>
+        <td>${r.id}</td>
+        <td>${escapeHtml(formatReportDate(r.publication_datetime))}</td>
+        <td class="admin-detail-title">${escapeHtml(r.title || '-')}</td>
+        <td>${escapeHtml(r.source || '-')}</td>
+        <td>${escapeHtml(r.label_value ?? '-')}</td>
+        <td>${statusBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderDetailPagination() {
+  const maxPage = Math.max(1, Math.ceil(detailState.total / detailState.pageSize));
+  document.getElementById('detail-page-info').textContent = `Halaman ${detailState.page} dari ${maxPage} (${detailState.total} baris)`;
+  document.getElementById('detail-prev-btn').disabled = detailState.page <= 1;
+  document.getElementById('detail-next-btn').disabled = detailState.page >= maxPage;
 }
 
 async function loadAdminUsers() {
