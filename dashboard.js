@@ -166,6 +166,19 @@ function countByPengeluaran(data, granularity) {
   }, {});
 }
 
+// Kode agregat non-PKRT ('1'-'7': Konsumsi LNPRT, Pemerintah, PMTB, dst.) tidak
+// punya padanan di taksonomi Kab/Kota (yang cuma pecahan dari kode '1' PKRT) —
+// jatuhkan ke label Provinsi supaya tetap deskriptif, bukan cuma menampilkan kode
+// mentah ("3 · 3") di mode Kab/Kota.
+function pengeluaranLabel(code, granularity) {
+  if (granularity === 'kabkota') return PENGELUARAN_KABKOTA_LABELS[code] || PENGELUARAN_LABELS[code] || code;
+  return PENGELUARAN_LABELS[code] || code;
+}
+function pengeluaranShortLabel(code, granularity) {
+  if (granularity === 'kabkota') return PENGELUARAN_KABKOTA_LABELS[code] || PENGELUARAN_SHORT_LABELS[code] || code;
+  return PENGELUARAN_SHORT_LABELS[code] || code;
+}
+
 // Level pengeluaran mengikuti filter wilayah yang sudah ada: satu kab/kota dipilih
 // -> skema resmi BPS Kab/Kota (7 kelompok, lebih ringkas); tanpa filter, atau
 // "Bangka Belitung" (opsi provinsi penuh di #dash_region, bukan kab/kota) -> skema
@@ -590,8 +603,6 @@ function renderLapus(data) {
 function renderPengeluaran(data) {
   const region      = document.getElementById('dash_region').value;
   const granularity = getPengeluaranGranularity(region);
-  const labels      = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_LABELS;
-  const shortLabels = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_SHORT_LABELS;
   updatePengeluaranLevelUI(granularity, region);
 
   const counts = countByPengeluaran(data, granularity);
@@ -609,7 +620,7 @@ function renderPengeluaran(data) {
       axisPointer: { type: 'shadow' },
       formatter: p => {
         const code = p[0].name;
-        return `${labels[code] || code} (${code})<br/><b>${fmt(p[0].value)}</b>`;
+        return `${pengeluaranLabel(code, granularity)} (${code})<br/><b>${fmt(p[0].value)}</b>`;
       }
     },
     xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
@@ -617,7 +628,7 @@ function renderPengeluaran(data) {
       type: 'category',
       data: sorted.map(x => x[0]).reverse(),
       axisLabel: {
-        formatter: code => `${code} · ${shortLabels[code] || code}`,
+        formatter: code => `${code} · ${pengeluaranShortLabel(code, granularity)}`,
         fontSize: 11,
         width: labelWidth,
         overflow: 'truncate',
@@ -783,8 +794,6 @@ function openPengModal() {
 
   const region      = document.getElementById('dash_region').value;
   const granularity = getPengeluaranGranularity(region);
-  const labels      = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_LABELS;
-  const shortLabels = granularity === 'kabkota' ? PENGELUARAN_KABKOTA_LABELS : PENGELUARAN_SHORT_LABELS;
   updatePengeluaranLevelUI(granularity, region);
 
   const counts = countByPengeluaran(lastFilteredData, granularity);
@@ -805,7 +814,7 @@ function openPengModal() {
       axisPointer: { type: 'shadow' },
       formatter: p => {
         const code = p[0].name;
-        return `${labels[code] || code} (${code})<br/><b>${fmt(p[0].value)}</b>`;
+        return `${pengeluaranLabel(code, granularity)} (${code})<br/><b>${fmt(p[0].value)}</b>`;
       }
     },
     xAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
@@ -814,7 +823,7 @@ function openPengModal() {
       data: sorted.map(x => x[0]).reverse(),
       axisLabel: {
         fontSize: 12,
-        formatter: code => `${code} · ${shortLabels[code] || code}`,
+        formatter: code => `${code} · ${pengeluaranShortLabel(code, granularity)}`,
         overflow: 'truncate',
         ellipsis: '...',
         width: 160
