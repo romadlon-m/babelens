@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913">
+  <link rel="stylesheet" href="style.css?v=20260913d">
 </head>
 <body class="labeling-page" style="visibility:hidden;">
 
@@ -30,6 +30,11 @@
           <div class="topbar-left">
             <div><h2>Labeling — Screener PDRB</h2></div>
           </div>
+          <nav class="labeling-subnav" id="labeling-subnav">
+            <a href="labeling-screener.html" class="labeling-subnav-item" data-jenis="screener">1. Screener</a>
+            <a href="labeling-lapus.html" class="labeling-subnav-item" data-jenis="lapus">2. Lapangan Usaha</a>
+            <a href="labeling-pengeluaran.html" class="labeling-subnav-item" data-jenis="pengeluaran">3. Pengeluaran</a>
+          </nav>
         </div>
       </header>
 
@@ -38,6 +43,7 @@
       <div class="labeling-format-hint">
         Tempel hasil AI persis satu baris dengan format:
         <code>[No]|||[Lolos/Tidak Lolos]|||[Alasan]</code>
+        — [No] harus sama dengan ID artikel di awal teks yang disalin.
       </div>
 
       <div id="labeling-card" class="labeling-card" hidden>
@@ -60,15 +66,14 @@
       <div id="validation-msg" class="labeling-validation-msg"></div>
 
       <div class="labeling-actions">
-        <button id="btn-validate" class="primary-btn">Validasi</button>
-        <button id="btn-submit" class="primary-btn" hidden>Kirim</button>
+        <button id="btn-submit" class="primary-btn">Validasi & Kirim</button>
       </div>
     </main>
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20260913"></script>
-  <script src="labeling-common.js?v=20260913"></script>
-  <script src="labeling-screener.js?v=20260913"></script>
+  <script src="labeling-common.js?v=20260913d"></script>
+  <script src="labeling-screener.js?v=20260913b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

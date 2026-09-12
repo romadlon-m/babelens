@@ -3,6 +3,7 @@
 //
 // Expected format (LABELING_TOOL_PLAN.md section 6):
 //   [No]|||[Ya/Tidak]|||[Komponen atau -]|||[Alasan]|||[Naik/Turun/Netral/-]
+// [No] harus persis ID berita (news.id), lihat catatan di labeling-screener.js.
 //
 // Kode komponen duplikat sengaja dari dashboard.js/news-search.js
 // (PENGELUARAN_LABELS, sisi Provinsi) — repo ini sudah tidak punya modul bersama
@@ -10,9 +11,10 @@
 const PENGELUARAN_CODES = ['1a', '1b', '1c', '1d', '1e', '1f', '1g', '1h', '1i', '1j', '1k', '1l', '1', '2', '3', '4', '5', '6', '7'];
 const ARAH_VALUES = ['Naik', 'Turun', 'Netral'];
 
-function parsePengeluaranLine(raw) {
+function parsePengeluaranLine(raw, expectedId) {
   const parts = labelingSplitPipes(raw, 5);
-  const [, relevanRaw, komponenRaw, alasan, arahRaw] = parts;
+  const [noRaw, relevanRaw, komponenRaw, alasan, arahRaw] = parts;
+  labelingCheckNo(noRaw, expectedId);
 
   const relevanNorm = relevanRaw.toLowerCase();
   let relevan;
