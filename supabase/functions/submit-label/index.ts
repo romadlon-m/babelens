@@ -84,18 +84,19 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, secretKey)
 
-    // Step 2: caller must be an active labeler
+    // Step 2: caller must be an active labeler or an admin (admins can work the
+    // labeling queue too — e.g. to resolve a flagged row directly)
     const { data: callerProfile, error: callerError } = await adminClient
       .from('profiles')
-      .select('is_labeler')
+      .select('is_labeler, is_admin')
       .eq('id', user.id)
       .maybeSingle()
 
     if (callerError) {
       return json({ error: 'Failed to check caller profile: ' + callerError.message }, 500)
     }
-    if (!callerProfile?.is_labeler) {
-      return json({ error: 'Forbidden — labeler only' }, 403)
+    if (!callerProfile?.is_labeler && !callerProfile?.is_admin) {
+      return json({ error: 'Forbidden — labeler or admin only' }, 403)
     }
 
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}

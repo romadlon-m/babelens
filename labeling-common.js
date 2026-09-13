@@ -110,6 +110,17 @@ async function labelingClaimNext(jenis) {
   return data;
 }
 
+// Direct-access counterpart used when the page is opened as
+// labeling-{jenis}.html?news_id=123 (e.g. from admin Detail Baris) — loads that
+// exact row instead of the next one in queue, bypassing the normal ordering and
+// the flag exclusion (the whole point of opening this way is often to resolve a
+// flagged row) and overriding any existing soft-lock.
+async function labelingClaimSpecific(jenis, newsId) {
+  const { data, error } = await window.db.rpc('claim_specific_news_for_labeling', { p_news_id: newsId, p_jenis: jenis });
+  if (error) throw new Error('Gagal membuka berita: ' + error.message);
+  return data;
+}
+
 async function labelingReleaseLock(newsId, jenis) {
   const { error } = await window.db.rpc('release_news_lock', { p_news_id: newsId, p_jenis: jenis });
   if (error) throw new Error('Gagal melepas kunci: ' + error.message);
@@ -297,6 +308,28 @@ function initLabelingPage(config) {
   els.btnSkip.addEventListener('click', handleSkip);
   els.btnFlag.addEventListener('click', handleFlag);
 
+  // ?news_id=123 (e.g. a link from admin Detail Baris) opens that exact article
+  // directly instead of the next one in queue — only for the very first load;
+  // stripped from the URL right away so a refresh or the normal "next" flow after
+  // submit/skip/flag falls back to the regular queue, not this same row again.
+  async function loadInitial() {
+    const params = new URLSearchParams(window.location.search);
+    const newsIdParam = params.get('news_id');
+    if (newsIdParam && /^\d+$/.test(newsIdParam)) {
+      history.replaceState(null, '', window.location.pathname);
+      els.card.hidden = true;
+      els.empty.hidden = true;
+      try {
+        const row = await labelingClaimSpecific(jenis, parseInt(newsIdParam, 10));
+        renderRow(row);
+        return;
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+    await loadNext();
+  }
+
   (async () => {
     try {
       activePrompt = await labelingFetchActivePrompt(jenis);
@@ -304,6 +337,6 @@ function initLabelingPage(config) {
       alert(err.message);
     }
     await refreshQueueCount();
-    await loadNext();
+    await loadInitial();
   })();
 }

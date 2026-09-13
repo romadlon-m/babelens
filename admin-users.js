@@ -104,6 +104,7 @@ function switchAdminTab(tab) {
 }
 
 const JENIS_LABELS = { screener: 'Screener', lapus: 'Lapangan Usaha', pengeluaran: 'Pengeluaran' };
+const LABELING_PAGE_BY_JENIS = { screener: 'labeling-screener.html', lapus: 'labeling-lapus.html', pengeluaran: 'labeling-pengeluaran.html' };
 
 function formatReportDate(iso) {
   const d = new Date(iso);
@@ -276,9 +277,11 @@ function renderDetailRows(rows) {
         : r.needs_relabel
           ? '<span class="badge" style="background:#fef3c7;color:#b45309;">Perlu direlabel</span>'
           : '<span class="badge badge-green">Sudah dilabel</span>';
+    const labelingUrl = `${LABELING_PAGE_BY_JENIS[detailState.jenis]}?news_id=${r.id}`;
+    const titleLink = `<a class="admin-link-btn" href="${escapeHtml(labelingUrl)}" target="_blank" rel="noopener" title="Buka di halaman labeling">${escapeHtml(r.title || '-')}</a>`;
     const titleCell = r.is_flagged && r.flag_reason
-      ? `${escapeHtml(r.title || '-')}<div class="admin-muted" style="font-size:11px;margin-top:2px;">Alasan: ${escapeHtml(r.flag_reason)}</div>`
-      : escapeHtml(r.title || '-');
+      ? `${titleLink}<div class="admin-muted" style="font-size:11px;margin-top:2px;">Alasan: ${escapeHtml(r.flag_reason)}</div>`
+      : titleLink;
     return `
       <tr>
         <td>${r.id}</td>
