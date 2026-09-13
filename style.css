@@ -2227,9 +2227,35 @@ select {
   color: var(--text);
 }
 
-#admin-status {
+#admin-status,
+#edit-status {
   font-size: 13px;
   color: var(--muted);
+}
+
+.admin-modal-checkbox {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.admin-modal-checkbox input {
+  width: auto;
+  margin-right: 6px;
+}
+
+#admin-edit-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+}
+
+#admin-edit-modal-overlay.open {
+  display: flex;
 }
 
 /* ============================================================

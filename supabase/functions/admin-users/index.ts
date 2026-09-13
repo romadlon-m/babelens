@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
       const { data: profiles, error: profilesError } = await adminClient
         .from('profiles')
-        .select('id, nip_lama, nama, is_admin, must_change_password')
+        .select('id, nip_lama, nama, is_admin, is_labeler, must_change_password')
 
       if (profilesError) return json({ error: 'Failed to list profiles: ' + profilesError.message }, 500)
 
@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
           nip_lama: p.nip_lama,
           nama: p.nama,
           is_admin: p.is_admin,
+          is_labeler: p.is_labeler,
           must_change_password: p.must_change_password,
           banned: !!(au?.banned_until && new Date(au.banned_until) > new Date()),
           last_login: lastLoginByUser[p.id] ?? null,
@@ -155,6 +156,57 @@ Deno.serve(async (req) => {
       if (profileError) return json({ error: 'Gagal memperbarui status profil: ' + profileError.message }, 500)
 
       return json({ reset: true, default_password: DEFAULT_PASSWORD })
+    }
+
+    if (action === 'update-profile') {
+      const userId = body?.user_id
+      if (!userId) return json({ error: 'user_id wajib diisi' }, 400)
+
+      const updates: Record<string, unknown> = {}
+
+      if (body?.nama !== undefined) {
+        const nama = String(body.nama).trim()
+        if (!nama) return json({ error: 'Nama wajib diisi' }, 400)
+        updates.nama = nama
+      }
+
+      if (body?.is_labeler !== undefined) {
+        updates.is_labeler = !!body.is_labeler
+      }
+
+      // Changing NIP also changes the login email (${nip}@babelens.internal) — the
+      // two must never drift apart, so both are updated together in one action.
+      if (body?.nip_lama !== undefined) {
+        const nipLama = String(body.nip_lama).trim()
+        if (!NIP_RE.test(nipLama)) return json({ error: 'NIP harus 9 digit angka' }, 400)
+
+        const { data: existing } = await adminClient
+          .from('profiles')
+          .select('id')
+          .eq('nip_lama', nipLama)
+          .neq('id', userId)
+          .maybeSingle()
+        if (existing) return json({ error: 'NIP sudah dipakai pengguna lain' }, 400)
+
+        const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, {
+          email: `${nipLama}@babelens.internal`
+        })
+        if (emailError) return json({ error: 'Gagal memperbarui email login: ' + emailError.message }, 500)
+
+        updates.nip_lama = nipLama
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return json({ error: 'Tidak ada perubahan yang dikirim' }, 400)
+      }
+
+      const { error: updateError } = await adminClient
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+      if (updateError) return json({ error: 'Gagal memperbarui profil: ' + updateError.message }, 500)
+
+      return json({ updated: true })
     }
 
     if (action === 'toggle-ban') {

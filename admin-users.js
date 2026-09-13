@@ -54,6 +54,7 @@ function renderAdminUsers(users) {
         <td>${formatLastLogin(u.last_login)}</td>
         <td>
           <div class="admin-actions">
+            <button class="card-btn" data-edit-user-id="${u.id}">Edit</button>
             <button class="card-btn" onclick="resetUserPassword('${u.id}')">Reset Password</button>
             <button class="card-btn ${u.banned ? '' : 'danger'}" onclick="toggleUserBan('${u.id}', ${!u.banned})">${u.banned ? 'Aktifkan' : 'Nonaktifkan'}</button>
           </div>
@@ -300,6 +301,64 @@ function renderDetailPagination() {
   document.getElementById('detail-page-info').textContent = `Halaman ${detailState.page} dari ${maxPage} (${detailState.total} baris)`;
   document.getElementById('detail-prev-btn').disabled = detailState.page <= 1;
   document.getElementById('detail-next-btn').disabled = detailState.page >= maxPage;
+}
+
+// Delegated (like the labeling-report name links) so re-renders of the users
+// table never need re-binding, and so it survives switching between the
+// "Sudah Pernah Login" / "Seluruh Pegawai" tabs sharing the same tbody.
+document.addEventListener('DOMContentLoaded', () => {
+  const tbody = document.getElementById('admin-users-tbody');
+  if (!tbody) return;
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-edit-user-id]');
+    if (!btn) return;
+    openEditModal(btn.dataset.editUserId);
+  });
+});
+
+function openEditModal(userId) {
+  const user = adminUsersCache.find(u => u.id === userId);
+  if (!user) return;
+  document.getElementById('edit-user-id').value = userId;
+  document.getElementById('edit-nip').value = user.nip_lama || '';
+  document.getElementById('edit-nama').value = user.nama || '';
+  document.getElementById('edit-is-labeler').checked = !!user.is_labeler;
+  document.getElementById('edit-status').textContent = '';
+  document.getElementById('admin-edit-modal-overlay').classList.add('open');
+}
+
+function closeEditModal(event, force) {
+  if (force || !event || event.target.id === 'admin-edit-modal-overlay') {
+    document.getElementById('admin-edit-modal-overlay').classList.remove('open');
+  }
+}
+
+async function submitEditUser() {
+  const userId = document.getElementById('edit-user-id').value;
+  const nip = document.getElementById('edit-nip').value.trim();
+  const nama = document.getElementById('edit-nama').value.trim();
+  const isLabeler = document.getElementById('edit-is-labeler').checked;
+  const statusEl = document.getElementById('edit-status');
+
+  if (!/^\d{9}$/.test(nip)) {
+    statusEl.textContent = 'NIP harus 9 digit angka.';
+    return;
+  }
+  if (!nama) {
+    statusEl.textContent = 'Nama wajib diisi.';
+    return;
+  }
+
+  statusEl.textContent = 'Menyimpan...';
+  try {
+    await callAdminFn('update-profile', { user_id: userId, nip_lama: nip, nama, is_labeler: isLabeler });
+    statusEl.textContent = 'Berhasil disimpan.';
+    adminUsersCache = [];
+    await loadAdminUsers();
+    setTimeout(() => closeEditModal(null, true), 600);
+  } catch (err) {
+    statusEl.textContent = 'Gagal: ' + err.message;
+  }
 }
 
 async function loadAdminUsers() {
