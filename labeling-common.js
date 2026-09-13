@@ -8,7 +8,6 @@
 // See news-scraper-babel/LABELING_TOOL_PLAN.md (private repo) for the full design.
 
 const SUBMIT_LABEL_FN_URL = 'https://cyqqohycenkoludiefgq.supabase.co/functions/v1/submit-label';
-const LOCK_TIMEOUT_MINUTES = 25;
 
 function labelingEscapeHtml(str) {
   const div = document.createElement('div');
@@ -95,21 +94,13 @@ async function labelingFetchActivePrompt(jenis) {
   return data;
 }
 
+// RPC rather than a client-side query so this can never drift from what
+// claim_next_news_for_labeling() actually considers queued (e.g. flagged-row
+// exclusion) — see labeling_queue_count() in the labeling_flags migration.
 async function labelingQueueCount(jenis) {
-  const cutoff = new Date(Date.now() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
-  let query = window.db.from('news').select('id', { count: 'exact', head: true });
-  if (jenis === 'screener') {
-    query = query.is('screener_passed', null).or(`screener_assigned_to.is.null,screener_assigned_at.lt.${cutoff}`);
-  } else if (jenis === 'lapus') {
-    query = query.eq('screener_passed', true).is('lu_relevan', null)
-      .or(`lapus_assigned_to.is.null,lapus_assigned_at.lt.${cutoff}`);
-  } else {
-    query = query.eq('screener_passed', true).is('pengeluaran_relevan', null)
-      .or(`pengeluaran_assigned_to.is.null,pengeluaran_assigned_at.lt.${cutoff}`);
-  }
-  const { count, error } = await query;
+  const { data, error } = await window.db.rpc('labeling_queue_count', { p_jenis: jenis });
   if (error) throw new Error('Gagal menghitung antrean: ' + error.message);
-  return count ?? 0;
+  return data ?? 0;
 }
 
 async function labelingClaimNext(jenis) {
@@ -122,6 +113,11 @@ async function labelingClaimNext(jenis) {
 async function labelingReleaseLock(newsId, jenis) {
   const { error } = await window.db.rpc('release_news_lock', { p_news_id: newsId, p_jenis: jenis });
   if (error) throw new Error('Gagal melepas kunci: ' + error.message);
+}
+
+async function labelingFlag(newsId, jenis, reason) {
+  const { error } = await window.db.rpc('flag_news_for_labeling', { p_news_id: newsId, p_jenis: jenis, p_reason: reason });
+  if (error) throw new Error('Gagal menandai berita: ' + error.message);
 }
 
 async function labelingSubmit(newsId, jenis, hasil) {
@@ -162,6 +158,7 @@ function initLabelingPage(config) {
     textarea: document.getElementById('result-textarea'),
     btnSubmit: document.getElementById('btn-submit'),
     btnSkip: document.getElementById('btn-skip'),
+    btnFlag: document.getElementById('btn-flag'),
     validationMsg: document.getElementById('validation-msg')
   };
 
@@ -271,9 +268,34 @@ function initLabelingPage(config) {
     }
   }
 
+  // "Lewati" only releases the lock — the row goes right back into the queue, so
+  // it's for a transient reason (came back to this article, want a different one
+  // next). Use "Tandai Bermasalah" instead when the AI itself won't cooperate
+  // (e.g. it answers with a sympathetic/safety message instead of the format for
+  // sensitive topics like suicide/depression) — that permanently pulls the row out
+  // of this stage's queue rather than sending the next intern into the same wall.
+  async function handleFlag() {
+    if (!currentRow) return;
+    const reason = prompt('Alasan menandai (opsional) — mis. "AI menolak merespon karena konten sensitif":', '');
+    if (reason === null) return; // cancelled
+    els.btnFlag.disabled = true;
+    els.btnSkip.disabled = true;
+    try {
+      await labelingFlag(currentRow.id, jenis, reason);
+      await refreshQueueCount();
+      await loadNext();
+    } catch (err) {
+      alert('Gagal menandai: ' + err.message);
+    } finally {
+      els.btnFlag.disabled = false;
+      els.btnSkip.disabled = false;
+    }
+  }
+
   els.btnCopy.addEventListener('click', handleCopy);
   els.btnSubmit.addEventListener('click', handleValidateAndSubmit);
   els.btnSkip.addEventListener('click', handleSkip);
+  els.btnFlag.addEventListener('click', handleFlag);
 
   (async () => {
     try {
