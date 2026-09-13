@@ -104,7 +104,7 @@ function switchAdminTab(tab) {
   }
 }
 
-const JENIS_LABELS = { screener: 'Screener', lapus: 'Lapangan Usaha', pengeluaran: 'Pengeluaran' };
+const JENIS_LABELS = { screener: 'Pengecekan Awal', lapus: 'Lapangan Usaha', pengeluaran: 'Pengeluaran' };
 const LABELING_PAGE_BY_JENIS = { screener: 'labeling-screener.html', lapus: 'labeling-lapus.html', pengeluaran: 'labeling-pengeluaran.html' };
 
 function formatReportDate(iso) {
