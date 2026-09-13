@@ -2315,6 +2315,19 @@ select {
   margin-bottom: 14px;
 }
 
+/* Only ever populated for a row opened via ?news_id= (see loadInitial() in
+   labeling-common.js) — the normal queue can never claim an already-labeled row,
+   so this has nothing to show there and stays hidden. */
+.labeling-existing-label {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
 .labeling-content {
   font-size: 14px;
   line-height: 1.65;

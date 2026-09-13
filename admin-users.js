@@ -245,7 +245,7 @@ function syncDetailFilterInputs() {
 
 async function loadDetailRows() {
   const tbody = document.getElementById('admin-detail-tbody');
-  tbody.innerHTML = '<tr><td colspan="6">Memuat data...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7">Memuat data...</td></tr>';
 
   try {
     const { data, error } = await window.db.rpc('admin_labeling_detail', {
@@ -260,14 +260,14 @@ async function loadDetailRows() {
     renderDetailRows(data.rows || []);
     renderDetailPagination();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
 function renderDetailRows(rows) {
   const tbody = document.getElementById('admin-detail-tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6">Tidak ada baris yang cocok dengan filter ini.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Tidak ada baris yang cocok dengan filter ini.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -290,6 +290,7 @@ function renderDetailRows(rows) {
         <td class="admin-detail-title">${titleCell}</td>
         <td>${escapeHtml(r.source || '-')}</td>
         <td>${escapeHtml(r.label_value ?? '-')}</td>
+        <td>${escapeHtml(r.labeler_nama || '-')}</td>
         <td>${statusBadge}</td>
       </tr>
     `;

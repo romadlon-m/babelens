@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913g">
+  <link rel="stylesheet" href="style.css?v=20260913h">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -118,11 +118,12 @@
               <th>Judul</th>
               <th>Sumber</th>
               <th>Label</th>
+              <th>Dikerjakan Oleh</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="admin-detail-tbody">
-            <tr><td colspan="6">Memuat data...</td></tr>
+            <tr><td colspan="7">Memuat data...</td></tr>
           </tbody>
         </table>
 
@@ -181,7 +182,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913f"></script>
-  <script src="admin-users.js?v=20260913g"></script>
+  <script src="admin-users.js?v=20260913h"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

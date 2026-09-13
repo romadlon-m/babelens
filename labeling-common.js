@@ -72,6 +72,29 @@ async function labelingCopyToClipboard(text) {
   }
 }
 
+// Only ever relevant for a row opened via ?news_id= (see loadInitial()) — the
+// normal queue claim can never return an already-labeled row for that jenis, so
+// there is nothing to show in the regular flow. Reads straight off the `news`
+// row's own columns (already returned by both claim RPCs), so this needs no
+// extra query and works identically for admins and labelers.
+function labelingFormatExistingLabel(jenis, row) {
+  if (jenis === 'screener') {
+    if (row.screener_passed == null) return null;
+    return row.screener_passed ? 'Lolos' : 'Tidak Lolos';
+  }
+  if (jenis === 'lapus') {
+    if (row.lu_relevan == null) return null;
+    const kategori = Array.isArray(row.kategori_lapus) && row.kategori_lapus.length
+      ? ` (${row.kategori_lapus.join(', ')})` : '';
+    return `${row.lu_relevan}${kategori}`;
+  }
+  // pengeluaran
+  if (row.pengeluaran_relevan == null) return null;
+  const komponen = Array.isArray(row.komponen_pengeluaran) && row.komponen_pengeluaran.length
+    ? ` (${row.komponen_pengeluaran.join(', ')})` : '';
+  return `${row.pengeluaran_relevan}${komponen}`;
+}
+
 // Marks the current stage active in the shared 3-item subnav markup (identical
 // on all 3 labeling-*.html pages, like sidebar.js's setActiveNav() for the top nav).
 function renderLabelingSubnav(jenis) {
@@ -164,6 +187,7 @@ function initLabelingPage(config) {
     empty: document.getElementById('labeling-empty'),
     title: document.getElementById('labeling-title'),
     meta: document.getElementById('labeling-meta'),
+    existingLabel: document.getElementById('labeling-existing-label'),
     content: document.getElementById('labeling-content'),
     btnCopy: document.getElementById('btn-copy-prompt'),
     textarea: document.getElementById('result-textarea'),
@@ -199,6 +223,13 @@ function initLabelingPage(config) {
       row.category ? `🏷️ ${labelingEscapeHtml(row.category)}` : ''
     ].filter(Boolean).map(s => `<span>${s}</span>`).join('');
     els.content.textContent = row.content || row.summary || '(tidak ada isi)';
+    const existing = labelingFormatExistingLabel(jenis, row);
+    if (existing) {
+      els.existingLabel.textContent = `🏷️ Label saat ini: ${existing}`;
+      els.existingLabel.hidden = false;
+    } else {
+      els.existingLabel.hidden = true;
+    }
     resetResultArea();
   }
 
