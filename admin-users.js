@@ -278,6 +278,13 @@ function renderDetailRows(rows) {
         : r.needs_relabel
           ? '<span class="badge" style="background:#fef3c7;color:#b45309;">Perlu direlabel</span>'
           : '<span class="badge badge-green">Sudah dilabel</span>';
+    // Only meaningful for Screener: this is the same "already has lapus/pengeluaran
+    // data from the pre-tool manual pass" group the Screener queue itself already
+    // deprioritizes (see claim_next_news_for_labeling) — shown here so admins see
+    // the same distinction, not just the labeler-facing queue order.
+    const legacyBadge = (detailState.jenis === 'screener' && r.legacy_labeled)
+      ? ' <span class="badge badge-gray" title="Sudah punya data lapus/pengeluaran dari proses manual dulu">🗂️ Data Lama</span>'
+      : '';
     const labelingUrl = `${LABELING_PAGE_BY_JENIS[detailState.jenis]}?news_id=${r.id}`;
     const titleLink = `<a class="admin-link-btn" href="${escapeHtml(labelingUrl)}" target="_blank" rel="noopener" title="Buka di halaman labeling">${escapeHtml(r.title || '-')}</a>`;
     const titleCell = r.is_flagged && r.flag_reason
@@ -291,7 +298,7 @@ function renderDetailRows(rows) {
         <td>${escapeHtml(r.source || '-')}</td>
         <td>${escapeHtml(r.label_value ?? '-')}</td>
         <td>${escapeHtml(r.labeler_nama || '-')}</td>
-        <td>${statusBadge}</td>
+        <td>${statusBadge}${legacyBadge}</td>
       </tr>
     `;
   }).join('');
