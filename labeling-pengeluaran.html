@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913e">
+  <link rel="stylesheet" href="style.css?v=20260913f">
 </head>
 <body class="labeling-page" style="visibility:hidden;">
 
@@ -78,13 +78,13 @@
     </main>
   </div><!-- /.app-body -->
 
-  <script src="sidebar.js?v=20260913"></script>
-  <script src="labeling-common.js?v=20260913e"></script>
+  <script src="sidebar.js?v=20260913f"></script>
+  <script src="labeling-common.js?v=20260913f"></script>
   <script src="labeling-pengeluaran.js?v=20260913b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
-      if (!r.profile?.is_labeler) {
+      if (!r.profile?.is_labeler && !r.profile?.is_admin) {
         window.location.replace('index.html');
         return;
       }
