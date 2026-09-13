@@ -2152,9 +2152,10 @@ select {
   text-decoration: underline;
 }
 
-.admin-detail-title {
+.admin-table td.admin-detail-title {
   white-space: normal;
   max-width: 420px;
+  word-break: break-word;
 }
 
 .admin-detail-filters {
@@ -2240,6 +2241,19 @@ select {
   max-width: 860px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* Mobile/tablet (<1024px): single column, article first (read it, then respond
+   below) — reordered via `order` rather than DOM order so the desktop 2-column
+   layout below can put the workflow first without duplicating markup. */
+.labeling-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.labeling-article-pane {
+  order: -1;
+  margin-bottom: 18px;
 }
 
 .labeling-queue-counter {
@@ -2401,12 +2415,39 @@ select {
 
   .labeling-page .app-body { flex: 1; min-height: 0; overflow: hidden; }
   .labeling-page .main-content {
+    max-width: 1500px;
     flex: 1;
     min-height: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     padding-bottom: 16px;
+  }
+
+  /* 2-column layout: fixed-width workflow pane on the left (queue/actions/paste
+     box — content is short and doesn't need much room), article reading pane
+     filling the rest on the right. Below 1024px these stack via the base rules
+     above instead (article first, order:-1). */
+  .labeling-page .labeling-layout {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+  }
+  .labeling-page .labeling-workflow {
+    flex: 0 0 380px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .labeling-page .labeling-article-pane {
+    order: 0;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
   }
 
   /* position:static, not sticky: .main-content no longer scrolls at all on this

@@ -269,16 +269,21 @@ function renderDetailRows(rows) {
     return;
   }
   tbody.innerHTML = rows.map(r => {
-    const statusBadge = r.label_value == null
-      ? '<span class="badge badge-gray">Belum dilabel</span>'
-      : r.needs_relabel
-        ? '<span class="badge" style="background:#fef3c7;color:#b45309;">Perlu direlabel</span>'
-        : '<span class="badge badge-green">Sudah dilabel</span>';
+    const statusBadge = r.is_flagged
+      ? '<span class="badge" style="background:#fee2e2;color:#dc2626;">🚩 Ditandai</span>'
+      : r.label_value == null
+        ? '<span class="badge badge-gray">Belum dilabel</span>'
+        : r.needs_relabel
+          ? '<span class="badge" style="background:#fef3c7;color:#b45309;">Perlu direlabel</span>'
+          : '<span class="badge badge-green">Sudah dilabel</span>';
+    const titleCell = r.is_flagged && r.flag_reason
+      ? `${escapeHtml(r.title || '-')}<div class="admin-muted" style="font-size:11px;margin-top:2px;">Alasan: ${escapeHtml(r.flag_reason)}</div>`
+      : escapeHtml(r.title || '-');
     return `
       <tr>
         <td>${r.id}</td>
         <td>${escapeHtml(formatReportDate(r.publication_datetime))}</td>
-        <td class="admin-detail-title">${escapeHtml(r.title || '-')}</td>
+        <td class="admin-detail-title">${titleCell}</td>
         <td>${escapeHtml(r.source || '-')}</td>
         <td>${escapeHtml(r.label_value ?? '-')}</td>
         <td>${statusBadge}</td>

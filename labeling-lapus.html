@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913d">
+  <link rel="stylesheet" href="style.css?v=20260913e">
 </head>
 <body class="labeling-page" style="visibility:hidden;">
 
@@ -38,41 +38,48 @@
         </div>
       </header>
 
-      <div id="labeling-queue-count" class="labeling-queue-counter">Sisa antrean: memuat...</div>
+      <div class="labeling-layout">
+        <div class="labeling-workflow">
+          <div id="labeling-queue-count" class="labeling-queue-counter">Sisa antrean: memuat...</div>
 
-      <div class="labeling-format-hint">
-        Tempel hasil AI persis satu baris dengan format:
-        <code>[No]|||[Ya/Tidak]|||[Kategori atau -]|||[Alasan]|||[Naik/Turun/Netral/-]</code>
-        — [No] harus sama dengan ID artikel di awal teks yang disalin.
-      </div>
+          <div class="labeling-format-hint">
+            Tempel hasil AI persis satu baris dengan format:
+            <code>[No]|||[Ya/Tidak]|||[Kategori atau -]|||[Alasan]|||[Naik/Turun/Netral/-]</code>
+            — [No] harus sama dengan ID artikel di awal teks yang disalin.
+          </div>
 
-      <div id="labeling-card" class="labeling-card" hidden>
-        <h3 id="labeling-title"></h3>
-        <div id="labeling-meta" class="labeling-meta"></div>
-        <div id="labeling-content" class="labeling-content"></div>
-      </div>
+          <div class="labeling-actions">
+            <button id="btn-copy-prompt" class="primary-btn">📋 Copy Prompt + Artikel</button>
+            <button id="btn-skip" class="secondary-btn">⏭️ Lewati</button>
+            <button id="btn-flag" class="secondary-btn">🚩 Tandai Bermasalah</button>
+          </div>
 
-      <div id="labeling-empty" class="labeling-empty-state" hidden>
-        🎉 Antrean Lapangan Usaha kosong. Tidak ada berita yang perlu dilabel saat ini.
-      </div>
+          <div class="labeling-step-label">Tempel hasil AI di sini</div>
+          <textarea id="result-textarea" class="labeling-textarea" placeholder="1|||Ya|||A, B|||Alasan singkat...|||Naik"></textarea>
+          <div id="validation-msg" class="labeling-validation-msg"></div>
 
-      <div class="labeling-actions">
-        <button id="btn-copy-prompt" class="primary-btn">📋 Copy Prompt + Artikel</button>
-        <button id="btn-skip" class="secondary-btn">⏭️ Lewati</button>
-      </div>
+          <div class="labeling-actions">
+            <button id="btn-submit" class="primary-btn">Validasi & Kirim</button>
+          </div>
+        </div>
 
-      <div class="labeling-step-label">Tempel hasil AI di sini</div>
-      <textarea id="result-textarea" class="labeling-textarea" placeholder="1|||Ya|||A, B|||Alasan singkat...|||Naik"></textarea>
-      <div id="validation-msg" class="labeling-validation-msg"></div>
+        <div class="labeling-article-pane">
+          <div id="labeling-card" class="labeling-card" hidden>
+            <h3 id="labeling-title"></h3>
+            <div id="labeling-meta" class="labeling-meta"></div>
+            <div id="labeling-content" class="labeling-content"></div>
+          </div>
 
-      <div class="labeling-actions">
-        <button id="btn-submit" class="primary-btn">Validasi & Kirim</button>
+          <div id="labeling-empty" class="labeling-empty-state" hidden>
+            🎉 Antrean Lapangan Usaha kosong. Tidak ada berita yang perlu dilabel saat ini.
+          </div>
+        </div>
       </div>
     </main>
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20260913"></script>
-  <script src="labeling-common.js?v=20260913d"></script>
+  <script src="labeling-common.js?v=20260913e"></script>
   <script src="labeling-lapus.js?v=20260913b"></script>
   <script>
     requireAuth().then(r => {

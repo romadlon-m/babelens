@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913d">
+  <link rel="stylesheet" href="style.css?v=20260913e">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -99,6 +99,7 @@
               <option value="belum">Belum dilabel</option>
               <option value="sudah">Sudah dilabel</option>
               <option value="perlu_relabel">Perlu direlabel (prompt lama)</option>
+              <option value="ditandai">Ditandai bermasalah</option>
             </select>
           </div>
           <div class="filter-group">
@@ -156,7 +157,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913"></script>
-  <script src="admin-users.js?v=20260913d"></script>
+  <script src="admin-users.js?v=20260913e"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
