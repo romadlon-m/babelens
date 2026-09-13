@@ -684,6 +684,8 @@ select {
 
 .full-article.show {
   display: block;
+  max-height: 480px;
+  overflow-y: auto;
 }
 
 /* ============================================================
