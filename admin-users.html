@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260913f">
+  <link rel="stylesheet" href="style.css?v=20260913g">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -156,8 +156,32 @@
     </div>
   </div>
 
+  <!-- EDIT USER MODAL -->
+  <div id="admin-edit-modal-overlay" onclick="closeEditModal(event)">
+    <div class="feedback-modal">
+      <div class="feedback-modal-header">
+        <span>Edit Pengguna</span>
+        <button onclick="closeEditModal(null, true)">✕</button>
+      </div>
+      <input type="hidden" id="edit-user-id">
+      <div class="admin-modal-field">
+        <label for="edit-nip">NIP (9 digit)</label>
+        <input type="text" id="edit-nip" maxlength="9" inputmode="numeric" placeholder="3400xxxxx">
+      </div>
+      <div class="admin-modal-field">
+        <label for="edit-nama">Nama</label>
+        <input type="text" id="edit-nama" placeholder="Nama lengkap">
+      </div>
+      <div class="admin-modal-checkbox">
+        <label><input type="checkbox" id="edit-is-labeler"> Bisa akses Labeling PDRB (intern labeler)</label>
+      </div>
+      <button id="edit-modal-submit" class="primary-btn" onclick="submitEditUser()">Simpan</button>
+      <div id="edit-status"></div>
+    </div>
+  </div>
+
   <script src="sidebar.js?v=20260913f"></script>
-  <script src="admin-users.js?v=20260913f"></script>
+  <script src="admin-users.js?v=20260913g"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
