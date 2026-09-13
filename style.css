@@ -10,6 +10,8 @@
   --primary: #2563eb;
   --primary-light: #eff6ff;
   --green: #16a34a;
+  --amber: #b45309;
+  --amber-light: #fef3c7;
   --gray: #6b7280;
   --sidebar-width: 320px;
   --header-top-height: 60px;
@@ -2263,6 +2265,14 @@ select {
    labeling-pengeluaran.html) — see news-scraper-babel/LABELING_TOOL_PLAN.md
    (private repo) for the full design rationale.
    ============================================================ */
+/* Per-stage accent color (--jenis-color) so the 3 pages read as distinct stages
+   at a glance instead of all looking identically blue — set via an extra body
+   class (labeling-page-screener/-lapus/-pengeluaran) alongside .labeling-page,
+   consumed by .primary-btn/.labeling-subnav-item.active/etc. below. */
+.labeling-page-screener { --jenis-color: var(--primary); --jenis-color-light: var(--primary-light); }
+.labeling-page-lapus { --jenis-color: var(--green); --jenis-color-light: #f0fdf4; }
+.labeling-page-pengeluaran { --jenis-color: var(--amber); --jenis-color-light: var(--amber-light); }
+
 .labeling-page .main-content {
   max-width: 860px;
   margin: 0 auto;
@@ -2319,8 +2329,8 @@ select {
    labeling-common.js) — the normal queue can never claim an already-labeled row,
    so this has nothing to show there and stays hidden. */
 .labeling-existing-label {
-  background: var(--primary-light);
-  color: var(--primary);
+  background: var(--jenis-color-light, var(--primary-light));
+  color: var(--jenis-color, var(--primary));
   font-size: 13px;
   font-weight: 600;
   border-radius: 10px;
@@ -2350,6 +2360,18 @@ select {
   min-width: 170px;
 }
 
+/* Primary actions (Copy Prompt, Validasi & Kirim) tinted per stage too, not just
+   the subnav — .secondary-btn (Lewati/Tandai) stays neutral on purpose so it
+   doesn't compete visually with the primary action. */
+.labeling-page .primary-btn {
+  background: var(--jenis-color, var(--primary));
+}
+
+.labeling-page .topbar-left h2 {
+  border-left: 4px solid var(--jenis-color, var(--primary));
+  padding-left: 12px;
+}
+
 .labeling-subnav {
   display: flex;
   gap: 6px;
@@ -2374,9 +2396,9 @@ select {
 }
 
 .labeling-subnav-item.active {
-  background: var(--primary);
+  background: var(--jenis-color, var(--primary));
   color: white;
-  border-color: var(--primary);
+  border-color: var(--jenis-color, var(--primary));
 }
 
 .labeling-step-label {
@@ -2422,7 +2444,7 @@ select {
 .labeling-format-hint {
   font-size: 12px;
   color: var(--muted);
-  background: var(--primary-light);
+  background: var(--jenis-color-light, var(--primary-light));
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 12px;
