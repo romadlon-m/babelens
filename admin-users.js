@@ -325,11 +325,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // paginated via the admin_labeling_detail RPC (see supabase/migrations/
 // 20260913140000_labeling_admin_detail.sql) so this stays fast as `news` grows. ---
 
-const detailState = { jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0, sortCol: 'tanggal', sortDir: 'desc' };
+const detailState = {
+  jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0,
+  sortCol: 'tanggal', sortDir: 'desc',
+  label: '', source: '', dateFrom: null, dateTo: null
+};
 let labelerOptions = [];
 let labelerOptionsLoaded = false;
 
-// Populates the "Intern" <select> once (profiles isn't admin-readable directly via
+// Label vocab is a closed, per-jenis set (matches labelingFormatExistingLabel()'s
+// values in labeling-common.js) — no need for a distinct-values query.
+const DETAIL_LABEL_OPTIONS = {
+  screener: ['Lolos', 'Tidak Lolos'],
+  lapus: ['Ya', 'Tidak'],
+  pengeluaran: ['Ya', 'Tidak']
+};
+
+function renderDetailLabelOptions() {
+  const select = document.getElementById('detail-label-filter');
+  const options = DETAIL_LABEL_OPTIONS[detailState.jenis] || [];
+  select.innerHTML = '<option value="">Semua</option>' +
+    options.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+  select.value = detailState.label || '';
+}
+
+// Populates the "Labeler" <select> once (profiles isn't admin-readable directly via
 // RLS, see loadLabelingReport()'s comment, hence the admin_list_labelers RPC).
 async function ensureLabelerOptionsLoaded() {
   if (labelerOptionsLoaded) return;
@@ -350,16 +370,35 @@ function openDetailForLabeler(labelerId, jenis) {
   detailState.labelerId = labelerId;
   detailState.jenis = jenis;
   detailState.status = 'sudah';
+  detailState.label = '';
+  detailState.source = '';
+  detailState.dateFrom = null;
+  detailState.dateTo = null;
   detailState.page = 1;
   switchAdminTab('detail');
 }
 
 function onDetailFilterChange() {
-  detailState.jenis = document.getElementById('detail-jenis').value;
+  const newJenis = document.getElementById('detail-jenis').value;
+  if (newJenis !== detailState.jenis) {
+    detailState.jenis = newJenis;
+    detailState.label = ''; // label vocab differs per jenis, so a stale value can't carry over
+    renderDetailLabelOptions();
+  }
   detailState.status = document.getElementById('detail-status').value;
+  detailState.label = document.getElementById('detail-label-filter').value;
+  detailState.source = document.getElementById('detail-source').value.trim();
+  detailState.dateFrom = document.getElementById('detail-date-from').value || null;
+  detailState.dateTo = document.getElementById('detail-date-to').value || null;
   detailState.labelerId = document.getElementById('detail-labeler-select').value || null;
   detailState.page = 1;
   loadDetailRows();
+}
+
+let detailSourceDebounceTimer = null;
+function onDetailSourceInput() {
+  clearTimeout(detailSourceDebounceTimer);
+  detailSourceDebounceTimer = setTimeout(onDetailFilterChange, 350);
 }
 
 function onDetailSortClick(col) {
@@ -394,6 +433,10 @@ function changeDetailPage(delta) {
 function syncDetailFilterInputs() {
   document.getElementById('detail-jenis').value = detailState.jenis;
   document.getElementById('detail-status').value = detailState.status;
+  renderDetailLabelOptions();
+  document.getElementById('detail-source').value = detailState.source || '';
+  document.getElementById('detail-date-from').value = detailState.dateFrom || '';
+  document.getElementById('detail-date-to').value = detailState.dateTo || '';
   document.getElementById('detail-labeler-select').value = detailState.labelerId || '';
 }
 
@@ -409,7 +452,11 @@ async function loadDetailRows() {
       p_page: detailState.page,
       p_page_size: detailState.pageSize,
       p_sort_col: detailState.sortCol,
-      p_sort_dir: detailState.sortDir
+      p_sort_dir: detailState.sortDir,
+      p_label: detailState.label || null,
+      p_source: detailState.source || null,
+      p_date_from: detailState.dateFrom || null,
+      p_date_to: detailState.dateTo || null
     });
     if (error) throw error;
     detailState.total = data.total || 0;
