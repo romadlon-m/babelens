@@ -2090,7 +2090,8 @@ select {
   background: white;
   border: 1px solid var(--border);
   border-radius: 14px;
-  overflow-x: auto;
+  overflow: auto;
+  max-height: max(360px, calc(100vh - var(--header-height) - 230px));
 }
 
 .admin-table {
@@ -2102,12 +2103,16 @@ select {
 .admin-table th,
 .admin-table td {
   text-align: left;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: white;
   color: var(--muted);
   font-weight: 600;
   font-size: 12px;
@@ -2117,6 +2122,32 @@ select {
 
 .admin-table tr:last-child td {
   border-bottom: none;
+}
+
+.admin-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-table th[data-sort]:hover {
+  color: var(--text);
+}
+
+.admin-table th[data-sort]::after {
+  content: '\2195';
+  margin-left: 5px;
+  font-size: 11px;
+  color: var(--border);
+}
+
+.admin-table th[data-sort].sorted-asc::after {
+  content: '\2191';
+  color: var(--primary);
+}
+
+.admin-table th[data-sort].sorted-desc::after {
+  content: '\2193';
+  color: var(--primary);
 }
 
 .admin-muted {
@@ -2162,12 +2193,17 @@ select {
   word-break: break-word;
 }
 
-.admin-detail-filters {
+.admin-detail-filters:not([hidden]) {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 14px;
   margin-bottom: 14px;
+}
+
+#admin-search {
+  width: auto;
+  min-width: 200px;
 }
 
 .admin-detail-filters .filter-group {

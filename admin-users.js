@@ -2,6 +2,73 @@ const ADMIN_FN_URL = 'https://cyqqohycenkoludiefgq.supabase.co/functions/v1/admi
 
 let adminUsersCache = [];
 let adminActiveTab = 'recent';
+const adminUsersFilter = { search: '', role: 'semua', status: 'semua' };
+const adminUsersSort = { col: null, dir: 'asc' };
+
+function renderSortIndicator(containerSelector, sortState) {
+  document.querySelectorAll(`${containerSelector} thead th[data-sort]`).forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (sortState.col && th.dataset.sort === sortState.col) {
+      th.classList.add(sortState.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+
+function adminUserStatusSortKey(u) {
+  return [
+    u.banned ? 'Nonaktif' : 'Aktif',
+    u.is_admin ? 'Admin' : '',
+    u.is_labeler ? 'Labeler' : '',
+    u.must_change_password ? 'BelumGantiPassword' : ''
+  ].join('|');
+}
+
+function compareAdminUsers(a, b, col) {
+  switch (col) {
+    case 'nip':
+      return (a.nip_lama || '').localeCompare(b.nip_lama || '');
+    case 'nama':
+      return (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' });
+    case 'email':
+      return (a.google_email || '').localeCompare(b.google_email || '', 'id', { sensitivity: 'base' });
+    case 'status':
+      return adminUserStatusSortKey(a).localeCompare(adminUserStatusSortKey(b));
+    case 'login': {
+      const va = a.last_login ? new Date(a.last_login).getTime() : -Infinity;
+      const vb = b.last_login ? new Date(b.last_login).getTime() : -Infinity;
+      return va - vb;
+    }
+    default:
+      return 0;
+  }
+}
+
+function sortAdminUsers(list) {
+  if (!adminUsersSort.col) return list;
+  const sorted = [...list].sort((a, b) => compareAdminUsers(a, b, adminUsersSort.col));
+  if (adminUsersSort.dir === 'desc') sorted.reverse();
+  return sorted;
+}
+
+function onAdminUsersSortClick(col) {
+  if (adminUsersSort.col === col) {
+    adminUsersSort.dir = adminUsersSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    adminUsersSort.col = col;
+    adminUsersSort.dir = 'asc';
+  }
+  renderActiveTab();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const thead = document.querySelector('#admin-users-view thead');
+  if (!thead) return;
+  thead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    onAdminUsersSortClick(th.dataset.sort);
+  });
+});
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -34,6 +101,7 @@ function formatLastLogin(iso) {
 
 function renderAdminUsers(users) {
   const tbody = document.getElementById('admin-users-tbody');
+  renderSortIndicator('#admin-users-view', adminUsersSort);
   if (!users.length) {
     tbody.innerHTML = '<tr><td colspan="6">Tidak ada data.</td></tr>';
     return;
@@ -41,6 +109,7 @@ function renderAdminUsers(users) {
   tbody.innerHTML = users.map(u => {
     const statusBadges = [
       u.is_admin ? '<span class="badge badge-blue">Admin</span>' : '',
+      u.is_labeler ? '<span class="badge" style="background:#ede9fe;color:#6d28d9;">Labeler</span>' : '',
       u.must_change_password ? '<span class="badge badge-gray">Belum ganti password</span>' : '',
       u.banned ? '<span class="badge" style="background:#fee2e2;color:#dc2626;">Nonaktif</span>' : '<span class="badge badge-green">Aktif</span>'
     ].filter(Boolean).join(' ');
@@ -64,17 +133,39 @@ function renderAdminUsers(users) {
   }).join('');
 }
 
+function matchesAdminUsersFilter(u) {
+  const { search, role, status } = adminUsersFilter;
+  if (search) {
+    const haystack = `${u.nama || ''} ${u.nip_lama || ''}`.toLowerCase();
+    if (!haystack.includes(search)) return false;
+  }
+  if (role === 'admin' && !u.is_admin) return false;
+  if (role === 'labeler' && !u.is_labeler) return false;
+  if (role === 'biasa' && (u.is_admin || u.is_labeler)) return false;
+  if (status === 'aktif' && u.banned) return false;
+  if (status === 'nonaktif' && !u.banned) return false;
+  if (status === 'belum_ganti_password' && !u.must_change_password) return false;
+  return true;
+}
+
+function onAdminFilterChange() {
+  adminUsersFilter.search = document.getElementById('admin-search').value.trim().toLowerCase();
+  adminUsersFilter.role = document.getElementById('admin-filter-role').value;
+  adminUsersFilter.status = document.getElementById('admin-filter-status').value;
+  renderActiveTab();
+}
+
 function renderActiveTab() {
+  let base;
   if (adminActiveTab === 'recent') {
-    const recent = adminUsersCache
+    base = adminUsersCache
       .filter(u => u.last_login)
       .sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
-    renderAdminUsers(recent);
   } else {
-    const all = [...adminUsersCache]
+    base = [...adminUsersCache]
       .sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' }));
-    renderAdminUsers(all);
   }
+  renderAdminUsers(sortAdminUsers(base.filter(matchesAdminUsersFilter)));
 }
 
 function switchAdminTab(tab) {
@@ -84,10 +175,12 @@ function switchAdminTab(tab) {
   document.getElementById('tab-btn-labeling').classList.toggle('active', tab === 'labeling');
   document.getElementById('tab-btn-detail').classList.toggle('active', tab === 'detail');
 
+  const usersFilters = document.getElementById('admin-users-filters');
   const usersView = document.getElementById('admin-users-view');
   const labelingView = document.getElementById('admin-labeling-view');
   const detailView = document.getElementById('admin-detail-view');
 
+  usersFilters.hidden = tab !== 'recent' && tab !== 'all';
   usersView.hidden = tab !== 'recent' && tab !== 'all';
   labelingView.hidden = tab !== 'labeling';
   detailView.hidden = tab !== 'detail';
@@ -147,34 +240,74 @@ async function loadLabelingReport() {
       counts[key] = (counts[key] || 0) + 1;
     });
 
-    const rows = Object.entries(counts).map(([key, count]) => {
+    labelingReportRows = Object.entries(counts).map(([key, count]) => {
       const [date, labelerId, jenis] = key.split('|||');
-      return { date, labelerId, jenis, count };
-    }).sort((a, b) => {
-      if (a.date !== b.date) return new Date(b.date) - new Date(a.date);
-      return (nameById[a.labelerId] || '').localeCompare(nameById[b.labelerId] || '', 'id');
+      return { date, labelerId, jenis, count, nama: nameById[labelerId] || labelerId };
     });
-
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="4">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = rows.map(r => {
-      const nama = nameById[r.labelerId] || r.labelerId;
-      return `
-      <tr>
-        <td>${escapeHtml(r.date)}</td>
-        <td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="${escapeHtml(r.jenis)}">${escapeHtml(nama)}</button></td>
-        <td>${escapeHtml(JENIS_LABELS[r.jenis] || r.jenis)}</td>
-        <td>${r.count}</td>
-      </tr>
-    `;
-    }).join('');
+    renderLabelingReportRows();
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="4">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
+
+let labelingReportRows = [];
+const labelingSort = { col: 'date', dir: 'desc' };
+
+function compareLabelingRows(a, b, col) {
+  switch (col) {
+    case 'date':
+      return new Date(a.date) - new Date(b.date);
+    case 'nama':
+      return (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' });
+    case 'jenis':
+      return (JENIS_LABELS[a.jenis] || a.jenis).localeCompare(JENIS_LABELS[b.jenis] || b.jenis, 'id');
+    case 'count':
+      return a.count - b.count;
+    default:
+      return 0;
+  }
+}
+
+function renderLabelingReportRows() {
+  const tbody = document.getElementById('admin-labeling-tbody');
+  renderSortIndicator('#admin-labeling-view', labelingSort);
+  if (!labelingReportRows.length) {
+    tbody.innerHTML = '<tr><td colspan="4">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>';
+    return;
+  }
+  const sorted = [...labelingReportRows].sort((a, b) => {
+    const cmp = compareLabelingRows(a, b, labelingSort.col);
+    return labelingSort.dir === 'asc' ? cmp : -cmp;
+  });
+  tbody.innerHTML = sorted.map(r => `
+      <tr>
+        <td>${escapeHtml(r.date)}</td>
+        <td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="${escapeHtml(r.jenis)}">${escapeHtml(r.nama)}</button></td>
+        <td>${escapeHtml(JENIS_LABELS[r.jenis] || r.jenis)}</td>
+        <td>${r.count}</td>
+      </tr>
+    `).join('');
+}
+
+function onLabelingSortClick(col) {
+  if (labelingSort.col === col) {
+    labelingSort.dir = labelingSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    labelingSort.col = col;
+    labelingSort.dir = col === 'date' ? 'desc' : 'asc';
+  }
+  renderLabelingReportRows();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const thead = document.querySelector('#admin-labeling-view thead');
+  if (!thead) return;
+  thead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    onLabelingSortClick(th.dataset.sort);
+  });
+});
 
 // Delegated so it survives every loadLabelingReport() re-render, and so intern
 // names (may contain quotes/apostrophes) never need inline-onclick escaping.
@@ -192,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // paginated via the admin_labeling_detail RPC (see supabase/migrations/
 // 20260913140000_labeling_admin_detail.sql) so this stays fast as `news` grows. ---
 
-const detailState = { jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0 };
+const detailState = { jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0, sortCol: 'tanggal', sortDir: 'desc' };
 let labelerOptions = [];
 let labelerOptionsLoaded = false;
 
@@ -205,7 +338,7 @@ async function ensureLabelerOptionsLoaded() {
     if (error) throw error;
     labelerOptions = data || [];
     const select = document.getElementById('detail-labeler-select');
-    select.innerHTML = '<option value="">Semua Intern</option>' +
+    select.innerHTML = '<option value="">Semua Labeler</option>' +
       labelerOptions.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.nama)}</option>`).join('');
     labelerOptionsLoaded = true;
   } catch (err) {
@@ -228,6 +361,27 @@ function onDetailFilterChange() {
   detailState.page = 1;
   loadDetailRows();
 }
+
+function onDetailSortClick(col) {
+  if (detailState.sortCol === col) {
+    detailState.sortDir = detailState.sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    detailState.sortCol = col;
+    detailState.sortDir = (col === 'tanggal' || col === 'no') ? 'desc' : 'asc';
+  }
+  detailState.page = 1;
+  loadDetailRows();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const thead = document.querySelector('#admin-detail-view table thead');
+  if (!thead) return;
+  thead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    onDetailSortClick(th.dataset.sort);
+  });
+});
 
 function changeDetailPage(delta) {
   const maxPage = Math.max(1, Math.ceil(detailState.total / detailState.pageSize));
@@ -253,10 +407,13 @@ async function loadDetailRows() {
       p_status: detailState.status,
       p_labeler_id: detailState.labelerId,
       p_page: detailState.page,
-      p_page_size: detailState.pageSize
+      p_page_size: detailState.pageSize,
+      p_sort_col: detailState.sortCol,
+      p_sort_dir: detailState.sortDir
     });
     if (error) throw error;
     detailState.total = data.total || 0;
+    renderSortIndicator('#admin-detail-view', { col: detailState.sortCol, dir: detailState.sortDir });
     renderDetailRows(data.rows || []);
     renderDetailPagination();
   } catch (err) {
@@ -404,6 +561,7 @@ async function toggleUserBan(userId, ban) {
 function openAdminModal() {
   document.getElementById('admin-new-nip').value = '';
   document.getElementById('admin-new-nama').value = '';
+  document.getElementById('admin-new-is-labeler').checked = false;
   document.getElementById('admin-status').textContent = '';
   document.getElementById('admin-modal-overlay').classList.add('open');
 }
@@ -417,6 +575,7 @@ function closeAdminModal(event, force) {
 async function submitNewUser() {
   const nip = document.getElementById('admin-new-nip').value.trim();
   const nama = document.getElementById('admin-new-nama').value.trim();
+  const isLabeler = document.getElementById('admin-new-is-labeler').checked;
   const statusEl = document.getElementById('admin-status');
 
   if (!/^\d{9}$/.test(nip)) {
@@ -430,7 +589,7 @@ async function submitNewUser() {
 
   statusEl.textContent = 'Menyimpan...';
   try {
-    const result = await callAdminFn('create', { nip_lama: nip, nama });
+    const result = await callAdminFn('create', { nip_lama: nip, nama, is_labeler: isLabeler });
     statusEl.textContent = `Berhasil dibuat. Password default: ${result.default_password}`;
     loadAdminUsers();
   } catch (err) {
