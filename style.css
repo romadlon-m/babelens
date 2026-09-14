@@ -2340,6 +2340,16 @@ select {
   color: var(--text);
 }
 
+.labeling-progress {
+  font-size: 13px;
+  color: var(--muted);
+  margin: -8px 0 16px;
+}
+
+.labeling-progress strong {
+  color: var(--jenis-color, var(--primary));
+}
+
 .labeling-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -2556,6 +2566,7 @@ select {
      flex-shrink:0 alone already keeps it pinned at the top of the column. */
   .labeling-page .topbar { position: static; top: auto; flex-shrink: 0; margin-bottom: 12px; }
   .labeling-page .labeling-queue-counter,
+  .labeling-page .labeling-progress,
   .labeling-page .labeling-format-hint { flex-shrink: 0; margin-bottom: 10px; }
 
   /* :not([hidden]) matters here: an author-stylesheet `display` declaration always

@@ -126,6 +126,17 @@ async function labelingQueueCount(jenis) {
   return data ?? 0;
 }
 
+// Counts this labeler's own submissions for `jenis` — total ever, and since
+// local (WIB) midnight today — via a SECURITY DEFINER RPC rather than a direct
+// `labeling_log` query, since that table's only SELECT policy is admin-only
+// (see labeling_my_progress() migration) and would otherwise silently return
+// zero for every non-admin labeler.
+async function labelingMyProgress(jenis) {
+  const { data, error } = await window.db.rpc('labeling_my_progress', { p_jenis: jenis });
+  if (error) throw new Error('Gagal memuat progres: ' + error.message);
+  return { total: data?.total ?? 0, today: data?.today ?? 0 };
+}
+
 async function labelingClaimNext(jenis) {
   const { data, error } = await window.db.rpc('claim_next_news_for_labeling', { p_jenis: jenis });
   if (error) throw new Error('Gagal mengambil antrean: ' + error.message);
@@ -183,6 +194,7 @@ function initLabelingPage(config) {
 
   const els = {
     queueCount: document.getElementById('labeling-queue-count'),
+    myProgress: document.getElementById('labeling-my-progress'),
     card: document.getElementById('labeling-card'),
     empty: document.getElementById('labeling-empty'),
     title: document.getElementById('labeling-title'),
@@ -243,6 +255,17 @@ function initLabelingPage(config) {
     }
   }
 
+  async function refreshMyProgress() {
+    if (!els.myProgress) return;
+    try {
+      const { total, today } = await labelingMyProgress(jenis);
+      els.myProgress.innerHTML = `Progres saya: <strong>${today}</strong> hari ini &middot; <strong>${total}</strong> total`;
+    } catch (err) {
+      els.myProgress.textContent = 'Progres saya: (gagal memuat)';
+      console.error(err);
+    }
+  }
+
   async function loadNext() {
     els.card.hidden = true;
     els.empty.hidden = true;
@@ -286,6 +309,7 @@ function initLabelingPage(config) {
     try {
       await labelingSubmit(currentRow.id, jenis, hasil);
       await refreshQueueCount();
+      await refreshMyProgress();
       await loadNext();
     } catch (err) {
       els.validationMsg.textContent = '❌ Gagal mengirim: ' + err.message;
@@ -368,6 +392,7 @@ function initLabelingPage(config) {
       alert(err.message);
     }
     await refreshQueueCount();
+    await refreshMyProgress();
     await loadInitial();
   })();
 }
