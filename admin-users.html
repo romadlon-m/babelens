@@ -153,6 +153,12 @@
               <option value="">Semua Labeler</option>
             </select>
           </div>
+          <div class="filter-group">
+            <label for="detail-prompt-versi-filter">Versi Prompt</label>
+            <select id="detail-prompt-versi-filter" onchange="onDetailFilterChange()">
+              <option value="">Semua</option>
+            </select>
+          </div>
         </div>
 
         <div class="admin-table-wrapper">
@@ -164,12 +170,13 @@
                 <th data-sort="judul">Judul</th>
                 <th data-sort="sumber">Sumber</th>
                 <th data-sort="label">Label</th>
+                <th>Versi Prompt</th>
                 <th data-sort="labeler">Dikerjakan Oleh</th>
                 <th data-sort="status">Status</th>
               </tr>
             </thead>
             <tbody id="admin-detail-tbody">
-              <tr><td colspan="7">Memuat data...</td></tr>
+              <tr><td colspan="8">Memuat data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -290,7 +297,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913f"></script>
-  <script src="admin-users.js?v=20260914e"></script>
+  <script src="admin-users.js?v=20260914f"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
