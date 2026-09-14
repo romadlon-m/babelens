@@ -191,7 +191,10 @@ function switchAdminTab(tab) {
   if (tab === 'labeling') {
     loadLabelingReport();
   } else if (tab === 'detail') {
-    ensureLabelerOptionsLoaded().then(() => {
+    Promise.all([
+      ensureLabelerOptionsLoaded(),
+      ensurePromptVersiOptionsLoaded(detailState.jenis)
+    ]).then(() => {
       syncDetailFilterInputs();
       loadDetailRows();
     });
@@ -333,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const detailState = {
   jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0,
   sortCol: 'tanggal', sortDir: 'desc',
-  label: '', source: '', dateFrom: null, dateTo: null
+  label: '', source: '', dateFrom: null, dateTo: null, promptVersi: ''
 };
 let labelerOptions = [];
 let labelerOptionsLoaded = false;
@@ -376,6 +379,7 @@ function openDetailForLabeler(labelerId, jenis) {
   detailState.jenis = jenis;
   detailState.status = 'sudah';
   detailState.label = '';
+  detailState.promptVersi = '';
   detailState.source = '';
   detailState.dateFrom = null;
   detailState.dateTo = null;
@@ -383,15 +387,51 @@ function openDetailForLabeler(labelerId, jenis) {
   switchAdminTab('detail');
 }
 
+// Prompt-version filter options: label_prompts' SELECT policy already allows
+// any authenticated user to read every row (active or not), same as the
+// "Kelola Prompt" tab's own read — but loaded independently here (not reused
+// from promptHistoryByJenis) since Detail Baris can be opened before the
+// Kelola Prompt tab has ever loaded.
+let promptVersiOptionsByJenis = { screener: null, lapus: null, pengeluaran: null };
+
+async function ensurePromptVersiOptionsLoaded(jenis) {
+  if (!promptVersiOptionsByJenis[jenis]) {
+    try {
+      const { data, error } = await window.db
+        .from('label_prompts')
+        .select('versi, created_at')
+        .eq('jenis', jenis)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      promptVersiOptionsByJenis[jenis] = data || [];
+    } catch (err) {
+      console.error('Gagal memuat daftar versi prompt:', err);
+      promptVersiOptionsByJenis[jenis] = [];
+    }
+  }
+  renderPromptVersiOptions();
+}
+
+function renderPromptVersiOptions() {
+  const select = document.getElementById('detail-prompt-versi-filter');
+  const options = promptVersiOptionsByJenis[detailState.jenis] || [];
+  select.innerHTML = '<option value="">Semua</option>' +
+    options.map(o => `<option value="${escapeHtml(o.versi)}">${escapeHtml(o.versi)}</option>`).join('');
+  select.value = detailState.promptVersi || '';
+}
+
 function onDetailFilterChange() {
   const newJenis = document.getElementById('detail-jenis').value;
   if (newJenis !== detailState.jenis) {
     detailState.jenis = newJenis;
     detailState.label = ''; // label vocab differs per jenis, so a stale value can't carry over
+    detailState.promptVersi = ''; // prompt versions differ per jenis too
     renderDetailLabelOptions();
+    ensurePromptVersiOptionsLoaded(newJenis);
   }
   detailState.status = document.getElementById('detail-status').value;
   detailState.label = document.getElementById('detail-label-filter').value;
+  detailState.promptVersi = document.getElementById('detail-prompt-versi-filter').value;
   detailState.source = document.getElementById('detail-source').value.trim();
   detailState.dateFrom = document.getElementById('detail-date-from').value || null;
   detailState.dateTo = document.getElementById('detail-date-to').value || null;
@@ -439,6 +479,7 @@ function syncDetailFilterInputs() {
   document.getElementById('detail-jenis').value = detailState.jenis;
   document.getElementById('detail-status').value = detailState.status;
   renderDetailLabelOptions();
+  renderPromptVersiOptions();
   document.getElementById('detail-source').value = detailState.source || '';
   document.getElementById('detail-date-from').value = detailState.dateFrom || '';
   document.getElementById('detail-date-to').value = detailState.dateTo || '';
@@ -447,7 +488,7 @@ function syncDetailFilterInputs() {
 
 async function loadDetailRows() {
   const tbody = document.getElementById('admin-detail-tbody');
-  tbody.innerHTML = '<tr><td colspan="7">Memuat data...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8">Memuat data...</td></tr>';
 
   try {
     const { data, error } = await window.db.rpc('admin_labeling_detail', {
@@ -461,7 +502,8 @@ async function loadDetailRows() {
       p_label: detailState.label || null,
       p_source: detailState.source || null,
       p_date_from: detailState.dateFrom || null,
-      p_date_to: detailState.dateTo || null
+      p_date_to: detailState.dateTo || null,
+      p_prompt_versi: detailState.promptVersi || null
     });
     if (error) throw error;
     detailState.total = data.total || 0;
@@ -469,14 +511,14 @@ async function loadDetailRows() {
     renderDetailRows(data.rows || []);
     renderDetailPagination();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
 function renderDetailRows(rows) {
   const tbody = document.getElementById('admin-detail-tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Tidak ada baris yang cocok dengan filter ini.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8">Tidak ada baris yang cocok dengan filter ini.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -499,18 +541,33 @@ function renderDetailRows(rows) {
     const titleCell = r.is_flagged && r.flag_reason
       ? `${titleLink}<div class="admin-muted" style="font-size:11px;margin-top:2px;">Alasan: ${escapeHtml(r.flag_reason)}</div>`
       : titleLink;
+    // Click (not hover) to reveal "alasan" — a hover tooltip risks the same
+    // clipping bug already documented for `.tooltip::after` inside a scrolling
+    // ancestor (this table wrapper has overflow), and this matches the
+    // existing inline-reveal pattern already used for flag_reason above.
+    const alasanRowId = `detail-alasan-${detailState.jenis}-${r.id}`;
+    const labelCell = r.alasan
+      ? `<span class="admin-link-btn" style="cursor:pointer" onclick="toggleDetailAlasan('${alasanRowId}')" title="Klik untuk lihat/sembunyikan alasan">${escapeHtml(r.label_value ?? '-')} 💬</span>
+         <div id="${alasanRowId}" class="admin-muted" style="font-size:11px;margin-top:2px;" hidden>Alasan: ${escapeHtml(r.alasan)}</div>`
+      : escapeHtml(r.label_value ?? '-');
     return `
       <tr>
         <td>${r.id}</td>
         <td>${escapeHtml(formatReportDate(r.publication_datetime))}</td>
         <td class="admin-detail-title">${titleCell}</td>
         <td>${escapeHtml(r.source || '-')}</td>
-        <td>${escapeHtml(r.label_value ?? '-')}</td>
+        <td>${labelCell}</td>
+        <td>${escapeHtml(r.prompt_versi || '-')}</td>
         <td>${escapeHtml(r.labeler_nama || '-')}</td>
         <td>${statusBadge}${legacyBadge}</td>
       </tr>
     `;
   }).join('');
+}
+
+function toggleDetailAlasan(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = !el.hidden;
 }
 
 function renderDetailPagination() {
