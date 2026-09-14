@@ -2241,6 +2241,67 @@ select {
   color: var(--muted);
 }
 
+.prompt-editor-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.prompt-editor-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  margin-bottom: 12px;
+}
+
+.prompt-editor-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.prompt-editor-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.prompt-editor-card .filter-group {
+  margin-bottom: 12px;
+}
+
+.prompt-editor-card select {
+  width: 100%;
+  max-width: 420px;
+}
+
+.prompt-textarea {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.prompt-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.prompt-editor-actions input[type="text"] {
+  flex: 1;
+  min-width: 220px;
+}
+
 #admin-modal-overlay {
   display: none;
   position: fixed;
