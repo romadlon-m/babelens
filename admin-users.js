@@ -174,16 +174,19 @@ function switchAdminTab(tab) {
   document.getElementById('tab-btn-all').classList.toggle('active', tab === 'all');
   document.getElementById('tab-btn-labeling').classList.toggle('active', tab === 'labeling');
   document.getElementById('tab-btn-detail').classList.toggle('active', tab === 'detail');
+  document.getElementById('tab-btn-prompts').classList.toggle('active', tab === 'prompts');
 
   const usersFilters = document.getElementById('admin-users-filters');
   const usersView = document.getElementById('admin-users-view');
   const labelingView = document.getElementById('admin-labeling-view');
   const detailView = document.getElementById('admin-detail-view');
+  const promptsView = document.getElementById('admin-prompts-view');
 
   usersFilters.hidden = tab !== 'recent' && tab !== 'all';
   usersView.hidden = tab !== 'recent' && tab !== 'all';
   labelingView.hidden = tab !== 'labeling';
   detailView.hidden = tab !== 'detail';
+  promptsView.hidden = tab !== 'prompts';
 
   if (tab === 'labeling') {
     loadLabelingReport();
@@ -192,6 +195,8 @@ function switchAdminTab(tab) {
       syncDetailFilterInputs();
       loadDetailRows();
     });
+  } else if (tab === 'prompts') {
+    loadAllPrompts();
   } else {
     renderActiveTab();
   }
@@ -513,6 +518,101 @@ function renderDetailPagination() {
   document.getElementById('detail-page-info').textContent = `Halaman ${detailState.page} dari ${maxPage} (${detailState.total} baris)`;
   document.getElementById('detail-prev-btn').disabled = detailState.page <= 1;
   document.getElementById('detail-next-btn').disabled = detailState.page >= maxPage;
+}
+
+// --- Kelola Prompt tab: view/edit label_prompts. "Simpan Versi Baru" always
+// creates a new row via admin_update_label_prompt() rather than editing the
+// active row's isi_prompt in place — see that RPC's migration for why (breaks
+// admin_labeling_detail()'s "perlu_relabel" audit trail otherwise). Reading is a
+// plain client query since label_prompts' SELECT policy already allows any
+// authenticated user to read every row, active or not. ---
+
+const PROMPT_JENIS_LIST = ['screener', 'lapus', 'pengeluaran'];
+let promptHistoryByJenis = { screener: [], lapus: [], pengeluaran: [] };
+
+async function loadAllPrompts() {
+  await Promise.all(PROMPT_JENIS_LIST.map(loadPromptHistory));
+}
+
+async function loadPromptHistory(jenis) {
+  const metaEl = document.getElementById(`prompt-meta-${jenis}`);
+  try {
+    const { data, error } = await window.db
+      .from('label_prompts')
+      .select('id, versi, isi_prompt, is_active, created_at')
+      .eq('jenis', jenis)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    promptHistoryByJenis[jenis] = data || [];
+    renderPromptEditor(jenis);
+  } catch (err) {
+    metaEl.textContent = 'Gagal memuat: ' + err.message;
+  }
+}
+
+function renderPromptEditor(jenis) {
+  const rows = promptHistoryByJenis[jenis] || [];
+  const metaEl = document.getElementById(`prompt-meta-${jenis}`);
+  const select = document.getElementById(`prompt-history-${jenis}`);
+  const textarea = document.getElementById(`prompt-textarea-${jenis}`);
+
+  if (!rows.length) {
+    metaEl.textContent = 'Belum ada prompt untuk jenis ini.';
+    select.innerHTML = '';
+    textarea.value = '';
+    return;
+  }
+
+  const active = rows.find(r => r.is_active) || rows[0];
+  metaEl.textContent = rows.find(r => r.is_active)
+    ? `Versi aktif: ${active.versi} • Dibuat ${formatReportDate(active.created_at)}`
+    : `Tidak ada versi aktif — menampilkan versi terbaru (${active.versi}).`;
+
+  select.innerHTML = rows.map(r =>
+    `<option value="${escapeHtml(r.id)}">${escapeHtml(r.versi)} (${escapeHtml(formatReportDate(r.created_at))})${r.is_active ? ' • Aktif' : ''}</option>`
+  ).join('');
+  select.value = active.id;
+  textarea.value = active.isi_prompt;
+}
+
+function onPromptHistorySelect(jenis) {
+  const select = document.getElementById(`prompt-history-${jenis}`);
+  const textarea = document.getElementById(`prompt-textarea-${jenis}`);
+  const row = (promptHistoryByJenis[jenis] || []).find(r => r.id === select.value);
+  if (row) textarea.value = row.isi_prompt;
+}
+
+async function savePrompt(jenis) {
+  const textarea = document.getElementById(`prompt-textarea-${jenis}`);
+  const versiInput = document.getElementById(`prompt-versi-${jenis}`);
+  const statusEl = document.getElementById(`prompt-status-${jenis}`);
+  const isiPrompt = textarea.value;
+
+  if (!isiPrompt.trim()) {
+    statusEl.textContent = 'Isi prompt tidak boleh kosong.';
+    statusEl.className = 'labeling-validation-msg error';
+    return;
+  }
+  if (!confirm(`Simpan versi baru untuk prompt "${JENIS_LABELS[jenis]}"? Versi ini akan langsung aktif dipakai labeler; versi lama tetap tersimpan di riwayat.`)) {
+    return;
+  }
+
+  statusEl.textContent = 'Menyimpan...';
+  statusEl.className = 'labeling-validation-msg';
+  try {
+    const { data, error } = await window.db.rpc('admin_update_label_prompt', {
+      p_jenis: jenis,
+      p_isi_prompt: isiPrompt,
+      p_versi: versiInput.value.trim() || null
+    });
+    if (error) throw error;
+    versiInput.value = '';
+    statusEl.textContent = `Tersimpan sebagai versi "${data.versi}".`;
+    await loadPromptHistory(jenis);
+  } catch (err) {
+    statusEl.textContent = 'Gagal menyimpan: ' + err.message;
+    statusEl.className = 'labeling-validation-msg error';
+  }
 }
 
 // Delegated (like the labeling-report name links) so re-renders of the users

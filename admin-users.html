@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260914d">
+  <link rel="stylesheet" href="style.css?v=20260914e">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -41,6 +41,7 @@
         <button class="admin-tab-btn" id="tab-btn-all" onclick="switchAdminTab('all')">Seluruh Pegawai</button>
         <button class="admin-tab-btn" id="tab-btn-labeling" onclick="switchAdminTab('labeling')">Aktivitas Labeling</button>
         <button class="admin-tab-btn" id="tab-btn-detail" onclick="switchAdminTab('detail')">Detail Baris</button>
+        <button class="admin-tab-btn" id="tab-btn-prompts" onclick="switchAdminTab('prompts')">Kelola Prompt</button>
       </div>
 
       <div id="admin-users-filters" class="admin-detail-filters">
@@ -179,6 +180,64 @@
           <button class="card-btn" id="detail-next-btn" onclick="changeDetailPage(1)">Berikutnya ›</button>
         </div>
       </div>
+
+      <!-- Kelola Prompt: view/edit the 3 labeling prompts (label_prompts table).
+           "Simpan" always creates a new version (see admin_update_label_prompt()
+           migration) rather than editing the active row in place, so past
+           labeling_log entries keep pointing at the prompt text that was actually
+           active when they were submitted. -->
+      <div id="admin-prompts-view" hidden>
+        <div class="prompt-editor-card" data-jenis="screener">
+          <div class="prompt-editor-header">
+            <h3>Pengecekan Awal</h3>
+            <span class="prompt-editor-meta" id="prompt-meta-screener">Memuat...</span>
+          </div>
+          <div class="filter-group">
+            <label for="prompt-history-screener">Riwayat Versi</label>
+            <select id="prompt-history-screener" onchange="onPromptHistorySelect('screener')"></select>
+          </div>
+          <textarea id="prompt-textarea-screener" class="prompt-textarea" rows="16"></textarea>
+          <div class="prompt-editor-actions">
+            <input type="text" id="prompt-versi-screener" placeholder="Nama versi (opsional, default timestamp)">
+            <button class="primary-btn" onclick="savePrompt('screener')">Simpan Versi Baru</button>
+          </div>
+          <div id="prompt-status-screener" class="labeling-validation-msg"></div>
+        </div>
+
+        <div class="prompt-editor-card" data-jenis="lapus">
+          <div class="prompt-editor-header">
+            <h3>Lapangan Usaha</h3>
+            <span class="prompt-editor-meta" id="prompt-meta-lapus">Memuat...</span>
+          </div>
+          <div class="filter-group">
+            <label for="prompt-history-lapus">Riwayat Versi</label>
+            <select id="prompt-history-lapus" onchange="onPromptHistorySelect('lapus')"></select>
+          </div>
+          <textarea id="prompt-textarea-lapus" class="prompt-textarea" rows="16"></textarea>
+          <div class="prompt-editor-actions">
+            <input type="text" id="prompt-versi-lapus" placeholder="Nama versi (opsional, default timestamp)">
+            <button class="primary-btn" onclick="savePrompt('lapus')">Simpan Versi Baru</button>
+          </div>
+          <div id="prompt-status-lapus" class="labeling-validation-msg"></div>
+        </div>
+
+        <div class="prompt-editor-card" data-jenis="pengeluaran">
+          <div class="prompt-editor-header">
+            <h3>Pengeluaran</h3>
+            <span class="prompt-editor-meta" id="prompt-meta-pengeluaran">Memuat...</span>
+          </div>
+          <div class="filter-group">
+            <label for="prompt-history-pengeluaran">Riwayat Versi</label>
+            <select id="prompt-history-pengeluaran" onchange="onPromptHistorySelect('pengeluaran')"></select>
+          </div>
+          <textarea id="prompt-textarea-pengeluaran" class="prompt-textarea" rows="16"></textarea>
+          <div class="prompt-editor-actions">
+            <input type="text" id="prompt-versi-pengeluaran" placeholder="Nama versi (opsional, default timestamp)">
+            <button class="primary-btn" onclick="savePrompt('pengeluaran')">Simpan Versi Baru</button>
+          </div>
+          <div id="prompt-status-pengeluaran" class="labeling-validation-msg"></div>
+        </div>
+      </div>
     </main>
 
   </div><!-- /.app-body -->
@@ -231,7 +290,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913f"></script>
-  <script src="admin-users.js?v=20260914d"></script>
+  <script src="admin-users.js?v=20260914e"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
