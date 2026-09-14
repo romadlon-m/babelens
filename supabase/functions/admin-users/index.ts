@@ -129,7 +129,8 @@ Deno.serve(async (req) => {
         nip_lama: nipLama,
         nama,
         must_change_password: true,
-        is_admin: false
+        is_admin: false,
+        is_labeler: !!body?.is_labeler
       })
 
       if (insertError) {
