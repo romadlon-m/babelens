@@ -34,8 +34,8 @@ function compareAdminUsers(a, b, col) {
     case 'status':
       return adminUserStatusSortKey(a).localeCompare(adminUserStatusSortKey(b));
     case 'login': {
-      const va = a.last_login ? new Date(a.last_login).getTime() : -Infinity;
-      const vb = b.last_login ? new Date(b.last_login).getTime() : -Infinity;
+      const va = a.last_activity ? new Date(a.last_activity).getTime() : -Infinity;
+      const vb = b.last_activity ? new Date(b.last_activity).getTime() : -Infinity;
       return va - vb;
     }
     default:
@@ -92,7 +92,7 @@ async function callAdminFn(action, payload = {}) {
   return body;
 }
 
-function formatLastLogin(iso) {
+function formatLastActivity(iso) {
   if (!iso) return 'Belum pernah';
   const d = new Date(iso);
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -120,7 +120,7 @@ function renderAdminUsers(users) {
         <td>${escapeHtml(u.nama)}</td>
         <td>${u.google_email ? escapeHtml(u.google_email) : '<span class="admin-muted">Belum terhubung</span>'}</td>
         <td>${statusBadges}</td>
-        <td>${formatLastLogin(u.last_login)}</td>
+        <td>${formatLastActivity(u.last_activity)}</td>
         <td>
           <div class="admin-actions">
             <button class="card-btn" data-edit-user-id="${u.id}">Edit</button>
@@ -159,8 +159,8 @@ function renderActiveTab() {
   let base;
   if (adminActiveTab === 'recent') {
     base = adminUsersCache
-      .filter(u => u.last_login)
-      .sort((a, b) => new Date(b.last_login) - new Date(a.last_login));
+      .filter(u => u.last_activity)
+      .sort((a, b) => new Date(b.last_activity) - new Date(a.last_activity));
   } else {
     base = [...adminUsersCache]
       .sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' }));
