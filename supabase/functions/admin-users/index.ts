@@ -76,17 +76,17 @@ Deno.serve(async (req) => {
 
       if (profilesError) return json({ error: 'Failed to list profiles: ' + profilesError.message }, 500)
 
-      const { data: loginEvents, error: eventsError } = await adminClient
+      const { data: activityEvents, error: eventsError } = await adminClient
         .from('user_events')
         .select('user_id, created_at')
-        .eq('event_type', 'login')
+        .in('event_type', ['login', 'session_resume'])
         .order('created_at', { ascending: false })
 
       if (eventsError) return json({ error: 'Failed to load login history: ' + eventsError.message }, 500)
 
-      const lastLoginByUser: Record<string, string> = {}
-      for (const ev of loginEvents ?? []) {
-        if (!lastLoginByUser[ev.user_id]) lastLoginByUser[ev.user_id] = ev.created_at
+      const lastActivityByUser: Record<string, string> = {}
+      for (const ev of activityEvents ?? []) {
+        if (!lastActivityByUser[ev.user_id]) lastActivityByUser[ev.user_id] = ev.created_at
       }
 
       const users = (profiles ?? []).map(p => {
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
           is_labeler: p.is_labeler,
           must_change_password: p.must_change_password,
           banned: !!(au?.banned_until && new Date(au.banned_until) > new Date()),
-          last_login: lastLoginByUser[p.id] ?? null,
+          last_activity: lastActivityByUser[p.id] ?? null,
           google_email: googleIdentity?.identity_data?.email ?? null
         }
       })
