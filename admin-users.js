@@ -537,20 +537,21 @@ function renderDetailRows(rows) {
       ? ' <span class="badge badge-gray" title="Sudah punya data lapus/pengeluaran dari proses manual dulu">🗂️ Data Lama</span>'
       : '';
     const labelingUrl = `${LABELING_PAGE_BY_JENIS[detailState.jenis]}?news_id=${r.id}`;
-    const titleLink = `<a class="admin-link-btn" href="${escapeHtml(labelingUrl)}" target="_blank" rel="noopener" title="Buka di halaman labeling">${escapeHtml(r.title || '-')}</a>`;
+    const titleLink = `<a class="admin-link-btn admin-detail-title-link" href="${escapeHtml(labelingUrl)}" target="_blank" rel="noopener" title="${escapeHtml(r.title || '-')}">${escapeHtml(r.title || '-')}</a>`;
     const titleCell = r.is_flagged && r.flag_reason
-      ? `${titleLink}<div class="admin-muted" style="font-size:11px;margin-top:2px;">Alasan: ${escapeHtml(r.flag_reason)}</div>`
+      ? `${titleLink}<div class="admin-muted admin-detail-note" title="${escapeHtml(r.flag_reason)}">Alasan: ${escapeHtml(r.flag_reason)}</div>`
       : titleLink;
     // Click (not hover) to reveal "alasan" — a hover tooltip risks the same
     // clipping bug already documented for `.tooltip::after` inside a scrolling
-    // ancestor (this table wrapper has overflow), and this matches the
-    // existing inline-reveal pattern already used for flag_reason above.
+    // ancestor (this table wrapper has overflow). Revealed as a separate
+    // colspan row below (not inline under the label cell) so it can never
+    // change this row's column widths under the fixed table layout.
     const alasanRowId = `detail-alasan-${detailState.jenis}-${r.id}`;
-    const labelCell = r.alasan
-      ? `<span class="admin-link-btn" style="cursor:pointer" onclick="toggleDetailAlasan('${alasanRowId}')" title="Klik untuk lihat/sembunyikan alasan">${escapeHtml(r.label_value ?? '-')} 💬</span>
-         <div id="${alasanRowId}" class="admin-muted" style="font-size:11px;margin-top:2px;" hidden>Alasan: ${escapeHtml(r.alasan)}</div>`
+    const hasAlasan = !!r.alasan;
+    const labelCell = hasAlasan
+      ? `<span class="admin-link-btn" style="cursor:pointer" onclick="toggleDetailAlasan('${alasanRowId}')" title="Klik untuk lihat/sembunyikan alasan">${escapeHtml(r.label_value ?? '-')} 💬</span>`
       : escapeHtml(r.label_value ?? '-');
-    return `
+    const mainRow = `
       <tr>
         <td>${r.id}</td>
         <td>${escapeHtml(formatReportDate(r.publication_datetime))}</td>
@@ -562,6 +563,26 @@ function renderDetailRows(rows) {
         <td>${statusBadge}${legacyBadge}</td>
       </tr>
     `;
+    const expandRow = hasAlasan ? `
+      <tr id="${alasanRowId}" class="admin-detail-expand-row" hidden>
+        <td colspan="8">
+          <div class="admin-detail-expand">
+            <div class="admin-detail-expand-block">
+              <strong>Alasan label</strong>
+              <p>${escapeHtml(r.alasan)}</p>
+            </div>
+            <div class="admin-detail-expand-block">
+              <strong>Ringkasan berita</strong>
+              <p>${r.summary ? escapeHtml(r.summary) : '<span class="admin-muted">Belum ada ringkasan.</span>'}</p>
+            </div>
+            <div class="admin-detail-expand-actions">
+              <a class="card-btn" href="${escapeHtml(labelingUrl)}" target="_blank" rel="noopener">🔍 Review Label</a>
+            </div>
+          </div>
+        </td>
+      </tr>
+    ` : '';
+    return mainRow + expandRow;
   }).join('');
 }
 
