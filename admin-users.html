@@ -8,8 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="auth.js?v=20260913"></script>
-  <link rel="stylesheet" href="style.css?v=20260915a">
+  <link rel="stylesheet" href="style.css?v=20260915b">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -192,9 +193,15 @@
         </div>
 
         <div class="admin-detail-pagination">
-          <button class="card-btn" id="detail-prev-btn" onclick="changeDetailPage(-1)">‹ Sebelumnya</button>
-          <span id="detail-page-info"></span>
-          <button class="card-btn" id="detail-next-btn" onclick="changeDetailPage(1)">Berikutnya ›</button>
+          <div class="admin-detail-pagination-nav">
+            <button class="card-btn" id="detail-prev-btn" onclick="changeDetailPage(-1)">‹ Sebelumnya</button>
+            <span id="detail-page-info"></span>
+            <button class="card-btn" id="detail-next-btn" onclick="changeDetailPage(1)">Berikutnya ›</button>
+          </div>
+          <div class="admin-detail-pagination-actions">
+            <button class="card-btn" id="detail-show-all-btn" onclick="toggleDetailShowAll()">📄 Tampilkan Semua</button>
+            <button class="card-btn" id="detail-export-btn" onclick="exportDetailToExcel()">⬇️ Unduh Excel</button>
+          </div>
         </div>
       </div>
 
@@ -307,7 +314,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913f"></script>
-  <script src="admin-users.js?v=20260915a"></script>
+  <script src="admin-users.js?v=20260915b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

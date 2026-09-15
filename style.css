@@ -2312,11 +2312,21 @@ select {
 
 .admin-detail-pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
   font-size: 13px;
   color: var(--muted);
+}
+
+.admin-detail-pagination-nav,
+.admin-detail-pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .prompt-editor-card {

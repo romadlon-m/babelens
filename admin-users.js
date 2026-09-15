@@ -336,10 +336,53 @@ document.addEventListener('DOMContentLoaded', () => {
 const detailState = {
   jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0,
   sortCol: 'tanggal', sortDir: 'desc',
-  label: '', source: '', dateFrom: null, dateTo: null, promptVersi: ''
+  label: '', source: '', dateFrom: null, dateTo: null, promptVersi: '',
+  showAll: false
 };
 let labelerOptions = [];
 let labelerOptionsLoaded = false;
+
+// admin_labeling_detail() clamps p_page_size to 100 server-side, so "tampilkan
+// semua" / Excel export (both want every filtered row, not just one page) have
+// to page through it in 100-row batches and accumulate client-side rather than
+// asking for one giant page. Past this many matching rows, "Tampilkan Semua"
+// asks for confirmation first (it means dozens of extra round trips plus a
+// very tall table) — Excel export doesn't prompt, since the whole point of
+// exporting is usually to get everything into one file regardless of size.
+const DETAIL_FETCH_PAGE_SIZE = 100;
+const DETAIL_SHOW_ALL_CONFIRM_THRESHOLD = 2000;
+
+// Loops admin_labeling_detail() with the *current* filters until every
+// matching row has been fetched. Used by both "Tampilkan Semua" and the
+// Excel export so they can never disagree about what "semua" means.
+async function fetchAllDetailRows(onProgress) {
+  let page = 1;
+  let total = Infinity;
+  const rows = [];
+  while (rows.length < total) {
+    const { data, error } = await window.db.rpc('admin_labeling_detail', {
+      p_jenis: detailState.jenis,
+      p_status: detailState.status,
+      p_labeler_id: detailState.labelerId,
+      p_page: page,
+      p_page_size: DETAIL_FETCH_PAGE_SIZE,
+      p_sort_col: detailState.sortCol,
+      p_sort_dir: detailState.sortDir,
+      p_label: detailState.label || null,
+      p_source: detailState.source || null,
+      p_date_from: detailState.dateFrom || null,
+      p_date_to: detailState.dateTo || null,
+      p_prompt_versi: detailState.promptVersi || null
+    });
+    if (error) throw error;
+    total = data.total || 0;
+    rows.push(...(data.rows || []));
+    if (!data.rows || !data.rows.length) break; // safety net against an infinite loop
+    if (onProgress) onProgress(rows.length, total);
+    page++;
+  }
+  return { rows, total };
+}
 
 // Label vocab is a closed, per-jenis set (matches labelingFormatExistingLabel()'s
 // values in labeling-common.js) — no need for a distinct-values query.
@@ -468,6 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function changeDetailPage(delta) {
+  if (detailState.showAll) return;
   const maxPage = Math.max(1, Math.ceil(detailState.total / detailState.pageSize));
   const next = detailState.page + delta;
   if (next < 1 || next > maxPage) return;
@@ -484,6 +528,7 @@ function syncDetailFilterInputs() {
   document.getElementById('detail-date-from').value = detailState.dateFrom || '';
   document.getElementById('detail-date-to').value = detailState.dateTo || '';
   document.getElementById('detail-labeler-select').value = detailState.labelerId || '';
+  document.getElementById('detail-show-all-btn').textContent = detailState.showAll ? '📄 Kembali ke Halaman' : '📄 Tampilkan Semua';
 }
 
 async function loadDetailRows() {
@@ -491,6 +536,17 @@ async function loadDetailRows() {
   tbody.innerHTML = '<tr><td colspan="8">Memuat data...</td></tr>';
 
   try {
+    if (detailState.showAll) {
+      const { rows, total } = await fetchAllDetailRows((loaded, total) => {
+        tbody.innerHTML = `<tr><td colspan="8">Memuat semua data... (${loaded.toLocaleString('id-ID')} / ${total.toLocaleString('id-ID')})</td></tr>`;
+      });
+      detailState.total = total;
+      renderSortIndicator('#admin-detail-view', { col: detailState.sortCol, dir: detailState.sortDir });
+      renderDetailRows(rows);
+      renderDetailPagination();
+      return;
+    }
+
     const { data, error } = await window.db.rpc('admin_labeling_detail', {
       p_jenis: detailState.jenis,
       p_status: detailState.status,
@@ -592,10 +648,104 @@ function toggleDetailAlasan(id) {
 }
 
 function renderDetailPagination() {
+  const prevBtn = document.getElementById('detail-prev-btn');
+  const nextBtn = document.getElementById('detail-next-btn');
+  if (detailState.showAll) {
+    document.getElementById('detail-page-info').textContent = `Menampilkan semua ${detailState.total.toLocaleString('id-ID')} baris`;
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    return;
+  }
   const maxPage = Math.max(1, Math.ceil(detailState.total / detailState.pageSize));
-  document.getElementById('detail-page-info').textContent = `Halaman ${detailState.page} dari ${maxPage} (${detailState.total} baris)`;
-  document.getElementById('detail-prev-btn').disabled = detailState.page <= 1;
-  document.getElementById('detail-next-btn').disabled = detailState.page >= maxPage;
+  document.getElementById('detail-page-info').textContent = `Halaman ${detailState.page} dari ${maxPage} (${detailState.total.toLocaleString('id-ID')} baris)`;
+  prevBtn.disabled = detailState.page <= 1;
+  nextBtn.disabled = detailState.page >= maxPage;
+}
+
+// Toggles between the normal server-paginated view and fetching every
+// filtered row up front (see fetchAllDetailRows()). Past
+// DETAIL_SHOW_ALL_CONFIRM_THRESHOLD rows this confirms first, since it means
+// dozens of extra RPC round trips and a much taller table to render.
+async function toggleDetailShowAll() {
+  const btn = document.getElementById('detail-show-all-btn');
+  if (detailState.showAll) {
+    detailState.showAll = false;
+    detailState.page = 1;
+    btn.textContent = '📄 Tampilkan Semua';
+    loadDetailRows();
+    return;
+  }
+  if (detailState.total > DETAIL_SHOW_ALL_CONFIRM_THRESHOLD) {
+    const ok = confirm(`Ini akan memuat semua ${detailState.total.toLocaleString('id-ID')} baris sekaligus dan mungkin lambat. Lanjutkan?`);
+    if (!ok) return;
+  }
+  detailState.showAll = true;
+  btn.textContent = '📄 Kembali ke Halaman';
+  loadDetailRows();
+}
+
+// Excel export always fetches every filtered row itself (via
+// fetchAllDetailRows(), same helper "Tampilkan Semua" uses) rather than
+// reusing whatever's currently rendered — otherwise exporting while on page
+// 3 of a paginated view would silently only export that one page. No
+// row-count confirmation here (unlike "Tampilkan Semua") since exporting
+// everything is the whole point of the button.
+async function exportDetailToExcel() {
+  const btn = document.getElementById('detail-export-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  try {
+    const { rows, total } = await fetchAllDetailRows((loaded, total) => {
+      btn.textContent = `⬇️ Memuat (${loaded.toLocaleString('id-ID')}/${total.toLocaleString('id-ID')})...`;
+    });
+    if (!total) {
+      alert('Tidak ada data untuk diekspor.');
+      return;
+    }
+    btn.textContent = '⬇️ Membuat file...';
+
+    const exportData = rows.map((r, i) => ({
+      'No': i + 1,
+      'ID Berita': r.id,
+      'Tanggal': r.publication_datetime ? formatReportDate(r.publication_datetime) : '-',
+      'Judul': r.title || '-',
+      'Sumber': r.source || '-',
+      'Label': r.label_value ?? '-',
+      'Alasan': r.alasan || '-',
+      'Versi Prompt': r.prompt_versi || '-',
+      'Dikerjakan Oleh': r.labeler_nama || '-',
+      'Status': r.is_flagged ? 'Ditandai' : (r.label_value == null ? 'Belum dilabel' : (r.needs_relabel ? 'Perlu direlabel' : 'Sudah dilabel')),
+      'Alasan Ditandai': r.is_flagged ? (r.flag_reason || '-') : '-',
+      'Ringkasan Berita': r.summary || '-'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Detail Baris');
+    ws['!cols'] = [
+      { wch: 5 },   // No
+      { wch: 10 },  // ID Berita
+      { wch: 14 },  // Tanggal
+      { wch: 50 },  // Judul
+      { wch: 20 },  // Sumber
+      { wch: 12 },  // Label
+      { wch: 45 },  // Alasan
+      { wch: 20 },  // Versi Prompt
+      { wch: 20 },  // Dikerjakan Oleh
+      { wch: 16 },  // Status
+      { wch: 40 },  // Alasan Ditandai
+      { wch: 60 },  // Ringkasan Berita
+    ];
+
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `babelens_detail_baris_${detailState.jenis}_${today}.xlsx`);
+  } catch (err) {
+    alert('Gagal membuat file Excel: ' + err.message);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 }
 
 // --- Kelola Prompt tab: view/edit label_prompts. "Simpan Versi Baru" always
