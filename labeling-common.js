@@ -134,7 +134,12 @@ async function labelingQueueCount(jenis) {
 async function labelingMyProgress(jenis) {
   const { data, error } = await window.db.rpc('labeling_my_progress', { p_jenis: jenis });
   if (error) throw new Error('Gagal memuat progres: ' + error.message);
-  return { total: data?.total ?? 0, today: data?.today ?? 0 };
+  return {
+    total: data?.total ?? 0,
+    today: data?.today ?? 0,
+    lastActiveDate: data?.last_active_date ?? null,
+    avgPerDay: data?.avg_per_day ?? 0
+  };
 }
 
 async function labelingClaimNext(jenis) {
@@ -248,7 +253,7 @@ function initLabelingPage(config) {
   async function refreshQueueCount() {
     try {
       const n = await labelingQueueCount(jenis);
-      els.queueCount.innerHTML = `Sisa antrean: <strong>${n}</strong> baris`;
+      els.queueCount.innerHTML = `Sisa antrean: <strong>${n.toLocaleString('id-ID')}</strong> baris`;
     } catch (err) {
       els.queueCount.textContent = 'Sisa antrean: (gagal memuat)';
       console.error(err);
@@ -258,8 +263,12 @@ function initLabelingPage(config) {
   async function refreshMyProgress() {
     if (!els.myProgress) return;
     try {
-      const { total, today } = await labelingMyProgress(jenis);
-      els.myProgress.innerHTML = `Progres saya: <strong>${today}</strong> hari ini &middot; <strong>${total}</strong> total`;
+      const { total, today, lastActiveDate, avgPerDay } = await labelingMyProgress(jenis);
+      const lastActiveText = lastActiveDate
+        ? `<strong>${labelingEscapeHtml(labelingFormatDate(lastActiveDate))}</strong>`
+        : '<strong>-</strong>';
+      els.myProgress.innerHTML = `Progres saya: <strong>${today}</strong> hari ini &middot; <strong>${total}</strong> total`
+        + `<span class="labeling-progress-extra">Hari aktif terakhir: ${lastActiveText} &middot; Rata-rata: <strong>${avgPerDay}</strong>/hari</span>`;
     } catch (err) {
       els.myProgress.textContent = 'Progres saya: (gagal memuat)';
       console.error(err);
