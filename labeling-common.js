@@ -138,6 +138,8 @@ async function labelingMyProgress(jenis) {
     total: data?.total ?? 0,
     today: data?.today ?? 0,
     lastActiveDate: data?.last_active_date ?? null,
+    lastActiveCount: data?.last_active_count ?? 0,
+    activeDays: data?.active_days ?? 0,
     avgPerDay: data?.avg_per_day ?? 0
   };
 }
@@ -263,12 +265,14 @@ function initLabelingPage(config) {
   async function refreshMyProgress() {
     if (!els.myProgress) return;
     try {
-      const { total, today, lastActiveDate, avgPerDay } = await labelingMyProgress(jenis);
-      const lastActiveText = lastActiveDate
-        ? `<strong>${labelingEscapeHtml(labelingFormatDate(lastActiveDate))}</strong>`
-        : '<strong>-</strong>';
+      const { total, today, lastActiveDate, lastActiveCount, activeDays, avgPerDay } = await labelingMyProgress(jenis);
+      const lastActiveLine = lastActiveDate
+        ? `Hari aktif terakhir: <strong>${labelingEscapeHtml(labelingFormatDate(lastActiveDate))}</strong> (${lastActiveCount} label)`
+        : 'Hari aktif terakhir: <strong>-</strong>';
+      const avgLine = `Rata-rata: <strong>${avgPerDay}</strong> label/hari (${activeDays} hari aktif)`;
       els.myProgress.innerHTML = `Progres saya: <strong>${today}</strong> hari ini &middot; <strong>${total}</strong> total`
-        + `<span class="labeling-progress-extra">Hari aktif terakhir: ${lastActiveText} &middot; Rata-rata: <strong>${avgPerDay}</strong>/hari</span>`;
+        + `<span class="labeling-progress-extra">${lastActiveLine}</span>`
+        + `<span class="labeling-progress-extra">${avgLine}</span>`;
     } catch (err) {
       els.myProgress.textContent = 'Progres saya: (gagal memuat)';
       console.error(err);
