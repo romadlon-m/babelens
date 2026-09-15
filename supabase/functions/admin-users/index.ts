@@ -91,7 +91,11 @@ Deno.serve(async (req) => {
 
       const users = (profiles ?? []).map(p => {
         const au = authUsers[p.id]
-        const googleIdentity = au?.identities?.find((i: any) => i.provider === 'google')
+        // au.identities is always null from the admin listUsers() endpoint (a GoTrue
+        // limitation — only getUserById() populates it), so linkage is read from
+        // app_metadata.providers/user_metadata.email instead, which listUsers() does
+        // populate correctly.
+        const hasGoogle = !!au?.app_metadata?.providers?.includes('google')
         return {
           id: p.id,
           nip_lama: p.nip_lama,
@@ -101,7 +105,7 @@ Deno.serve(async (req) => {
           must_change_password: p.must_change_password,
           banned: !!(au?.banned_until && new Date(au.banned_until) > new Date()),
           last_activity: lastActivityByUser[p.id] ?? null,
-          google_email: googleIdentity?.identity_data?.email ?? null
+          google_email: hasGoogle ? (au?.user_metadata?.email ?? null) : null
         }
       })
 
