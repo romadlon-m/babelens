@@ -78,24 +78,42 @@ Deno.serve(async (req) => {
 
       const { data: activityEvents, error: eventsError } = await adminClient
         .from('user_events')
-        .select('user_id, created_at')
-        .in('event_type', ['login', 'session_resume'])
+        .select('user_id, event_type, created_at, payload')
+        .in('event_type', ['login', 'session_resume', 'google_linked'])
         .order('created_at', { ascending: false })
 
       if (eventsError) return json({ error: 'Failed to load login history: ' + eventsError.message }, 500)
 
       const lastActivityByUser: Record<string, string> = {}
+      const googleEmailByUser: Record<string, string> = {}
       for (const ev of activityEvents ?? []) {
+        if (ev.event_type === 'google_linked') {
+          if (!googleEmailByUser[ev.user_id] && ev.payload?.email) googleEmailByUser[ev.user_id] = ev.payload.email
+          continue
+        }
         if (!lastActivityByUser[ev.user_id]) lastActivityByUser[ev.user_id] = ev.created_at
       }
 
       const users = (profiles ?? []).map(p => {
         const au = authUsers[p.id]
-        // au.identities is always null from the admin listUsers() endpoint (a GoTrue
-        // limitation — only getUserById() populates it), so linkage is read from
-        // app_metadata.providers/user_metadata.email instead, which listUsers() does
-        // populate correctly.
-        const hasGoogle = !!au?.app_metadata?.providers?.includes('google')
+        // app_metadata.providers is the reliable signal for "is Google linked" via
+        // listUsers(). The email itself has 3 possible sources, tried in order:
+        // (1) au.identities — usually absent from listUsers()'s response, but seen
+        //     populated for at least one real account (2026-09-16), so still worth
+        //     checking first when present; (2) the `google_linked` user_events row
+        //     logged client-side at link time (google-callback.html) — covers
+        //     accounts linked through the normal in-app flow after that logging
+        //     shipped; (3) user_metadata.email — normally empty for an identity
+        //     added later via linkIdentity() (confirmed empty, real accounts,
+        //     2026-09-16), but harmless to also check. Accounts linked before any
+        //     of these existed (e.g. very early manual/test links) may still show
+        //     no email despite being linked.
+        const googleIdentity = au?.identities?.find((i: any) => i.provider === 'google')
+        const hasGoogle = !!googleIdentity || !!au?.app_metadata?.providers?.includes('google')
+        const googleEmail = googleIdentity?.identity_data?.email
+          ?? googleEmailByUser[p.id]
+          ?? au?.user_metadata?.email
+          ?? null
         return {
           id: p.id,
           nip_lama: p.nip_lama,
@@ -105,7 +123,7 @@ Deno.serve(async (req) => {
           must_change_password: p.must_change_password,
           banned: !!(au?.banned_until && new Date(au.banned_until) > new Date()),
           last_activity: lastActivityByUser[p.id] ?? null,
-          google_email: hasGoogle ? (au?.user_metadata?.email ?? null) : null
+          google_email: hasGoogle ? googleEmail : null
         }
       })
 
