@@ -43,6 +43,10 @@
             <option value="pengeluaran">Pengeluaran</option>
           </select>
         </div>
+        <div class="filter-group" id="review-label-filter-group">
+          <label for="review-label-filter">Label</label>
+          <select id="review-label-filter"></select>
+        </div>
       </div>
 
       <div class="admin-tabs">
@@ -70,7 +74,7 @@
   <script src="labeling-screener.js?v=20260913b"></script>
   <script src="labeling-lapus.js?v=20260913b"></script>
   <script src="labeling-pengeluaran.js?v=20260913b"></script>
-  <script src="admin-review.js?v=20260919b"></script>
+  <script src="admin-review.js?v=20260919c"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
