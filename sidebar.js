@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const displayName = profile?.nama || 'Pengguna';
           const adminLink = profile?.is_admin
             ? '<a href="admin-users.html" class="user-dropdown-item">🛠️ Kelola Pengguna</a>'
+              + '<a href="admin-review.html" class="user-dropdown-item">🔍 Review Label</a>'
             : '';
           const labelerLink = (profile?.is_labeler || profile?.is_admin)
             ? '<a href="labeling-screener.html" class="user-dropdown-item">🏷️ Labeling PDRB</a>'

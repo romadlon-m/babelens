@@ -657,6 +657,7 @@ select {
 }
 
 .card-btn {
+  display: inline-block;
   border: none;
   background: #f3f4f6;
   padding: 10px 14px;
@@ -664,6 +665,8 @@ select {
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
+  color: inherit;
+  text-decoration: none;
   transition: 0.2s;
 }
 
@@ -1805,6 +1808,13 @@ select {
   align-items: center;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .badge-pdrb-active {
   display: inline-block;
   font-size: 11px;
@@ -2763,4 +2773,134 @@ select {
   .labeling-page .labeling-step-label { flex-shrink: 0; margin: 10px 0 6px; }
   .labeling-page .labeling-textarea { flex-shrink: 0; min-height: 80px; max-height: 130px; }
   .labeling-page .labeling-validation-msg { flex-shrink: 0; }
+}
+
+/* ============================================================
+   ADMIN REVIEW (admin-review.html) — mobile-first, single scrollable
+   list of cards (reuses .labeling-card as the base card look), loaded in
+   batches via infinite scroll rather than pagination. See CLAUDE.md
+   "Menu Review Label (admin)".
+   ============================================================ */
+.admin-review-page .main-content {
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.review-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.review-remaining {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.review-label-current {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.review-alasan-current {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.review-flag-reason {
+  font-size: 13px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.review-summary {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.review-full-content {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.review-full-content summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.review-full-content div {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  color: var(--text);
+}
+
+.review-source-link {
+  display: inline-block;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.review-ai-box,
+.review-perbaiki-box {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.review-ai-box .review-ai-textarea {
+  margin: 10px 0;
+  min-height: 60px;
+}
+
+.review-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.review-codes-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.review-perbaiki-box .review-alasan-input {
+  margin-bottom: 4px;
+}
+
+.review-sentinel {
+  height: 1px;
+}
+
+.review-loading {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 16px;
 }
