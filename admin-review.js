@@ -34,6 +34,17 @@ const REVIEW_PENGELUARAN_LABELS = {
   '5': 'Perubahan Inventori', '6': 'Ekspor Luar Negeri', '7': 'Impor Luar Negeri'
 };
 
+// Kosakata sama dengan DETAIL_LABEL_OPTIONS (admin-users.js) -- default-nya
+// sengaja nilai negatif (bukan "Semua"), lihat CLAUDE.md "Label filter" untuk
+// alasannya (baris "Tidak Lolos"/"Tidak" lebih berisiko menyembunyikan
+// kesalahan, jangan sampai tenggelam di antara baris "Lolos"/"Ya" yang jauh
+// lebih banyak).
+const REVIEW_LABEL_OPTIONS = {
+  screener: { options: ['Lolos', 'Tidak Lolos'], default: 'Tidak Lolos' },
+  lapus: { options: ['Ya', 'Tidak'], default: 'Tidak' },
+  pengeluaran: { options: ['Ya', 'Tidak'], default: 'Tidak' }
+};
+
 // Satu batch penuh dimuat sekaligus (bukan infinite-scroll) — lihat catatan di
 // reviewLoadBatch() untuk alasannya: infinite-scroll bentrok dengan tombol bulk
 // approve yang sengaja ditaruh di bawah kartu terakhir supaya harus dilewati
@@ -43,11 +54,26 @@ const REVIEW_BATCH_SIZE = 10;
 const reviewState = {
   jenis: 'screener',
   scope: 'ditandai',
+  label: REVIEW_LABEL_OPTIONS.screener.default,
   total: 0,
   rows: [],       // batch yang sedang tampil saja — {..row, resolved: bool}
   loading: false,
   activePrompts: {} // jenis -> {id, isi_prompt, versi}, fetched lazily
 };
+
+// "Ditandai" tidak punya label sama sekali (belum dilabel), jadi filter Label
+// tidak relevan untuk scope itu.
+function reviewSyncLabelFilterUi() {
+  const group = document.getElementById('review-label-filter-group');
+  const select = document.getElementById('review-label-filter');
+  const applies = reviewState.scope !== 'ditandai';
+  group.hidden = !applies;
+  if (!applies) return;
+  const { options } = REVIEW_LABEL_OPTIONS[reviewState.jenis];
+  select.innerHTML = '<option value="">Semua</option>' +
+    options.map(o => `<option value="${o}">${o}</option>`).join('');
+  select.value = reviewState.label || '';
+}
 
 function reviewCodesFor(jenis) {
   return jenis === 'lapus'
@@ -269,7 +295,8 @@ async function reviewLoadBatch() {
       p_jenis: reviewState.jenis,
       p_scope: reviewState.scope,
       p_page: 1,
-      p_page_size: REVIEW_BATCH_SIZE
+      p_page_size: REVIEW_BATCH_SIZE,
+      p_label: reviewState.scope === 'ditandai' ? null : (reviewState.label || null)
     });
     if (error) throw error;
     reviewState.total = data.total || 0;
@@ -486,7 +513,16 @@ function initReviewPage() {
   jenisSelect.value = reviewState.jenis;
   jenisSelect.addEventListener('change', () => {
     reviewState.jenis = jenisSelect.value;
+    // Kosakata Label beda per jenis (Lolos/Tidak Lolos vs Ya/Tidak), jadi nilai
+    // filter direset ke default negatif jenis yang baru, bukan dipertahankan.
+    reviewState.label = REVIEW_LABEL_OPTIONS[reviewState.jenis].default;
+    reviewSyncLabelFilterUi();
     reviewEnsureActivePrompt(reviewState.jenis);
+    reviewResetAndLoad();
+  });
+
+  document.getElementById('review-label-filter').addEventListener('change', (e) => {
+    reviewState.label = e.target.value;
     reviewResetAndLoad();
   });
 
@@ -494,11 +530,13 @@ function initReviewPage() {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tabs [data-scope]').forEach(b => b.classList.toggle('active', b === btn));
       reviewState.scope = btn.dataset.scope;
+      reviewSyncLabelFilterUi();
       reviewResetAndLoad();
     });
   });
 
   reviewWireListDelegation();
+  reviewSyncLabelFilterUi();
 
   reviewEnsureActivePrompt(reviewState.jenis);
   reviewResetAndLoad();
