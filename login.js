@@ -1,3 +1,17 @@
+// Only ever a bare "page.html" (+ optional query) from our own origin — set by
+// requireAuth() when it bounces an unauthenticated visit here, or absent
+// entirely for a normal visit to login.html. Rejecting anything else (a
+// protocol, "//host", a leading "/") closes the open-redirect hole a raw
+// `return` param would otherwise be: login.html?return=... is reachable by
+// anyone, not just requireAuth()'s own redirects.
+function getSafeReturnPath() {
+  const ret = new URLSearchParams(window.location.search).get('return');
+  if (ret && /^[a-zA-Z0-9_-]+\.html(\?\S*)?$/.test(ret)) {
+    return ret;
+  }
+  return 'index.html';
+}
+
 (async () => {
   const { data: { session } } = await window.db.auth.getSession();
   if (session) {
@@ -5,7 +19,7 @@
     if (profile?.must_change_password) {
       window.location.replace('change-password.html');
     } else {
-      window.location.replace('index.html');
+      window.location.replace(getSafeReturnPath());
     }
   }
 })();
@@ -43,12 +57,13 @@ async function handleLogin() {
   if (profile?.must_change_password) {
     window.location.replace('change-password.html');
   } else {
-    window.location.replace('index.html');
+    window.location.replace(getSafeReturnPath());
   }
 }
 
 async function handleGoogleLogin() {
   sessionStorage.setItem('oauth_intent', 'login');
+  sessionStorage.setItem('oauth_return', getSafeReturnPath());
   const { error } = await window.db.auth.signInWithOAuth({
     provider: 'google',
     options: {

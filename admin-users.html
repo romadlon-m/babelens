@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="auth.js?v=20260913"></script>
+  <script src="auth.js?v=20260919"></script>
   <link rel="stylesheet" href="style.css?v=20260915b">
 </head>
 <body class="admin-page" style="visibility:hidden;">
@@ -147,6 +147,14 @@
           <div class="filter-group">
             <label for="detail-date-to">Sampai Tanggal</label>
             <input type="date" id="detail-date-to" onchange="onDetailFilterChange()">
+          </div>
+          <div class="filter-group">
+            <label for="detail-submitted-from">Dikerjakan Dari</label>
+            <input type="date" id="detail-submitted-from" onchange="onDetailFilterChange()">
+          </div>
+          <div class="filter-group">
+            <label for="detail-submitted-to">Dikerjakan Sampai</label>
+            <input type="date" id="detail-submitted-to" onchange="onDetailFilterChange()">
           </div>
           <div class="filter-group">
             <label for="detail-labeler-select">Labeler</label>
@@ -314,7 +322,7 @@
   </div>
 
   <script src="sidebar.js?v=20260913f"></script>
-  <script src="admin-users.js?v=20260915c"></script>
+  <script src="admin-users.js?v=20260919b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
@@ -324,6 +332,7 @@
       }
       document.body.style.visibility = 'visible';
       loadAdminUsers();
+      applyDetailDeepLinkFromUrl();
     });
   </script>
 </body>

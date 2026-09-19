@@ -6,7 +6,8 @@ window.db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 async function requireAuth() {
   const { data: { session } } = await window.db.auth.getSession();
   if (!session) {
-    window.location.replace('login.html');
+    const returnTo = window.location.pathname.split('/').pop() + window.location.search;
+    window.location.replace('login.html?return=' + encodeURIComponent(returnTo));
     return null;
   }
   const { data: profile } = await window.db

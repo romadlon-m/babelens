@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="auth.js?v=20260913"></script>
+  <script src="auth.js?v=20260919"></script>
   <link rel="stylesheet" href="style.css?v=20260915b">
 </head>
 <body class="login-body">
@@ -70,6 +70,8 @@
 
       const intent = sessionStorage.getItem('oauth_intent');
       sessionStorage.removeItem('oauth_intent');
+      const oauthReturn = sessionStorage.getItem('oauth_return');
+      sessionStorage.removeItem('oauth_return');
 
       if (intent === 'login') {
         const { error: logError } = await window.db.from('user_events').insert({
@@ -88,7 +90,12 @@
         if (logError) console.error(logError);
       }
 
-      window.location.replace('index.html');
+      // Same allowlist as login.js's getSafeReturnPath() — oauth_return was
+      // already validated there before being stashed, but re-check here too
+      // since sessionStorage could in principle be tampered with.
+      const target = (oauthReturn && /^[a-zA-Z0-9_-]+\.html(\?\S*)?$/.test(oauthReturn))
+        ? oauthReturn : 'index.html';
+      window.location.replace(target);
     })();
   </script>
 </body>
