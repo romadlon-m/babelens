@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="auth.js?v=20260919"></script>
-  <link rel="stylesheet" href="style.css?v=20260915b">
+  <link rel="stylesheet" href="style.css?v=20260919">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -33,7 +33,10 @@
           <div class="topbar-left">
             <div><h2>Kelola Pengguna</h2></div>
           </div>
-          <button class="primary-btn" onclick="openAdminModal()">+ Tambah Pengguna</button>
+          <div class="topbar-actions">
+            <a class="card-btn" href="admin-review.html">🔍 Review Label</a>
+            <button class="primary-btn" onclick="openAdminModal()">+ Tambah Pengguna</button>
+          </div>
         </div>
       </header>
 
@@ -321,7 +324,7 @@
     </div>
   </div>
 
-  <script src="sidebar.js?v=20260913f"></script>
+  <script src="sidebar.js?v=20260919"></script>
   <script src="admin-users.js?v=20260919b"></script>
   <script>
     requireAuth().then(r => {

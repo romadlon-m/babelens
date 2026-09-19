@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Review Label</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js?v=20260919"></script>
+  <link rel="stylesheet" href="style.css?v=20260919">
+</head>
+<body class="admin-page admin-review-page" style="visibility:hidden;">
+
+  <!-- GLOBAL HEADER -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
+      <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
+    </div>
+    <div id="nav-placeholder" class="app-header-nav"></div>
+    <div id="header-user-widget"></div>
+  </header>
+
+  <div class="app-body">
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="topbar-left">
+            <div><h2>Review Label</h2></div>
+          </div>
+          <a class="card-btn" href="admin-users.html">← Kembali ke Kelola Pengguna</a>
+        </div>
+      </header>
+
+      <div class="admin-detail-filters">
+        <div class="filter-group">
+          <label for="review-jenis">Jenis</label>
+          <select id="review-jenis">
+            <option value="screener">Pengecekan Awal</option>
+            <option value="lapus">Lapangan Usaha</option>
+            <option value="pengeluaran">Pengeluaran</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" id="review-scope-ditandai" data-scope="ditandai">🚩 Ditandai bermasalah</button>
+        <button class="admin-tab-btn" id="review-scope-perlu_relabel" data-scope="perlu_relabel">♻️ Perlu direlabel</button>
+        <button class="admin-tab-btn" id="review-scope-sudah" data-scope="sudah">✅ Sudah dilabel</button>
+      </div>
+
+      <div class="review-toolbar">
+        <div id="review-remaining" class="review-remaining">Memuat...</div>
+        <button id="review-bulk-approve" class="primary-btn" hidden>✅ Semua yang termuat sesuai</button>
+      </div>
+
+      <div id="review-list" class="review-list"></div>
+
+      <div id="review-empty" class="labeling-empty-state" hidden>
+        🎉 Tidak ada baris di antrean ini.
+      </div>
+
+      <div id="review-sentinel" class="review-sentinel"></div>
+      <div id="review-loading" class="review-loading" hidden>Memuat lebih banyak...</div>
+    </main>
+  </div><!-- /.app-body -->
+
+  <script src="sidebar.js?v=20260919"></script>
+  <script src="labeling-common.js?v=20260915b"></script>
+  <script src="labeling-screener.js?v=20260913b"></script>
+  <script src="labeling-lapus.js?v=20260913b"></script>
+  <script src="labeling-pengeluaran.js?v=20260913b"></script>
+  <script src="admin-review.js?v=20260919"></script>
+  <script>
+    requireAuth().then(r => {
+      if (!r) return;
+      if (!r.profile?.is_admin) {
+        window.location.replace('index.html');
+        return;
+      }
+      document.body.style.visibility = 'visible';
+      initReviewPage();
+    });
+  </script>
+</body>
+</html>
