@@ -291,16 +291,34 @@ async function reviewLoadBatch() {
   list.innerHTML = '';
   emptyEl.hidden = true;
   try {
-    const { data, error } = await window.db.rpc('admin_review_queue', {
-      p_jenis: reviewState.jenis,
-      p_scope: reviewState.scope,
-      p_page: 1,
-      p_page_size: REVIEW_BATCH_SIZE,
-      p_label: reviewState.scope === 'ditandai' ? null : (reviewState.label || null)
-    });
-    if (error) throw error;
-    reviewState.total = data.total || 0;
-    const rows = data.rows || [];
+    // Loop (not recursion) so switching the Label filter when the current one
+    // runs dry can retry in-place without re-entering reviewLoadBatch() and
+    // tripping its own `if (loading) return` guard. At most 1 switch: with
+    // only 2 possible label values, a 2nd empty result means both are truly
+    // exhausted, so the loop always terminates in <= 2 iterations.
+    let switched = false;
+    let rows;
+    for (;;) {
+      const { data, error } = await window.db.rpc('admin_review_queue', {
+        p_jenis: reviewState.jenis,
+        p_scope: reviewState.scope,
+        p_page: 1,
+        p_page_size: REVIEW_BATCH_SIZE,
+        p_label: reviewState.scope === 'ditandai' ? null : (reviewState.label || null)
+      });
+      if (error) throw error;
+      reviewState.total = data.total || 0;
+      rows = data.rows || [];
+      if (rows.length || switched || !reviewState.label || reviewState.scope === 'ditandai') break;
+
+      const { options } = REVIEW_LABEL_OPTIONS[reviewState.jenis];
+      const other = options.find(o => o !== reviewState.label);
+      if (!other) break;
+      reviewState.label = other;
+      reviewSyncLabelFilterUi();
+      switched = true;
+    }
+
     reviewState.rows = rows.map(row => ({ ...row, resolved: false }));
     rows.forEach(row => list.appendChild(reviewRenderCard(row)));
     if (rows.length) {
