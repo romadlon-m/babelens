@@ -337,6 +337,7 @@ const detailState = {
   jenis: 'screener', status: 'semua', labelerId: null, page: 1, pageSize: 20, total: 0,
   sortCol: 'tanggal', sortDir: 'desc',
   label: '', source: '', dateFrom: null, dateTo: null, promptVersi: '',
+  submittedFrom: null, submittedTo: null,
   showAll: false
 };
 let labelerOptions = [];
@@ -372,7 +373,9 @@ async function fetchAllDetailRows(onProgress) {
       p_source: detailState.source || null,
       p_date_from: detailState.dateFrom || null,
       p_date_to: detailState.dateTo || null,
-      p_prompt_versi: detailState.promptVersi || null
+      p_prompt_versi: detailState.promptVersi || null,
+      p_submitted_from: detailState.submittedFrom || null,
+      p_submitted_to: detailState.submittedTo || null
     });
     if (error) throw error;
     total = data.total || 0;
@@ -417,6 +420,36 @@ async function ensureLabelerOptionsLoaded() {
   }
 }
 
+// Lets a link (e.g. from the daily labeling-progress Discord report) land
+// directly on a pre-filtered Detail Baris view — mirrors openDetailForLabeler()'s
+// pattern but driven by the URL instead of a click. Only ever reached after
+// requireAuth()'s admin check has already passed (see the inline bootstrap
+// script in admin-users.html), so no separate auth check is needed here.
+function applyDetailDeepLinkFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('tab') !== 'detail') return;
+
+  const jenis = params.get('jenis');
+  if (jenis && ['screener', 'lapus', 'pengeluaran'].includes(jenis)) {
+    detailState.jenis = jenis;
+  }
+  const labelerId = params.get('labeler');
+  if (labelerId) detailState.labelerId = labelerId;
+
+  const submitted = params.get('submitted');
+  if (submitted) {
+    detailState.submittedFrom = submitted;
+    detailState.submittedTo = submitted;
+  } else {
+    if (params.get('submitted_from')) detailState.submittedFrom = params.get('submitted_from');
+    if (params.get('submitted_to')) detailState.submittedTo = params.get('submitted_to');
+  }
+  detailState.status = 'sudah';
+  detailState.page = 1;
+
+  switchAdminTab('detail');
+}
+
 function openDetailForLabeler(labelerId, jenis) {
   detailState.labelerId = labelerId;
   detailState.jenis = jenis;
@@ -426,6 +459,8 @@ function openDetailForLabeler(labelerId, jenis) {
   detailState.source = '';
   detailState.dateFrom = null;
   detailState.dateTo = null;
+  detailState.submittedFrom = null;
+  detailState.submittedTo = null;
   detailState.page = 1;
   switchAdminTab('detail');
 }
@@ -478,6 +513,8 @@ function onDetailFilterChange() {
   detailState.source = document.getElementById('detail-source').value.trim();
   detailState.dateFrom = document.getElementById('detail-date-from').value || null;
   detailState.dateTo = document.getElementById('detail-date-to').value || null;
+  detailState.submittedFrom = document.getElementById('detail-submitted-from').value || null;
+  detailState.submittedTo = document.getElementById('detail-submitted-to').value || null;
   detailState.labelerId = document.getElementById('detail-labeler-select').value || null;
   detailState.page = 1;
   loadDetailRows();
@@ -527,6 +564,8 @@ function syncDetailFilterInputs() {
   document.getElementById('detail-source').value = detailState.source || '';
   document.getElementById('detail-date-from').value = detailState.dateFrom || '';
   document.getElementById('detail-date-to').value = detailState.dateTo || '';
+  document.getElementById('detail-submitted-from').value = detailState.submittedFrom || '';
+  document.getElementById('detail-submitted-to').value = detailState.submittedTo || '';
   document.getElementById('detail-labeler-select').value = detailState.labelerId || '';
   document.getElementById('detail-show-all-btn').textContent = detailState.showAll ? '📄 Kembali ke Halaman' : '📄 Tampilkan Semua';
 }
@@ -559,7 +598,9 @@ async function loadDetailRows() {
       p_source: detailState.source || null,
       p_date_from: detailState.dateFrom || null,
       p_date_to: detailState.dateTo || null,
-      p_prompt_versi: detailState.promptVersi || null
+      p_prompt_versi: detailState.promptVersi || null,
+      p_submitted_from: detailState.submittedFrom || null,
+      p_submitted_to: detailState.submittedTo || null
     });
     if (error) throw error;
     detailState.total = data.total || 0;
