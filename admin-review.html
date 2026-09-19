@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260919"></script>
-  <link rel="stylesheet" href="style.css?v=20260919">
+  <link rel="stylesheet" href="style.css?v=20260919b">
 </head>
 <body class="admin-page admin-review-page" style="visibility:hidden;">
 
@@ -53,17 +53,15 @@
 
       <div class="review-toolbar">
         <div id="review-remaining" class="review-remaining">Memuat...</div>
-        <button id="review-bulk-approve" class="primary-btn" hidden>✅ Semua yang termuat sesuai</button>
       </div>
+
+      <div id="review-loading" class="review-loading" hidden>Memuat batch...</div>
 
       <div id="review-list" class="review-list"></div>
 
       <div id="review-empty" class="labeling-empty-state" hidden>
         🎉 Tidak ada baris di antrean ini.
       </div>
-
-      <div id="review-sentinel" class="review-sentinel"></div>
-      <div id="review-loading" class="review-loading" hidden>Memuat lebih banyak...</div>
     </main>
   </div><!-- /.app-body -->
 
@@ -72,7 +70,7 @@
   <script src="labeling-screener.js?v=20260913b"></script>
   <script src="labeling-lapus.js?v=20260913b"></script>
   <script src="labeling-pengeluaran.js?v=20260913b"></script>
-  <script src="admin-review.js?v=20260919"></script>
+  <script src="admin-review.js?v=20260919b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

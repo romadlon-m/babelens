@@ -2776,10 +2776,11 @@ select {
 }
 
 /* ============================================================
-   ADMIN REVIEW (admin-review.html) — mobile-first, single scrollable
-   list of cards (reuses .labeling-card as the base card look), loaded in
-   batches via infinite scroll rather than pagination. See CLAUDE.md
-   "Menu Review Label (admin)".
+   ADMIN REVIEW (admin-review.html) — mobile-first list of cards (reuses
+   .labeling-card as the base card look). One discrete batch of 10 loads at a
+   time (NOT infinite scroll) — the bulk-approve button sits at the bottom of
+   the batch, after the last card, so it can't be reached without scrolling
+   past every card in it first. See CLAUDE.md "Menu Review Label (admin)".
    ============================================================ */
 .admin-review-page .main-content {
   max-width: 860px;
@@ -2894,13 +2895,30 @@ select {
   margin-bottom: 4px;
 }
 
-.review-sentinel {
-  height: 1px;
-}
-
 .review-loading {
   text-align: center;
   color: var(--muted);
   font-size: 13px;
   padding: 16px;
+}
+
+/* Sits after the last card of a batch (appended in JS, not static markup) —
+   deliberately at the bottom, not alongside .review-toolbar at the top, so
+   the bulk-approve button can only be reached by scrolling past every card. */
+.review-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-top: 4px;
+}
+
+.review-batch-bar-text {
+  font-size: 13px;
+  color: var(--muted);
 }

@@ -34,16 +34,18 @@ const REVIEW_PENGELUARAN_LABELS = {
   '5': 'Perubahan Inventori', '6': 'Ekspor Luar Negeri', '7': 'Impor Luar Negeri'
 };
 
-const REVIEW_PAGE_SIZE = 20;
+// Satu batch penuh dimuat sekaligus (bukan infinite-scroll) — lihat catatan di
+// reviewLoadBatch() untuk alasannya: infinite-scroll bentrok dengan tombol bulk
+// approve yang sengaja ditaruh di bawah kartu terakhir supaya harus dilewati
+// dulu (dibaca sekilas) sebelum bisa diklik.
+const REVIEW_BATCH_SIZE = 10;
 
 const reviewState = {
   jenis: 'screener',
   scope: 'ditandai',
-  page: 1,
   total: 0,
-  rows: [],       // {..row, resolved: bool} in load order
+  rows: [],       // batch yang sedang tampil saja — {..row, resolved: bool}
   loading: false,
-  hasMore: true,
   activePrompts: {} // jenis -> {id, isi_prompt, versi}, fetched lazily
 };
 
@@ -65,8 +67,7 @@ async function reviewEnsureActivePrompt(jenis) {
 
 function reviewUpdateRemainingText() {
   const el = document.getElementById('review-remaining');
-  const stillLoaded = reviewState.rows.filter(r => !r.resolved).length;
-  el.textContent = `Total di antrean ini: ${reviewState.total.toLocaleString('id-ID')} baris — ${stillLoaded.toLocaleString('id-ID')} termuat`;
+  el.textContent = `Sisa total di antrean ini: ${reviewState.total.toLocaleString('id-ID')} baris`;
 }
 
 function reviewFormatMeta(row) {
@@ -214,65 +215,90 @@ function reviewRenderCard(row) {
   return card;
 }
 
+// Cuma bersih-bersih DOM/state satu kartu -- tidak mengecek atau memuat batch
+// berikutnya sendiri (lihat reviewMaybeAdvance()), supaya dipanggil berkali-kali
+// dari dalam loop bulk-approve tidak memicu banyak pemuatan batch sekaligus.
 function reviewRemoveCard(rowId) {
   const row = reviewState.rows.find(r => r.id === rowId);
   if (row) row.resolved = true;
   const el = document.querySelector(`.review-card[data-id="${rowId}"]`);
   if (el) el.remove();
-  reviewState.total = Math.max(0, reviewState.total - 1);
   reviewUpdateRemainingText();
-  reviewMaybeShowEmpty();
 }
 
-function reviewMaybeShowEmpty() {
-  const list = document.getElementById('review-list');
-  const empty = document.getElementById('review-empty');
-  const stillLoaded = reviewState.rows.some(r => !r.resolved);
-  empty.hidden = stillLoaded || reviewState.hasMore;
+// Batch ini otomatis dianggap selesai begitu tidak ada kartu tersisa yang
+// belum ditangani (baik lewat aksi individual satu-satu, maupun lewat tombol
+// bulk) -- langsung muat batch berikutnya tanpa perlu tombol "Next" terpisah.
+// Kalau masih ada yang belum ditangani (mis. sebagian gagal saat bulk-approve),
+// batch TIDAK otomatis lanjut, supaya tidak ada baris yang diam-diam terlewat.
+function reviewMaybeAdvance() {
+  const stillPending = reviewState.rows.some(r => !r.resolved);
+  if (!stillPending) reviewLoadBatch();
 }
 
-async function reviewFetchNextPage() {
-  if (reviewState.loading || !reviewState.hasMore) return;
+function reviewRenderBatchBar() {
+  const bar = document.createElement('div');
+  bar.className = 'review-batch-bar';
+  const canBulk = reviewState.scope !== 'ditandai' && reviewState.rows.length > 0;
+  bar.innerHTML = `
+    <div class="review-batch-bar-text">Batch ini: ${reviewState.rows.length.toLocaleString('id-ID')} baris</div>
+    ${canBulk ? '<button id="review-bulk-approve" class="primary-btn">✅ Semua di batch ini sesuai</button>' : ''}
+  `;
+  return bar;
+}
+
+// Satu batch penuh dimuat sekaligus, BUKAN infinite-scroll: request selalu
+// p_page=1 karena baris yang sudah ditangani (dilabel ulang / ditandai
+// direview) otomatis tidak lagi memenuhi kondisi query-nya sendiri (lihat
+// admin_review_queue()), jadi "halaman 1" selalu berarti "baris berikutnya
+// yang belum ditangani" -- tidak perlu nomor halaman bertambah. Ini juga yang
+// membuat tombol bulk-approve bisa ditaruh di BAWAH kartu terakhir (baru
+// muncul setelah admin melewati semua kartu di batch itu) alih-alih di atas
+// tempat ia bisa diklik tanpa membaca satu pun kartu.
+async function reviewLoadBatch() {
+  if (reviewState.loading) return;
   reviewState.loading = true;
-  document.getElementById('review-loading').hidden = false;
+  const list = document.getElementById('review-list');
+  const loadingEl = document.getElementById('review-loading');
+  const emptyEl = document.getElementById('review-empty');
+  loadingEl.hidden = false;
+  list.innerHTML = '';
+  emptyEl.hidden = true;
   try {
     const { data, error } = await window.db.rpc('admin_review_queue', {
       p_jenis: reviewState.jenis,
       p_scope: reviewState.scope,
-      p_page: reviewState.page,
-      p_page_size: REVIEW_PAGE_SIZE
+      p_page: 1,
+      p_page_size: REVIEW_BATCH_SIZE
     });
     if (error) throw error;
     reviewState.total = data.total || 0;
     const rows = data.rows || [];
-    const list = document.getElementById('review-list');
-    rows.forEach(row => {
-      reviewState.rows.push({ ...row, resolved: false });
-      list.appendChild(reviewRenderCard(row));
-    });
-    reviewState.hasMore = rows.length === REVIEW_PAGE_SIZE;
-    reviewState.page += 1;
+    reviewState.rows = rows.map(row => ({ ...row, resolved: false }));
+    rows.forEach(row => list.appendChild(reviewRenderCard(row)));
+    if (rows.length) {
+      list.appendChild(reviewRenderBatchBar());
+      const bulkBtn = document.getElementById('review-bulk-approve');
+      if (bulkBtn) bulkBtn.addEventListener('click', reviewHandleBulkApprove);
+    } else {
+      emptyEl.hidden = false;
+    }
     reviewUpdateRemainingText();
-    reviewMaybeShowEmpty();
   } catch (err) {
     alert('Gagal memuat antrean: ' + err.message);
     console.error(err);
   } finally {
     reviewState.loading = false;
-    document.getElementById('review-loading').hidden = true;
+    loadingEl.hidden = true;
   }
 }
 
+// Dipanggil saat ganti Jenis/Scope -- reviewLoadBatch() sendiri sudah
+// membersihkan #review-list/#review-empty di awal, jadi cukup panggil itu.
 function reviewResetAndLoad() {
-  reviewState.page = 1;
   reviewState.total = 0;
   reviewState.rows = [];
-  reviewState.hasMore = true;
-  document.getElementById('review-list').innerHTML = '';
-  document.getElementById('review-empty').hidden = true;
-  document.getElementById('review-bulk-approve').hidden = reviewState.scope !== 'sudah';
-  reviewUpdateRemainingText();
-  reviewFetchNextPage();
+  reviewLoadBatch();
 }
 
 async function reviewMarkReviewed(newsIds) {
@@ -292,6 +318,7 @@ async function reviewHandleSesuai(rowId, card) {
     }
     await reviewMarkReviewed([rowId]);
     reviewRemoveCard(rowId);
+    reviewMaybeAdvance();
   } catch (err) {
     alert('Gagal menyimpan: ' + err.message);
     card.querySelectorAll('button').forEach(b => b.disabled = false);
@@ -299,9 +326,12 @@ async function reviewHandleSesuai(rowId, card) {
 }
 
 function reviewHandleLewati(rowId) {
-  // Tidak menulis apa pun -- baris ini tetap di status semula dan akan muncul
-  // lagi di sesi review berikutnya.
+  // Tidak menulis apa pun -- baris ini tetap di status semula. Karena batch
+  // berikutnya juga selalu meminta "halaman 1" dari kondisi yang sama, baris
+  // yang dilewati bisa saja muncul lagi di batch berikutnya dalam sesi yang
+  // sama (bukan cuma "nanti"), bukan cuma di sesi yang benar-benar baru.
   reviewRemoveCard(rowId);
+  reviewMaybeAdvance();
 }
 
 async function reviewHandlePerbaikiSubmit(rowId, card) {
@@ -322,6 +352,7 @@ async function reviewHandlePerbaikiSubmit(rowId, card) {
     await labelingSubmit(rowId, reviewState.jenis, hasil);
     await reviewMarkReviewed([rowId]);
     reviewRemoveCard(rowId);
+    reviewMaybeAdvance();
   } catch (err) {
     msgEl.textContent = '❌ Gagal menyimpan: ' + err.message;
     msgEl.classList.add('error');
@@ -369,20 +400,53 @@ function reviewHandleAiFill(rowId, card) {
   if (msgEl) { msgEl.textContent = ''; msgEl.className = 'review-form-msg labeling-validation-msg'; }
 }
 
+// "Sudah dilabel": tidak ada yang berubah pada labelnya, jadi cukup satu kali
+// catat "sudah direview" untuk seluruh batch. "Perlu direlabel": tiap baris
+// tetap harus disubmit ulang satu-satu ke submit_label() (tidak ada versi
+// bulk-nya) supaya prompt_version_id-nya ikut ter-update -- baris yang gagal
+// di tengah jalan dibiarkan tetap tampil (tidak dihapus dari batch) supaya
+// bisa dicoba lagi, bukan diam-diam terlewat.
 async function reviewHandleBulkApprove() {
   const pending = reviewState.rows.filter(r => !r.resolved);
   if (!pending.length) return;
-  const ok = confirm(`Tandai ${pending.length} baris yang sedang termuat sebagai "sesuai, sudah direview"?`);
+  const ok = confirm(`Tandai ${pending.length} baris di batch ini sebagai "sesuai, sudah direview"?`);
   if (!ok) return;
   const btn = document.getElementById('review-bulk-approve');
   btn.disabled = true;
+  const succeeded = [];
+  const failed = [];
   try {
-    await reviewMarkReviewed(pending.map(r => r.id));
-    pending.forEach(r => reviewRemoveCard(r.id));
+    if (reviewState.scope === 'perlu_relabel') {
+      btn.textContent = `Memproses 0/${pending.length}...`;
+      for (let i = 0; i < pending.length; i++) {
+        const row = pending[i];
+        try {
+          await labelingSubmit(row.id, reviewState.jenis, row.hasil);
+          succeeded.push(row.id);
+        } catch (err) {
+          failed.push({ row, err });
+        }
+        btn.textContent = `Memproses ${i + 1}/${pending.length}...`;
+      }
+    } else {
+      succeeded.push(...pending.map(r => r.id));
+    }
+    if (succeeded.length) {
+      await reviewMarkReviewed(succeeded);
+      succeeded.forEach(id => reviewRemoveCard(id));
+    }
+    if (failed.length) {
+      alert(`${failed.length} baris gagal disimpan (dibiarkan tetap tampil untuk dicoba lagi):\n` +
+        failed.map(f => `- ID ${f.row.id}: ${f.err.message}`).join('\n'));
+    }
+    reviewMaybeAdvance();
   } catch (err) {
     alert('Gagal menandai batch: ' + err.message);
   } finally {
-    btn.disabled = false;
+    if (document.body.contains(btn)) {
+      btn.disabled = false;
+      btn.textContent = '✅ Semua di batch ini sesuai';
+    }
   }
 }
 
@@ -434,15 +498,7 @@ function initReviewPage() {
     });
   });
 
-  document.getElementById('review-bulk-approve').addEventListener('click', reviewHandleBulkApprove);
-
   reviewWireListDelegation();
-
-  const sentinel = document.getElementById('review-sentinel');
-  const observer = new IntersectionObserver((entries) => {
-    if (entries.some(en => en.isIntersecting)) reviewFetchNextPage();
-  }, { rootMargin: '400px' });
-  observer.observe(sentinel);
 
   reviewEnsureActivePrompt(reviewState.jenis);
   reviewResetAndLoad();
