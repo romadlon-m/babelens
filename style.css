@@ -2792,8 +2792,13 @@ select {
    the batch, after the last card, so it can't be reached without scrolling
    past every card in it first. See CLAUDE.md "Menu Review Label (admin)".
    ============================================================ */
+/* 860px was the original single-column-card width (mobile-first reading,
+   pre-Tahap C) — too narrow now that each card shows 3 columns side by side
+   on desktop (Screener/Lapus/Pengeluaran), so bumped to match .admin-page's
+   usual 1400px. Mobile still stacks the 3 columns via .review-columns'
+   @media (max-width: 767px) rule below, unaffected by this. */
 .admin-review-page .main-content {
-  max-width: 860px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
