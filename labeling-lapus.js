@@ -8,7 +8,12 @@
 // Kode kategori duplikat sengaja dari dashboard.js/news-search.js (LAPUS_LABELS) —
 // repo ini sudah tidak punya modul bersama untuk daftar taksonomi, lihat CLAUDE.md.
 const LAPUS_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'MN', 'O', 'P', 'Q', 'RSTU'];
-const ARAH_VALUES = ['Naik', 'Turun', 'Netral'];
+// Named LAPUS_ARAH_VALUES (not the generic ARAH_VALUES) because
+// labeling-pengeluaran.js declares its own copy of the same list at top
+// level too, and admin-review.html loads both files on one page — two
+// `const` with the same name in the same global scope throws a SyntaxError
+// that silently breaks the whole second script (see labeling-pengeluaran.js).
+const LAPUS_ARAH_VALUES = ['Naik', 'Turun', 'Netral'];
 
 function parseLapusLine(raw, expectedId) {
   const parts = labelingSplitPipes(raw, 5);
@@ -41,9 +46,9 @@ function parseLapusLine(raw, expectedId) {
   }
 
   const arahNorm = arahRaw.trim();
-  const arahMatch = ARAH_VALUES.find(v => v.toLowerCase() === arahNorm.toLowerCase());
+  const arahMatch = LAPUS_ARAH_VALUES.find(v => v.toLowerCase() === arahNorm.toLowerCase());
   if (!arahMatch) {
-    throw new Error(`Kolom ke-5 (arah) harus salah satu dari ${ARAH_VALUES.join('/')} ketika kolom ke-2 = Ya.`);
+    throw new Error(`Kolom ke-5 (arah) harus salah satu dari ${LAPUS_ARAH_VALUES.join('/')} ketika kolom ke-2 = Ya.`);
   }
 
   return { hasil: { relevan: 'Ya', kategori, alasan, arah: arahMatch } };

@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="auth.js?v=20260919"></script>
-  <link rel="stylesheet" href="style.css?v=20260919b">
+  <link rel="stylesheet" href="style.css?v=20260920a">
 </head>
 <body class="admin-page" style="visibility:hidden;">
 
@@ -93,6 +93,16 @@
 
       <!-- Monitoring produktivitas intern labeling (LABELING_TOOL_PLAN.md bagian 7):
            hitungan submit per intern/jenis/hari dari tabel labeling_log. -->
+      <div id="admin-labeling-filters" class="admin-detail-filters" hidden>
+        <div class="filter-group">
+          <label for="labeling-source-filter">Sumber</label>
+          <select id="labeling-source-filter" onchange="onLabelingSourceFilterChange()">
+            <option value="">Semua</option>
+            <option value="labeling">Labeling (Intern/Labeler)</option>
+            <option value="review">Review (Admin)</option>
+          </select>
+        </div>
+      </div>
       <div id="admin-labeling-view" class="admin-table-wrapper" hidden>
         <table class="admin-table">
           <thead>
@@ -100,11 +110,12 @@
               <th data-sort="date">Tanggal</th>
               <th data-sort="nama">Nama</th>
               <th data-sort="jenis">Jenis</th>
+              <th data-sort="source">Sumber</th>
               <th data-sort="count">Jumlah Submit</th>
             </tr>
           </thead>
           <tbody id="admin-labeling-tbody">
-            <tr><td colspan="4">Memuat data...</td></tr>
+            <tr><td colspan="5">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -121,6 +132,14 @@
               <option value="screener">Pengecekan Awal</option>
               <option value="lapus">Lapangan Usaha</option>
               <option value="pengeluaran">Pengeluaran</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="detail-batch">Batch</label>
+            <select id="detail-batch" onchange="onDetailFilterChange()">
+              <option value="">Semua</option>
+              <option value="batch1">Batch 1 (Belum Pernah Dilabel)</option>
+              <option value="batch2">Batch 2 (Data Lama)</option>
             </select>
           </div>
           <div class="filter-group">
@@ -325,7 +344,7 @@
   </div>
 
   <script src="sidebar.js?v=20260919"></script>
-  <script src="admin-users.js?v=20260919b"></script>
+  <script src="admin-users.js?v=20260920c"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
