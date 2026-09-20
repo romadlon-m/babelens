@@ -35,6 +35,12 @@
       </header>
 
       <div class="admin-tabs">
+        <button class="admin-tab-btn active" id="review-batch-batch1" data-batch="batch1">📥 Batch 1 (Belum Pernah Dilabel)</button>
+        <button class="admin-tab-btn" id="review-batch-batch2" data-batch="batch2">🗂️ Batch 2 (Data Lama)</button>
+        <button class="admin-tab-btn" id="review-batch-semua" data-batch="">📚 Semua Batch</button>
+      </div>
+
+      <div class="admin-tabs">
         <button class="admin-tab-btn active" id="review-completeness-semua" data-completeness="">📰 Semua</button>
         <button class="admin-tab-btn" id="review-completeness-lengkap" data-completeness="lengkap">✅ Lengkap (3/3)</button>
         <button class="admin-tab-btn" id="review-completeness-sebagian" data-completeness="sebagian">🧩 Sebagian</button>
@@ -59,7 +65,7 @@
   <script src="labeling-screener.js?v=20260913b"></script>
   <script src="labeling-lapus.js?v=20260920a"></script>
   <script src="labeling-pengeluaran.js?v=20260920a"></script>
-  <script src="admin-review.js?v=20260920c"></script>
+  <script src="admin-review.js?v=20260920d"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

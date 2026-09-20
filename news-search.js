@@ -528,6 +528,27 @@ async function search(page = 1) {
 }
 
 
+// Arah (Naik/Turun/Netral): badan singkat — cuma ikon panah + tooltip, bukan
+// badge penuh seperti Lapus/Peng — supaya tidak menambah beban visual di
+// card yang sudah padat. Kosong (belum ada arah, mis. relevan = Tidak, atau
+// belum ikut diproses) tidak render apa-apa. Warna mengikuti arti: naik
+// hijau, turun merah, netral abu-abu (badge-green/red/gray sudah ada di
+// style.css, tapi ARAH_ICON dipakai sebagai teks badge, bukan warna latar,
+// jadi cukup pinjam kelas .tooltip + span kecil terpisah dari badge utama
+// supaya tooltip-nya tidak bentrok/nested dengan tooltip badge Lapus/Peng).
+const ARAH_ICON = { Naik: '↑', Turun: '↓', Netral: '→' };
+const ARAH_COLOR = { Naik: '#166534', Turun: '#dc2626', Netral: 'var(--muted)' };
+function arahBadge(arah) {
+  if (!arah || !ARAH_ICON[arah]) return '';
+  return `
+    <span
+      class="tooltip"
+      style="display:inline-flex;align-items:center;font-weight:700;font-size:15px;color:${ARAH_COLOR[arah]};padding:0 2px;"
+      data-tooltip="Arah: ${arah}"
+    >${ARAH_ICON[arah]}</span>
+  `;
+}
+
 // ====================================
 // TAMPILKAN HALAMAN
 // ====================================
@@ -680,6 +701,7 @@ function renderPage(page = 1) {
               Lapus: ${lapusShort}
             </span>
           ` : ""}
+          ${arahBadge(r.arah_lapus)}
 
           ${pengArr.length > 0 ? `
             <span
@@ -690,6 +712,7 @@ function renderPage(page = 1) {
               Peng: ${pengShort} (${pengLevelLabel})
             </span>
           ` : ""}
+          ${arahBadge(r.arah_pengeluaran)}
 
           ${r.event_time ? `
             <span
@@ -1138,9 +1161,11 @@ function exportToExcel() {
       "LU Relevan": r.lu_relevan || "-",
       "Lap. Usaha": lapusLabel(lapusArr[0]),
       "Lap. Usaha 2": lapusLabel(lapusArr[1]),
+      "Arah Lap. Usaha": r.arah_lapus || "-",
       "Pengeluaran Relevan": r.pengeluaran_relevan || "-",
       [pengColName]: pengLabel(pengEntries[0]),
       [pengColName2]: pengLabel(pengEntries[1]),
+      "Arah Pengeluaran": r.arah_pengeluaran || "-",
       "Ringkasan": r.summary || "-",
       "URL": r.url || "-",
       "Kutipan": r.title
@@ -1165,9 +1190,11 @@ function exportToExcel() {
     { wch: 12 },  // LU Relevan
     { wch: 45 },  // Lap. Usaha
     { wch: 45 },  // Lap. Usaha 2
+    { wch: 14 },  // Arah Lap. Usaha
     { wch: 18 },  // Pengeluaran Relevan
     { wch: 40 },  // Komp. Pengeluaran
     { wch: 40 },  // Komp. Pengeluaran 2
+    { wch: 14 },  // Arah Pengeluaran
     { wch: 60 },  // Ringkasan
     { wch: 40 },  // URL
     { wch: 80 },  // Kutipan

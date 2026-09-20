@@ -66,6 +66,7 @@ const REVIEW_STATUS_BADGE = {
 const REVIEW_BATCH_SIZE = 10;
 
 const reviewState = {
+  batch: 'batch1', // '' | 'batch1' | 'batch2' — defaults to Batch 1 (belum pernah dilabel) per admin request
   completeness: '', // '' | 'lengkap' | 'sebagian'
   total: 0,
   rows: [],       // batch yang sedang tampil saja — {..row, resolved: bool}
@@ -314,7 +315,8 @@ async function reviewLoadBatch() {
     const { data, error } = await window.db.rpc('admin_review_queue_by_article', {
       p_page: 1,
       p_page_size: REVIEW_BATCH_SIZE,
-      p_completeness: reviewState.completeness || null
+      p_completeness: reviewState.completeness || null,
+      p_batch: reviewState.batch || null
     });
     if (error) throw error;
     reviewState.total = data.total || 0;
@@ -583,6 +585,14 @@ function reviewWireListDelegation() {
 }
 
 function initReviewPage() {
+  document.querySelectorAll('.admin-tabs [data-batch]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tabs [data-batch]').forEach(b => b.classList.toggle('active', b === btn));
+      reviewState.batch = btn.dataset.batch;
+      reviewResetAndLoad();
+    });
+  });
+
   document.querySelectorAll('.admin-tabs [data-completeness]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.admin-tabs [data-completeness]').forEach(b => b.classList.toggle('active', b === btn));
