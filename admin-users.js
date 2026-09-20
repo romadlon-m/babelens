@@ -178,12 +178,14 @@ function switchAdminTab(tab) {
 
   const usersFilters = document.getElementById('admin-users-filters');
   const usersView = document.getElementById('admin-users-view');
+  const labelingFilters = document.getElementById('admin-labeling-filters');
   const labelingView = document.getElementById('admin-labeling-view');
   const detailView = document.getElementById('admin-detail-view');
   const promptsView = document.getElementById('admin-prompts-view');
 
   usersFilters.hidden = tab !== 'recent' && tab !== 'all';
   usersView.hidden = tab !== 'recent' && tab !== 'all';
+  labelingFilters.hidden = tab !== 'labeling';
   labelingView.hidden = tab !== 'labeling';
   detailView.hidden = tab !== 'detail';
   promptsView.hidden = tab !== 'prompts';
@@ -218,9 +220,18 @@ function formatReportDate(iso) {
 // (dimuat lewat Edge Function admin-users) karena RLS profiles tidak mengizinkan
 // klien admin membaca profil user lain langsung — labeling_log sendiri sudah
 // mengizinkan admin membaca semua baris (lihat migrasi labeling_tool_schema).
+let labelingSourceFilter = ''; // '' | 'labeling' | 'review'
+
+function onLabelingSourceFilterChange() {
+  labelingSourceFilter = document.getElementById('labeling-source-filter').value;
+  renderLabelingReportRows();
+}
+
+const LABELING_SOURCE_LABELS = { labeling: 'Labeling', review: 'Review' };
+
 async function loadLabelingReport() {
   const tbody = document.getElementById('admin-labeling-tbody');
-  tbody.innerHTML = '<tr><td colspan="4">Memuat data...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5">Memuat data...</td></tr>';
 
   try {
     if (!adminUsersCache.length) {
@@ -235,26 +246,27 @@ async function loadLabelingReport() {
 
     const { data, error } = await window.db
       .from('labeling_log')
-      .select('labeler_id, jenis, created_at')
+      .select('labeler_id, jenis, source, created_at')
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    const counts = {}; // key: date|labeler_id|jenis -> count
+    const counts = {}; // key: date|labeler_id|jenis|source -> count
     (data || []).forEach(row => {
       const date = formatReportDate(row.created_at);
-      const key = `${date}|||${row.labeler_id}|||${row.jenis}`;
+      const source = row.source || 'labeling';
+      const key = `${date}|||${row.labeler_id}|||${row.jenis}|||${source}`;
       counts[key] = (counts[key] || 0) + 1;
     });
 
     labelingReportRows = Object.entries(counts).map(([key, count]) => {
-      const [date, labelerId, jenis] = key.split('|||');
-      return { date, labelerId, jenis, count, nama: nameById[labelerId] || labelerId };
+      const [date, labelerId, jenis, source] = key.split('|||');
+      return { date, labelerId, jenis, source, count, nama: nameById[labelerId] || labelerId };
     });
     renderLabelingReportRows();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -269,6 +281,8 @@ function compareLabelingRows(a, b, col) {
       return (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' });
     case 'jenis':
       return (JENIS_LABELS[a.jenis] || a.jenis).localeCompare(JENIS_LABELS[b.jenis] || b.jenis, 'id');
+    case 'source':
+      return (LABELING_SOURCE_LABELS[a.source] || a.source).localeCompare(LABELING_SOURCE_LABELS[b.source] || b.source, 'id');
     case 'count':
       return a.count - b.count;
     default:
@@ -279,11 +293,14 @@ function compareLabelingRows(a, b, col) {
 function renderLabelingReportRows() {
   const tbody = document.getElementById('admin-labeling-tbody');
   renderSortIndicator('#admin-labeling-view', labelingSort);
-  if (!labelingReportRows.length) {
-    tbody.innerHTML = '<tr><td colspan="4">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>';
+  const rows = labelingSourceFilter
+    ? labelingReportRows.filter(r => r.source === labelingSourceFilter)
+    : labelingReportRows;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>';
     return;
   }
-  const sorted = [...labelingReportRows].sort((a, b) => {
+  const sorted = [...rows].sort((a, b) => {
     const cmp = compareLabelingRows(a, b, labelingSort.col);
     return labelingSort.dir === 'asc' ? cmp : -cmp;
   });
@@ -292,6 +309,7 @@ function renderLabelingReportRows() {
         <td>${escapeHtml(r.date)}</td>
         <td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="${escapeHtml(r.jenis)}">${escapeHtml(r.nama)}</button></td>
         <td>${escapeHtml(JENIS_LABELS[r.jenis] || r.jenis)}</td>
+        <td>${r.source === 'review' ? '<span class="badge badge-gray">Review</span>' : '<span class="badge badge-green">Labeling</span>'}</td>
         <td>${r.count}</td>
       </tr>
     `).join('');
@@ -338,6 +356,7 @@ const detailState = {
   sortCol: 'tanggal', sortDir: 'desc',
   label: '', source: '', dateFrom: null, dateTo: null, promptVersi: '',
   submittedFrom: null, submittedTo: null,
+  batch: '', // '' | 'batch1' | 'batch2' — filters admin_labeling_detail()'s p_batch
   showAll: false
 };
 let labelerOptions = [];
@@ -375,7 +394,8 @@ async function fetchAllDetailRows(onProgress) {
       p_date_to: detailState.dateTo || null,
       p_prompt_versi: detailState.promptVersi || null,
       p_submitted_from: detailState.submittedFrom || null,
-      p_submitted_to: detailState.submittedTo || null
+      p_submitted_to: detailState.submittedTo || null,
+      p_batch: detailState.batch || null
     });
     if (error) throw error;
     total = data.total || 0;
@@ -507,6 +527,7 @@ function onDetailFilterChange() {
     renderDetailLabelOptions();
     ensurePromptVersiOptionsLoaded(newJenis);
   }
+  detailState.batch = document.getElementById('detail-batch').value;
   detailState.status = document.getElementById('detail-status').value;
   detailState.label = document.getElementById('detail-label-filter').value;
   detailState.promptVersi = document.getElementById('detail-prompt-versi-filter').value;
@@ -558,6 +579,7 @@ function changeDetailPage(delta) {
 
 function syncDetailFilterInputs() {
   document.getElementById('detail-jenis').value = detailState.jenis;
+  document.getElementById('detail-batch').value = detailState.batch || '';
   document.getElementById('detail-status').value = detailState.status;
   renderDetailLabelOptions();
   renderPromptVersiOptions();
@@ -600,7 +622,8 @@ async function loadDetailRows() {
       p_date_to: detailState.dateTo || null,
       p_prompt_versi: detailState.promptVersi || null,
       p_submitted_from: detailState.submittedFrom || null,
-      p_submitted_to: detailState.submittedTo || null
+      p_submitted_to: detailState.submittedTo || null,
+      p_batch: detailState.batch || null
     });
     if (error) throw error;
     detailState.total = data.total || 0;

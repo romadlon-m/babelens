@@ -103,6 +103,11 @@ Deno.serve(async (req) => {
     const newsId = body?.news_id
     const jenis = body?.jenis as Jenis
     const hasil = body?.hasil
+    // 'review' = admin-review.html resubmitting/confirming an already-labeled
+    // row during QC (Sesuai/Perbaiki), not fresh labeling work — see
+    // labeling_log.source migration. Defaults to 'labeling' so the normal
+    // labeling-*.html pages (which never send this field) behave unchanged.
+    const source = body?.source === 'review' ? 'review' : 'labeling'
 
     if (!Number.isInteger(newsId)) {
       return json({ error: 'news_id wajib berupa integer' }, 400)
@@ -134,7 +139,8 @@ Deno.serve(async (req) => {
       p_labeler_id: user.id,
       p_hasil: hasil,
       p_prompt_version_id: activePrompt?.id ?? null,
-      p_batch_tag: null
+      p_batch_tag: null,
+      p_source: source
     })
 
     if (rpcError) {

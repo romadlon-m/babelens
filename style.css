@@ -649,6 +649,16 @@ select {
   color: #1d4ed8;
 }
 
+.badge-red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.badge-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 /* CARD ACTIONS */
 .card-actions {
   display: flex;
@@ -2900,6 +2910,54 @@ select {
   color: var(--muted);
   font-size: 13px;
   padding: 16px;
+}
+
+/* Tahap C: 3 kolom (Screener/Lapus/Pengeluaran) dalam satu kartu artikel —
+   side-by-side di layar lebar, ditumpuk di mobile (lihat @media di bawah). */
+.review-columns {
+  display: flex;
+  gap: 14px;
+  margin: 14px 0;
+  align-items: flex-start;
+}
+
+.review-column {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+
+.review-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.review-column-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.review-column-actions {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.review-card-actions {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+@media (max-width: 767px) {
+  .review-columns {
+    flex-direction: column;
+  }
 }
 
 /* Sits after the last card of a batch (appended in JS, not static markup) —

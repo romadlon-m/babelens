@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260919"></script>
-  <link rel="stylesheet" href="style.css?v=20260919b">
+  <link rel="stylesheet" href="style.css?v=20260920a">
 </head>
 <body class="admin-page admin-review-page" style="visibility:hidden;">
 
@@ -34,25 +34,10 @@
         </div>
       </header>
 
-      <div class="admin-detail-filters">
-        <div class="filter-group">
-          <label for="review-jenis">Jenis</label>
-          <select id="review-jenis">
-            <option value="screener">Pengecekan Awal</option>
-            <option value="lapus">Lapangan Usaha</option>
-            <option value="pengeluaran">Pengeluaran</option>
-          </select>
-        </div>
-        <div class="filter-group" id="review-label-filter-group">
-          <label for="review-label-filter">Label</label>
-          <select id="review-label-filter"></select>
-        </div>
-      </div>
-
       <div class="admin-tabs">
-        <button class="admin-tab-btn active" id="review-scope-ditandai" data-scope="ditandai">🚩 Ditandai bermasalah</button>
-        <button class="admin-tab-btn" id="review-scope-perlu_relabel" data-scope="perlu_relabel">♻️ Perlu direlabel</button>
-        <button class="admin-tab-btn" id="review-scope-sudah" data-scope="sudah">✅ Sudah dilabel</button>
+        <button class="admin-tab-btn active" id="review-completeness-semua" data-completeness="">📰 Semua</button>
+        <button class="admin-tab-btn" id="review-completeness-lengkap" data-completeness="lengkap">✅ Lengkap (3/3)</button>
+        <button class="admin-tab-btn" id="review-completeness-sebagian" data-completeness="sebagian">🧩 Sebagian</button>
       </div>
 
       <div class="review-toolbar">
@@ -70,11 +55,11 @@
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20260919"></script>
-  <script src="labeling-common.js?v=20260915b"></script>
+  <script src="labeling-common.js?v=20260920c"></script>
   <script src="labeling-screener.js?v=20260913b"></script>
-  <script src="labeling-lapus.js?v=20260913b"></script>
-  <script src="labeling-pengeluaran.js?v=20260913b"></script>
-  <script src="admin-review.js?v=20260919d"></script>
+  <script src="labeling-lapus.js?v=20260920a"></script>
+  <script src="labeling-pengeluaran.js?v=20260920a"></script>
+  <script src="admin-review.js?v=20260920c"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

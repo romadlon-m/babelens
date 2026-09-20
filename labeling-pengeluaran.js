@@ -9,7 +9,11 @@
 // (PENGELUARAN_LABELS, sisi Provinsi) — repo ini sudah tidak punya modul bersama
 // untuk daftar taksonomi, lihat CLAUDE.md.
 const PENGELUARAN_CODES = ['1a', '1b', '1c', '1d', '1e', '1f', '1g', '1h', '1i', '1j', '1k', '1l', '1', '2', '3', '4', '5', '6', '7'];
-const ARAH_VALUES = ['Naik', 'Turun', 'Netral'];
+// Named PENGELUARAN_ARAH_VALUES (not the generic ARAH_VALUES) because
+// labeling-lapus.js declares its own copy of the same list at top level too,
+// and admin-review.html loads both files on one page — see the matching
+// comment in labeling-lapus.js.
+const PENGELUARAN_ARAH_VALUES = ['Naik', 'Turun', 'Netral'];
 
 function parsePengeluaranLine(raw, expectedId) {
   const parts = labelingSplitPipes(raw, 5);
@@ -42,9 +46,9 @@ function parsePengeluaranLine(raw, expectedId) {
   }
 
   const arahNorm = arahRaw.trim();
-  const arahMatch = ARAH_VALUES.find(v => v.toLowerCase() === arahNorm.toLowerCase());
+  const arahMatch = PENGELUARAN_ARAH_VALUES.find(v => v.toLowerCase() === arahNorm.toLowerCase());
   if (!arahMatch) {
-    throw new Error(`Kolom ke-5 (arah) harus salah satu dari ${ARAH_VALUES.join('/')} ketika kolom ke-2 = Ya.`);
+    throw new Error(`Kolom ke-5 (arah) harus salah satu dari ${PENGELUARAN_ARAH_VALUES.join('/')} ketika kolom ke-2 = Ya.`);
   }
 
   return { hasil: { relevan: 'Ya', komponen, alasan, arah: arahMatch } };

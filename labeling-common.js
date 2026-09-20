@@ -126,6 +126,19 @@ async function labelingQueueCount(jenis) {
   return data ?? 0;
 }
 
+// Splits the same queue count into Batch 1 (publication_datetime after
+// LABEL_CUTOFF — never labeled at all, grows daily via the scraper) and
+// Batch 2 (the pre-cutoff legacy Copilot batch, already has lu_relevan/
+// pengeluaran_relevan filled but never run through this tool) — see
+// labeling_queue_count_by_batch() migration. Same predicate as
+// labeling_queue_count(), just split by publication date, so the two can
+// never disagree about what "queued" means.
+async function labelingQueueCountByBatch(jenis) {
+  const { data, error } = await window.db.rpc('labeling_queue_count_by_batch', { p_jenis: jenis });
+  if (error) throw new Error('Gagal menghitung antrean per batch: ' + error.message);
+  return { batch1: data?.batch1 ?? 0, batch2: data?.batch2 ?? 0 };
+}
+
 // Counts this labeler's own submissions for `jenis` — total ever, and since
 // local (WIB) midnight today — via a SECURITY DEFINER RPC rather than a direct
 // `labeling_log` query, since that table's only SELECT policy is admin-only
@@ -172,7 +185,11 @@ async function labelingFlag(newsId, jenis, reason) {
   if (error) throw new Error('Gagal menandai berita: ' + error.message);
 }
 
-async function labelingSubmit(newsId, jenis, hasil) {
+// `source` defaults to 'labeling' (the normal labeling-*.html flow); pass
+// 'review' from admin-review.html's Sesuai/Perbaiki actions so a QC resubmit
+// isn't counted as fresh labeling work in "Aktivitas Labeling"/"Progres saya"
+// (see labeling_log.source migration).
+async function labelingSubmit(newsId, jenis, hasil, source = 'labeling') {
   const { data: { session } } = await window.db.auth.getSession();
   if (!session) throw new Error('Sesi tidak valid, silakan login ulang.');
   const res = await fetch(SUBMIT_LABEL_FN_URL, {
@@ -181,7 +198,7 @@ async function labelingSubmit(newsId, jenis, hasil) {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ news_id: newsId, jenis, hasil })
+    body: JSON.stringify({ news_id: newsId, jenis, hasil, source })
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body?.error || 'Gagal mengirim label');
@@ -254,8 +271,13 @@ function initLabelingPage(config) {
 
   async function refreshQueueCount() {
     try {
-      const n = await labelingQueueCount(jenis);
-      els.queueCount.innerHTML = `Sisa antrean: <strong>${n.toLocaleString('id-ID')}</strong> baris`;
+      const [n, byBatch] = await Promise.all([
+        labelingQueueCount(jenis),
+        labelingQueueCountByBatch(jenis)
+      ]);
+      els.queueCount.innerHTML = `Sisa antrean: <strong>${n.toLocaleString('id-ID')}</strong> baris`
+        + `<span class="labeling-progress-extra">📥 Batch 1 (Belum Pernah Dilabel): <strong>${byBatch.batch1.toLocaleString('id-ID')}</strong>`
+        + ` &middot; 🗂️ Batch 2 (Data Lama): <strong>${byBatch.batch2.toLocaleString('id-ID')}</strong></span>`;
     } catch (err) {
       els.queueCount.textContent = 'Sisa antrean: (gagal memuat)';
       console.error(err);
