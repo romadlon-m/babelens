@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260919"></script>
-  <link rel="stylesheet" href="style.css?v=20260920b">
+  <link rel="stylesheet" href="style.css?v=20260921b">
 </head>
 <body class="admin-page admin-review-page" style="visibility:hidden;">
 
@@ -34,19 +34,33 @@
         </div>
       </header>
 
-      <div class="admin-tabs">
-        <button class="admin-tab-btn active" id="review-batch-batch1" data-batch="batch1">📥 Batch 1 (Belum Pernah Dilabel)</button>
-        <button class="admin-tab-btn" id="review-batch-batch2" data-batch="batch2">🗂️ Batch 2 (Data Lama)</button>
-        <button class="admin-tab-btn" id="review-batch-semua" data-batch="">📚 Semua Batch</button>
-      </div>
-
-      <div class="admin-tabs">
-        <button class="admin-tab-btn active" id="review-completeness-semua" data-completeness="">📰 Semua</button>
-        <button class="admin-tab-btn" id="review-completeness-lengkap" data-completeness="lengkap">✅ Lengkap (3/3)</button>
-        <button class="admin-tab-btn" id="review-completeness-sebagian" data-completeness="sebagian">🧩 Sebagian</button>
-      </div>
-
       <div class="review-toolbar">
+        <div class="review-filters">
+          <div class="filter-group">
+            <label for="review-batch">Batch</label>
+            <select id="review-batch">
+              <option value="batch1" selected>Batch 1 (Baru)</option>
+              <option value="batch2">Batch 2 (Data Lama)</option>
+              <option value="">Semua Batch</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="review-completeness">Kelengkapan</label>
+            <select id="review-completeness">
+              <option value="" selected>Semua</option>
+              <option value="lengkap">Lengkap (3/3)</option>
+              <option value="sebagian">Sebagian</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="review-kondisi-label">Kondisi Label</label>
+            <select id="review-kondisi-label">
+              <option value="lolos_tidak" selected>Lolos, tapi Lapus &amp; Pengeluaran Tidak</option>
+              <option value="tidak_lolos">Tidak Lolos</option>
+              <option value="">Semua</option>
+            </select>
+          </div>
+        </div>
         <div id="review-remaining" class="review-remaining">Memuat...</div>
       </div>
 
@@ -65,7 +79,7 @@
   <script src="labeling-screener.js?v=20260913b"></script>
   <script src="labeling-lapus.js?v=20260920a"></script>
   <script src="labeling-pengeluaran.js?v=20260920a"></script>
-  <script src="admin-review.js?v=20260920d"></script>
+  <script src="admin-review.js?v=20260921d"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;

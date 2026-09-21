@@ -2812,6 +2812,17 @@ select {
   margin-bottom: 14px;
 }
 
+.review-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.review-filters .filter-group {
+  margin: 0;
+}
+
 .review-remaining {
   font-size: 13px;
   color: var(--muted);
@@ -2822,15 +2833,100 @@ select {
   color: var(--primary);
   font-size: 13px;
   font-weight: 600;
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  padding: 5px 10px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
+/* Label + icon-only action buttons share one row per column. */
+.review-column-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.review-icon-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.review-icon-btn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.review-icon-btn:hover:not(:disabled) {
+  background: var(--primary-light);
+}
+
+.review-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Alasan: one ellipsised line by default, click to read in full. */
 .review-alasan-current {
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 10px;
+  margin-bottom: 6px;
+}
+
+.review-alasan-current summary {
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-alasan-current summary::-webkit-details-marker {
+  display: none;
+}
+
+.review-alasan-current[open] summary {
+  white-space: normal;
+}
+
+/* Ringkasan / isi lengkap / link artikel: collapsed toggles on one row. */
+.review-article-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 18px;
+  margin-bottom: 4px;
+}
+
+.review-summary-toggle {
+  font-size: 13px;
+}
+
+.review-summary-toggle summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.review-summary-toggle .review-summary {
+  margin-top: 8px;
+}
+
+.review-article-links .review-full-content,
+.review-article-links .review-source-link {
+  margin-bottom: 0;
+}
+
+.review-article-links details[open] {
+  flex-basis: 100%;
 }
 
 .review-flag-reason {
@@ -2921,8 +3017,8 @@ select {
    side-by-side di layar lebar, ditumpuk di mobile (lihat @media di bawah). */
 .review-columns {
   display: flex;
-  gap: 14px;
-  margin: 14px 0;
+  gap: 12px;
+  margin: 10px 0;
   align-items: flex-start;
 }
 
@@ -2931,7 +3027,7 @@ select {
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--bg);
 }
 
@@ -2940,7 +3036,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .review-column-title {
