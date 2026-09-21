@@ -220,18 +220,31 @@ function formatReportDate(iso) {
 // (dimuat lewat Edge Function admin-users) karena RLS profiles tidak mengizinkan
 // klien admin membaca profil user lain langsung — labeling_log sendiri sudah
 // mengizinkan admin membaca semua baris (lihat migrasi labeling_tool_schema).
-let labelingSourceFilter = ''; // '' | 'labeling' | 'review'
+let labelingSourceFilter = 'labeling'; // '' | 'labeling' | 'review' (sinkron dengan <option selected> di HTML)
 
 function onLabelingSourceFilterChange() {
   labelingSourceFilter = document.getElementById('labeling-source-filter').value;
   renderLabelingReportRows();
 }
 
+let labelingGroupMode = 'total'; // 'date' | 'total' (sinkron dengan <option selected> di HTML)
+
+function labelingDefaultSort() {
+  return labelingGroupMode === 'total' ? { col: 'total', dir: 'desc' } : { col: 'date', dir: 'desc' };
+}
+
+function onLabelingGroupChange() {
+  labelingGroupMode = document.getElementById('labeling-group-filter').value;
+  Object.assign(labelingSort, labelingDefaultSort());
+  renderLabelingReportRows();
+}
+
+const LABELING_JENIS_COLS = ['screener', 'lapus', 'pengeluaran'];
 const LABELING_SOURCE_LABELS = { labeling: 'Labeling', review: 'Review' };
 
 async function loadLabelingReport() {
   const tbody = document.getElementById('admin-labeling-tbody');
-  tbody.innerHTML = '<tr><td colspan="5">Memuat data...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7">Memuat data...</td></tr>';
 
   try {
     if (!adminUsersCache.length) {
@@ -254,37 +267,51 @@ async function loadLabelingReport() {
 
     const counts = {}; // key: date|labeler_id|jenis|source -> count
     (data || []).forEach(row => {
-      const date = formatReportDate(row.created_at);
+      const dateKey = new Date(row.created_at).toLocaleDateString('en-CA'); // YYYY-MM-DD lokal, sortable
       const source = row.source || 'labeling';
-      const key = `${date}|||${row.labeler_id}|||${row.jenis}|||${source}`;
+      const key = `${dateKey}|||${row.labeler_id}|||${row.jenis}|||${source}`;
       counts[key] = (counts[key] || 0) + 1;
     });
 
-    labelingReportRows = Object.entries(counts).map(([key, count]) => {
-      const [date, labelerId, jenis, source] = key.split('|||');
-      return { date, labelerId, jenis, source, count, nama: nameById[labelerId] || labelerId };
+    // Satu entri per tanggal/labeler/sumber, dengan hitungan per jenis (dipivot jadi kolom).
+    const byKey = {};
+    Object.entries(counts).forEach(([key, count]) => {
+      const [dateKey, labelerId, jenis, source] = key.split('|||');
+      const k = `${dateKey}|||${labelerId}|||${source}`;
+      if (!byKey[k]) {
+        byKey[k] = {
+          dateKey, labelerId, source,
+          date: formatReportDate(`${dateKey}T12:00:00`),
+          nama: nameById[labelerId] || labelerId,
+          screener: 0, lapus: 0, pengeluaran: 0, total: 0
+        };
+      }
+      if (LABELING_JENIS_COLS.includes(jenis)) byKey[k][jenis] += count;
+      byKey[k].total += count;
     });
+    labelingReportRows = Object.values(byKey);
     renderLabelingReportRows();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">Gagal memuat data: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
 let labelingReportRows = [];
-const labelingSort = { col: 'date', dir: 'desc' };
+const labelingSort = { col: 'total', dir: 'desc' };
 
 function compareLabelingRows(a, b, col) {
   switch (col) {
     case 'date':
-      return new Date(a.date) - new Date(b.date);
+      return a.dateKey.localeCompare(b.dateKey);
     case 'nama':
       return (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' });
-    case 'jenis':
-      return (JENIS_LABELS[a.jenis] || a.jenis).localeCompare(JENIS_LABELS[b.jenis] || b.jenis, 'id');
     case 'source':
       return (LABELING_SOURCE_LABELS[a.source] || a.source).localeCompare(LABELING_SOURCE_LABELS[b.source] || b.source, 'id');
-    case 'count':
-      return a.count - b.count;
+    case 'screener':
+    case 'lapus':
+    case 'pengeluaran':
+    case 'total':
+      return a[col] - b[col];
     default:
       return 0;
   }
@@ -293,24 +320,46 @@ function compareLabelingRows(a, b, col) {
 function renderLabelingReportRows() {
   const tbody = document.getElementById('admin-labeling-tbody');
   renderSortIndicator('#admin-labeling-view', labelingSort);
-  const rows = labelingSourceFilter
+  const totalMode = labelingGroupMode === 'total';
+  const dateTh = document.getElementById('labeling-th-date');
+  if (dateTh) dateTh.hidden = totalMode;
+  const colCount = totalMode ? 6 : 7;
+  let rows = labelingSourceFilter
     ? labelingReportRows.filter(r => r.source === labelingSourceFilter)
     : labelingReportRows;
+  if (totalMode) {
+    // Kumpulkan semua tanggal jadi satu baris per nama/sumber.
+    const agg = {};
+    rows.forEach(r => {
+      const key = `${r.labelerId}|||${r.source}`;
+      if (!agg[key]) agg[key] = { ...r, dateKey: '', date: null, screener: 0, lapus: 0, pengeluaran: 0, total: 0 };
+      LABELING_JENIS_COLS.forEach(j => { agg[key][j] += r[j]; });
+      agg[key].total += r.total;
+    });
+    rows = Object.values(agg);
+  }
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="5">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${colCount}">Belum ada aktivitas labeling dalam 30 hari terakhir.</td></tr>`;
     return;
   }
+  const sortCol = totalMode && labelingSort.col === 'date' ? 'total' : labelingSort.col;
   const sorted = [...rows].sort((a, b) => {
-    const cmp = compareLabelingRows(a, b, labelingSort.col);
-    return labelingSort.dir === 'asc' ? cmp : -cmp;
+    const primary = compareLabelingRows(a, b, sortCol);
+    if (primary !== 0) return labelingSort.dir === 'asc' ? primary : -primary;
+    return (b.total - a.total) || (a.nama || '').localeCompare(b.nama || '', 'id');
   });
+  const jenisCell = (r, jenis) => r[jenis]
+    ? `<td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="${jenis}">${r[jenis]}</button></td>`
+    : '<td>0</td>';
   tbody.innerHTML = sorted.map(r => `
       <tr>
-        <td>${escapeHtml(r.date)}</td>
-        <td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="${escapeHtml(r.jenis)}">${escapeHtml(r.nama)}</button></td>
-        <td>${escapeHtml(JENIS_LABELS[r.jenis] || r.jenis)}</td>
+        ${totalMode ? '' : `<td>${escapeHtml(r.date)}</td>`}
+        <td><button class="admin-link-btn" data-labeler-id="${escapeHtml(r.labelerId)}" data-jenis="screener">${escapeHtml(r.nama)}</button></td>
         <td>${r.source === 'review' ? '<span class="badge badge-gray">Review</span>' : '<span class="badge badge-green">Labeling</span>'}</td>
-        <td>${r.count}</td>
+        ${jenisCell(r, 'screener')}
+        ${jenisCell(r, 'lapus')}
+        ${jenisCell(r, 'pengeluaran')}
+        <td><strong>${r.total}</strong></td>
       </tr>
     `).join('');
 }
@@ -320,7 +369,7 @@ function onLabelingSortClick(col) {
     labelingSort.dir = labelingSort.dir === 'asc' ? 'desc' : 'asc';
   } else {
     labelingSort.col = col;
-    labelingSort.dir = col === 'date' ? 'desc' : 'asc';
+    labelingSort.dir = (col === 'nama' || col === 'source') ? 'asc' : 'desc';
   }
   renderLabelingReportRows();
 }
