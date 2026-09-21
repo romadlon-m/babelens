@@ -66,8 +66,9 @@ const REVIEW_STATUS_BADGE = {
 const REVIEW_BATCH_SIZE = 10;
 
 const reviewState = {
-  batch: 'batch1', // '' | 'batch1' | 'batch2' — defaults to Batch 1 (belum pernah dilabel) per admin request
+  batch: 'batch1', // '' | 'batch1' | 'batch2' — batch permanen (news.batch), default Batch 1 (Baru)
   completeness: '', // '' | 'lengkap' | 'sebagian'
+  kondisiLabel: 'lolos_tidak', // '' | 'lolos_tidak' | 'tidak_lolos'
   total: 0,
   rows: [],       // batch yang sedang tampil saja — {..row, resolved: bool}
   loading: false,
@@ -210,15 +211,18 @@ function reviewRenderColumn(jenis, rowId, col) {
         <span class="review-column-title">${REVIEW_JENIS_LABELS[jenis]}</span>
         <span class="badge ${badge.cls}">${badge.text}</span>
       </div>
-      <div class="review-label-current">🏷️ ${labelingEscapeHtml(reviewLabelSummary(jenis, col))}</div>
-      ${col.alasan ? `<div class="review-alasan-current">💬 ${labelingEscapeHtml(col.alasan)}</div>` : ''}
+      <div class="review-column-summary">
+        <div class="review-label-current">🏷️ ${labelingEscapeHtml(reviewLabelSummary(jenis, col))}</div>
+        ${actionable ? `
+          <div class="review-icon-actions">
+            ${showSesuai ? '<button class="review-icon-btn" data-action="sesuai" title="Sesuai" aria-label="Sesuai">✅</button>' : ''}
+            <button class="review-icon-btn" data-action="edit-toggle" title="Edit" aria-label="Edit">✏️</button>
+            <button class="review-icon-btn" data-action="ai-toggle" title="Bantuan AI" aria-label="Bantuan AI">🤖</button>
+          </div>` : ''}
+      </div>
+      ${col.alasan ? `<details class="review-alasan-current"><summary>💬 ${labelingEscapeHtml(col.alasan)}</summary></details>` : ''}
       ${flagLine}
       ${actionable ? `
-        <div class="labeling-actions review-column-actions">
-          ${showSesuai ? '<button class="secondary-btn" data-action="sesuai">✅ Sesuai</button>' : ''}
-          <button class="secondary-btn" data-action="edit-toggle">✏️ Edit</button>
-          <button class="secondary-btn" data-action="ai-toggle">🤖 Bantuan AI</button>
-        </div>
         <div class="review-ai-box" hidden>
           <button class="card-btn" data-action="ai-copy">📋 Salin Prompt + Artikel</button>
           <textarea class="review-ai-textarea labeling-textarea" placeholder="Tempel jawaban AI di sini..."></textarea>
@@ -252,9 +256,11 @@ function reviewRenderCard(row) {
   card.innerHTML = `
     <h3>${labelingEscapeHtml(row.title || '(tanpa judul)')}</h3>
     <div class="labeling-meta">${reviewFormatMeta(row)}</div>
-    <div class="review-summary">${labelingEscapeHtml(row.summary || '')}</div>
-    ${row.content ? `<details class="review-full-content"><summary>Lihat isi lengkap</summary><div>${labelingEscapeHtml(row.content)}</div></details>` : ''}
-    ${row.url ? `<a href="${labelingEscapeHtml(row.url)}" target="_blank" rel="noopener" class="review-source-link">🔗 Buka artikel asli</a>` : ''}
+    <div class="review-article-links">
+      ${row.summary ? `<details class="review-summary-toggle"><summary>Ringkasan</summary><div class="review-summary">${labelingEscapeHtml(row.summary)}</div></details>` : ''}
+      ${row.content ? `<details class="review-full-content"><summary>Lihat isi lengkap</summary><div>${labelingEscapeHtml(row.content)}</div></details>` : ''}
+      ${row.url ? `<a href="${labelingEscapeHtml(row.url)}" target="_blank" rel="noopener" class="review-source-link">🔗 Buka artikel asli</a>` : ''}
+    </div>
 
     <div class="review-columns">${columnsHtml}</div>
 
@@ -316,7 +322,8 @@ async function reviewLoadBatch() {
       p_page: 1,
       p_page_size: REVIEW_BATCH_SIZE,
       p_completeness: reviewState.completeness || null,
-      p_batch: reviewState.batch || null
+      p_batch: reviewState.batch || null,
+      p_kondisi_label: reviewState.kondisiLabel || null
     });
     if (error) throw error;
     reviewState.total = data.total || 0;
@@ -585,20 +592,16 @@ function reviewWireListDelegation() {
 }
 
 function initReviewPage() {
-  document.querySelectorAll('.admin-tabs [data-batch]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.admin-tabs [data-batch]').forEach(b => b.classList.toggle('active', b === btn));
-      reviewState.batch = btn.dataset.batch;
+  [['review-batch', 'batch'], ['review-completeness', 'completeness']].forEach(([id, key]) => {
+    document.getElementById(id).addEventListener('change', e => {
+      reviewState[key] = e.target.value;
       reviewResetAndLoad();
     });
   });
 
-  document.querySelectorAll('.admin-tabs [data-completeness]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.admin-tabs [data-completeness]').forEach(b => b.classList.toggle('active', b === btn));
-      reviewState.completeness = btn.dataset.completeness;
-      reviewResetAndLoad();
-    });
+  document.getElementById('review-kondisi-label').addEventListener('change', e => {
+    reviewState.kondisiLabel = e.target.value;
+    reviewResetAndLoad();
   });
 
   reviewWireListDelegation();
