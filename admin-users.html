@@ -95,10 +95,17 @@
            hitungan submit per intern/jenis/hari dari tabel labeling_log. -->
       <div id="admin-labeling-filters" class="admin-detail-filters" hidden>
         <div class="filter-group">
+          <label for="labeling-group-filter">Tampilan</label>
+          <select id="labeling-group-filter" onchange="onLabelingGroupChange()">
+            <option value="total" selected>Total (tanpa tanggal, 30 hari terakhir)</option>
+            <option value="date">Per tanggal</option>
+          </select>
+        </div>
+        <div class="filter-group">
           <label for="labeling-source-filter">Sumber</label>
           <select id="labeling-source-filter" onchange="onLabelingSourceFilterChange()">
             <option value="">Semua</option>
-            <option value="labeling">Labeling (Intern/Labeler)</option>
+            <option value="labeling" selected>Labeling (Intern/Labeler)</option>
             <option value="review">Review (Admin)</option>
           </select>
         </div>
@@ -107,15 +114,17 @@
         <table class="admin-table">
           <thead>
             <tr>
-              <th data-sort="date">Tanggal</th>
+              <th data-sort="date" id="labeling-th-date" hidden>Tanggal</th>
               <th data-sort="nama">Nama</th>
-              <th data-sort="jenis">Jenis</th>
               <th data-sort="source">Sumber</th>
-              <th data-sort="count">Jumlah Submit</th>
+              <th data-sort="screener">Pengecekan Awal</th>
+              <th data-sort="lapus">Lapus</th>
+              <th data-sort="pengeluaran">Pengeluaran</th>
+              <th data-sort="total">Total</th>
             </tr>
           </thead>
           <tbody id="admin-labeling-tbody">
-            <tr><td colspan="5">Memuat data...</td></tr>
+            <tr><td colspan="6">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -344,7 +353,7 @@
   </div>
 
   <script src="sidebar.js?v=20260919"></script>
-  <script src="admin-users.js?v=20260920c"></script>
+  <script src="admin-users.js?v=20260921b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
