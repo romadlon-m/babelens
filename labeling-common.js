@@ -72,9 +72,9 @@ async function labelingCopyToClipboard(text) {
   }
 }
 
-// Only ever relevant for a row opened via ?news_id= (see loadInitial()) — the
-// normal queue claim can never return an already-labeled row for that jenis, so
-// there is nothing to show in the regular flow. Reads straight off the `news`
+// Relevant for a row opened via ?news_id= (see loadInitial()) and for batch 2
+// (legacy) rows served by the normal Lapus/Pengeluaran queue, which still carry
+// their old label until the new submit overwrites it. Reads straight off the `news`
 // row's own columns (already returned by both claim RPCs), so this needs no
 // extra query and works identically for admins and labelers.
 function labelingFormatExistingLabel(jenis, row) {
