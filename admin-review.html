@@ -56,6 +56,7 @@
             <label for="review-kondisi-label">Kondisi Label</label>
             <select id="review-kondisi-label">
               <option value="lolos_tidak" selected>Lolos, tapi Lapus &amp; Pengeluaran Tidak</option>
+              <option value="lolos_ya">Lolos, Lapus dan/atau Pengeluaran Ya</option>
               <option value="tidak_lolos">Tidak Lolos</option>
               <option value="">Semua</option>
             </select>
@@ -79,7 +80,7 @@
   <script src="labeling-screener.js?v=20260913b"></script>
   <script src="labeling-lapus.js?v=20260920a"></script>
   <script src="labeling-pengeluaran.js?v=20260920a"></script>
-  <script src="admin-review.js?v=20260921d"></script>
+  <script src="admin-review.js?v=20260922a"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
