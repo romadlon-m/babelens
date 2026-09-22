@@ -68,7 +68,7 @@ const REVIEW_BATCH_SIZE = 10;
 const reviewState = {
   batch: 'batch1', // '' | 'batch1' | 'batch2' — batch permanen (news.batch), default Batch 1 (Baru)
   completeness: '', // '' | 'lengkap' | 'sebagian'
-  kondisiLabel: 'lolos_tidak', // '' | 'lolos_tidak' | 'tidak_lolos'
+  kondisiLabel: 'lolos_tidak', // '' | 'lolos_tidak' | 'lolos_ya' | 'tidak_lolos'
   total: 0,
   rows: [],       // batch yang sedang tampil saja — {..row, resolved: bool}
   loading: false,
