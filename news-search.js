@@ -417,7 +417,7 @@ async function search(page = 1) {
     !f_summary.checked &&
     !f_full.checked
   ) {
-    alert("Pilih minimal satu kolom pencarian.");
+    showAlert("Pilih minimal satu kolom pencarian (Judul, Ringkasan, atau Artikel Lengkap).");
     return;
   }
 
@@ -1117,7 +1117,7 @@ window.onload = async () => {
 function exportToExcel() {
 
   if (!currentRows || currentRows.length === 0) {
-    alert("Tidak ada data untuk diekspor.");
+    showAlert("Tidak ada data untuk diekspor.");
     return;
   }
 

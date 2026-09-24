@@ -3088,3 +3088,95 @@ select {
   font-size: 13px;
   color: var(--muted);
 }
+/* ============================================================
+   APP DIALOG (pengganti alert/confirm bawaan browser, lihat dialog.js)
+   ============================================================ */
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.app-dialog {
+  width: 100%;
+  max-width: 400px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.app-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.app-dialog-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+  white-space: pre-line;
+  overflow-y: auto;
+}
+
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.app-dialog-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.app-dialog-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.app-dialog-btn-primary { background: var(--primary); color: #fff; }
+.app-dialog-btn-primary:hover { opacity: 0.9; }
+.app-dialog-btn-danger { background: #dc2626; color: #fff; }
+.app-dialog-btn-danger:hover { opacity: 0.9; }
+.app-dialog-btn-cancel { background: #f3f4f6; color: #374151; }
+.app-dialog-btn-cancel:hover { background: #e5e7eb; }
+
+@media (max-width: 480px) {
+  .app-dialog-actions { flex-direction: column-reverse; }
+  .app-dialog-btn { width: 100%; }
+}
+
+/* Login page with the shared app header: card centered in the space below it */
+.login-body.login-with-header {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.login-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.login-with-header .header-login-btn { display: none; }
