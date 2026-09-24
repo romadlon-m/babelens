@@ -400,7 +400,7 @@ function applyFiltersAndRender() {
   lastFilteredData = filtered;
 
   updateWilayahVisibility(region);
-  renderStats(filtered);
+  renderStats(filtered, region);
   renderTren(filtered);
   renderLapus(filtered);
   renderPengeluaran(filtered);
@@ -434,26 +434,41 @@ function updateWilayahVisibility(region) {
 // ====================================
 // STAT CARDS
 // ====================================
-function renderStats(data) {
+function renderStats(data, region) {
   const total      = data.length;
   const pdrb       = data.filter(r => isPdrbRelevan(r)).length;
   const luRelevan  = data.filter(r => r.lu_relevan === 'Ya').length;
   const pengRelevan = data.filter(r => r.pengeluaran_relevan === 'Ya').length;
   const lapusSet   = new Set(data.flatMap(r => r.kategori_lapus || []));
+  const granularity = getPengeluaranGranularity(region);
+  const pengCount  = Object.keys(countByPengeluaran(data, granularity)).length;
   const wilayahSet = new Set(data.map(r => r.region_final).filter(Boolean));
 
-  document.getElementById('stat-total').textContent   = total.toLocaleString('id-ID');
-  document.getElementById('stat-pdrb').textContent    = pdrb.toLocaleString('id-ID');
-  document.getElementById('stat-lapus').textContent   = lapusSet.size;
-  document.getElementById('stat-wilayah').textContent = wilayahSet.size;
+  document.getElementById('stat-total').textContent       = total.toLocaleString('id-ID');
+  document.getElementById('stat-pdrb').textContent        = pdrb.toLocaleString('id-ID');
+  document.getElementById('stat-pdrb-pct').textContent    = total
+    ? `${(pdrb / total * 100).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`
+    : '';
+  document.getElementById('stat-lapus').textContent       = lapusSet.size;
+  document.getElementById('stat-pengeluaran').textContent = pengCount;
+  document.getElementById('stat-wilayah').textContent     = wilayahSet.size;
+
+  const pengInfoEl = document.getElementById('stat-pengeluaran-info');
+  if (pengInfoEl) {
+    pengInfoEl.dataset.tooltip = granularity === 'kabkota'
+      ? `Jumlah kategori pengeluaran yang ada beritanya, skema BPS Kab/Kota (${region}): 7 kelompok subkomponen PKRT (Pengeluaran Konsumsi Rumah Tangga, kode 1.a–1.g) + 7 komponen utama PDRB (kode 1–7), maksimal 14. Bisa kurang jika ada kategori yang belum ada beritanya pada filter ini.`
+      : `Jumlah kategori pengeluaran yang ada beritanya, skema BPS Provinsi: 12 subkomponen PKRT (Pengeluaran Konsumsi Rumah Tangga, kode 1a–1l) + 7 komponen utama PDRB (kode 1–7), maksimal 19. Bisa kurang jika ada kategori yang belum ada beritanya pada filter ini.`;
+  }
 
   const infoEl = document.getElementById('stat-pdrb-info');
   if (infoEl) {
+    const pctOfTotal = n => total
+      ? `${(n / total * 100).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`
+      : '0%';
     infoEl.dataset.tooltip =
-      `Lapangan Usaha: ${luRelevan.toLocaleString('id-ID')} artikel — `
-      + `Pengeluaran: ${pengRelevan.toLocaleString('id-ID')} artikel — `
-      + `Total PDRB Relevan tidak sama dengan penjumlahan keduanya karena satu artikel dapat relevan di keduanya sekaligus. `
-      + `Relevansi mencakup keterkaitan langsung maupun tidak langsung dengan PDRB.`;
+      `Lapangan Usaha: ${luRelevan.toLocaleString('id-ID')} artikel (${pctOfTotal(luRelevan)} dari total) — `
+      + `Pengeluaran: ${pengRelevan.toLocaleString('id-ID')} artikel (${pctOfTotal(pengRelevan)} dari total). `
+      + `Total PDRB Relevan bukan penjumlahan keduanya karena satu artikel bisa relevan di keduanya sekaligus.`;
   }
 }
 

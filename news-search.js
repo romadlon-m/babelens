@@ -687,7 +687,7 @@ function renderPage(page = 1) {
           <span
             class="badge tooltip ${isLabeled ? (isRelevant ? "badge-green" : "badge-gray") : "badge-gray"}"
             data-tooltip="${isLabeled
-              ? `PDRB: ${isRelevant ? 'YA' : 'TIDAK'} · LU: ${r.lu_relevan || '-'} · Pengeluaran: ${r.pengeluaran_relevan || '-'} — Label dibuat otomatis oleh AI. Relevansi mencakup keterkaitan langsung maupun tidak langsung dengan PDRB — gunakan sebagai panduan awal, bukan keputusan final.`
+              ? `PDRB: ${isRelevant ? 'YA' : 'TIDAK'} · LU: ${r.lu_relevan || '-'} · Pengeluaran: ${r.pengeluaran_relevan || '-'}. Label otomatis dari AI — gunakan sebagai panduan awal, bukan keputusan final.`
               : "Belum dianalisis. Label akan tersedia pada batch berikutnya."}"
           >
             ${isLabeled ? `PDRB: ${isRelevant ? "YA" : "TIDAK"}` : "Dalam Proses Analisis"}

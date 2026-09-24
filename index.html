@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260919"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <link rel="stylesheet" href="style.css?v=20260921b">
+  <link rel="stylesheet" href="style.css?v=20260924b">
   <style>
     /* ── Running text ticker ───────────────────────────── */
     .running-text-bar {
@@ -237,7 +237,7 @@
                 PDRB Relevan
                 <span class="tooltip tooltip-down info-icon" id="stat-pdrb-info" data-tooltip="">i</span>
               </div>
-              <div class="stat-value" id="stat-pdrb">—</div>
+              <div class="stat-value"><span id="stat-pdrb">—</span><span class="stat-value-sub" id="stat-pdrb-pct"></span></div>
             </div>
           </div>
           <div class="stat-card">
@@ -245,6 +245,16 @@
             <div>
               <div class="stat-label">Lapangan Usaha</div>
               <div class="stat-value" id="stat-lapus">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🛒</div>
+            <div>
+              <div class="stat-label">
+                Komponen Pengeluaran
+                <span class="tooltip tooltip-down info-icon" id="stat-pengeluaran-info" data-tooltip="">i</span>
+              </div>
+              <div class="stat-value" id="stat-pengeluaran">—</div>
             </div>
           </div>
           <div class="stat-card">
@@ -259,7 +269,7 @@
 
       <!-- RUNNING TEXT -->
       <div id="running-text-bar" class="running-text-bar" style="display:none">
-        <span class="running-text-label">Terkini</span>
+        <span class="running-text-label">Berita Terkini</span>
         <div class="running-text-track">
           <div id="running-text-inner" class="running-text-inner"></div>
         </div>
@@ -347,6 +357,6 @@
   </div>
 
   <script src="sidebar.js?v=20260919"></script>
-  <script src="dashboard.js?v=20260912b"></script>
+  <script src="dashboard.js?v=20260924e"></script>
 </body>
 </html>
