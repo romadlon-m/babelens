@@ -186,7 +186,14 @@ function renderPengeluaranFilterOptions() {
 }
 
 let lastParams = {};
+// currentRows now holds only the CURRENT PAGE's rows (server-paginated —
+// see the perf-fix note above applyCommonFilters()), not the full result
+// set. currentPage/totalFound track pagination state that renderResults()
+// and renderPager() read, since there's no full in-memory array left to
+// derive them from.
 let currentRows = [];
+let currentPage = 1;
+let totalFound = 0;
 let hiddenCount = 0;
 
 function getPageSize() {
@@ -276,15 +283,10 @@ function toggleQuickKeywordChips() {
 // ====================================
 // URUTKAN HASIL
 // ====================================
+// Sorting is applied server-side (see search()'s .order() call) since
+// pagination is now server-side too — there's no full in-memory result set
+// left to re-sort client-side (see the perf-fix note above search()).
 let sortOrder = 'desc';
-
-function sortCurrentRows() {
-  currentRows.sort((a, b) => {
-    const da = new Date(a.publication_datetime).getTime();
-    const dbb = new Date(b.publication_datetime).getTime();
-    return sortOrder === 'asc' ? da - dbb : dbb - da;
-  });
-}
 
 // ====================================
 // PRESET PERIODE (NEWS SEARCH)
@@ -408,8 +410,41 @@ function highlightKeyword(text, words) {
 }
 
 // ====================================
+// FILTER BERSAMA (dipakai query halaman utama, hitung tersembunyi PDRB, dan ekspor)
+// ====================================
+// Perf fix (2026-09-24): search() used to fetch EVERY row matching the
+// active filter (select('*'), batched 1000-at-a-time, no LIMIT) into
+// `currentRows`, then renderPage() sliced/sorted that full in-memory array
+// client-side purely to paginate. Measured against production: the default
+// "30 Hari Terakhir" filter alone shipped ~16.2MB of JSON — worse than the
+// Beranda bug fixed earlier the same day, since `select('*')` includes the
+// full article body (`content`) for every matching row, not just a handful
+// of short columns. Filtering, sorting, AND pagination now all happen in
+// Postgres via .range()/.order() on the query itself; only the current
+// page's rows (typically 10-50) are ever fetched for display. This helper
+// applies the filters shared by all 3 query sites (the main paginated
+// fetch, the PDRB "hidden count" query, and the full-result-set export)
+// so they can't drift out of sync with each other.
+function applyCommonFilters(query, params, { includePdrb = true } = {}) {
+  if (params.region)       query = query.eq('region_final', params.region);
+  if (params.lapus)        query = query.contains('kategori_lapus', [params.lapus]);
+  query = applyPengeluaranFilter(query, params.pengeluaran);
+  if (includePdrb && params.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
+  if (params.date_from)    query = query.gte('publication_datetime', params.date_from);
+  if (params.date_to)      query = query.lte('publication_datetime', params.date_to + 'T23:59:59');
+  const eventTimes = params.event_time ? params.event_time.split(',') : [];
+  if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
+  query = applyKeywordFilter(query, params);
+  return query;
+}
+
+// ====================================
 // CARI
 // ====================================
+// `page` now genuinely selects which page to fetch from the server (it used
+// to be accepted but ignored — every call re-fetched everything and always
+// showed page 1; separate direct renderPage(i) calls handled in-memory page
+// flips). See the perf-fix note on applyCommonFilters() above.
 async function search(page = 1) {
 
   if (
@@ -446,76 +481,44 @@ async function search(page = 1) {
   };
 
   result.innerHTML = renderNewsSearchSkeleton();
+  currentPage = page;
 
-  const BATCH = 1000;
-  const eventTimes = lastParams.event_time ? lastParams.event_time.split(',') : [];
+  const pageSize = getPageSize();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-  async function fetchRows() {
-    let allRows = [];
-    let from = 0;
+  let mainQuery = db.from('news')
+    .select('*', { count: 'exact' })
+    .order('publication_datetime', { ascending: sortOrder === 'asc' })
+    .range(from, to);
+  mainQuery = applyCommonFilters(mainQuery, lastParams);
 
-    while (true) {
-      let query = db.from('news')
-        .select('*')
-        .order('publication_datetime', { ascending: false })
-        .range(from, from + BATCH - 1);
-
-      if (lastParams.region)       query = query.eq('region_final', lastParams.region);
-      if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
-      query = applyPengeluaranFilter(query, lastParams.pengeluaran);
-      if (lastParams.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
-      if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
-      if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
-      if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
-      query = applyKeywordFilter(query, lastParams);
-
-      const { data: rows, error } = await query;
-
-      if (error) {
-        console.error(error);
-        result.innerHTML = `<div class="news-card">Gagal memuat data.</div>`;
-        return null;
-      }
-
-      allRows = allRows.concat(rows || []);
-      if (!rows || rows.length < BATCH) break;
-      from += BATCH;
-    }
-
-    return allRows;
-  }
-
-  async function fetchHiddenTotal() {
-    if (!lastParams.pdrb_relevan) return 0;
-
-    let query = db.from('news')
-      .select('*', { count: 'exact', head: true });
-
-    if (lastParams.region)       query = query.eq('region_final', lastParams.region);
-    if (lastParams.lapus)        query = query.contains('kategori_lapus', [lastParams.lapus]);
-    query = applyPengeluaranFilter(query, lastParams.pengeluaran);
-    if (lastParams.date_from)    query = query.gte('publication_datetime', lastParams.date_from);
-    if (lastParams.date_to)      query = query.lte('publication_datetime', lastParams.date_to + 'T23:59:59');
-    if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
-    query = applyKeywordFilter(query, lastParams);
-
-    const { count } = await query;
-    return count || 0;
-  }
-
-  const [allRows, totalCount] = await Promise.all([fetchRows(), fetchHiddenTotal()]);
-
-  if (allRows === null) return;
-
+  let hiddenQuery = null;
   if (lastParams.pdrb_relevan) {
-    hiddenCount = Math.max(0, totalCount - allRows.length);
-  } else {
-    hiddenCount = 0;
+    hiddenQuery = db.from('news').select('*', { count: 'exact', head: true });
+    hiddenQuery = applyCommonFilters(hiddenQuery, lastParams, { includePdrb: false });
   }
 
-  currentRows = allRows;
-  sortCurrentRows();
-  renderPage(1);
+  const [mainResult, hiddenResult] = await Promise.all([
+    mainQuery,
+    hiddenQuery || Promise.resolve({ count: 0 })
+  ]);
+
+  const { data: rows, count, error } = mainResult;
+
+  if (error) {
+    console.error(error);
+    result.innerHTML = `<div class="news-card">Gagal memuat data.</div>`;
+    return;
+  }
+
+  totalFound = count || 0;
+  hiddenCount = lastParams.pdrb_relevan
+    ? Math.max(0, (hiddenResult.count || 0) - totalFound)
+    : 0;
+
+  currentRows = rows || [];
+  renderResults();
 
   const { data: { session } } = await db.auth.getSession();
   if (session) {
@@ -552,17 +555,17 @@ function arahBadge(arah) {
 // ====================================
 // TAMPILKAN HALAMAN
 // ====================================
-function renderPage(page = 1) {
+// Renders currentRows as-is (already just the current page's rows, fetched
+// server-side by search() — see the perf-fix note above applyCommonFilters()).
+// currentPage/totalFound are set by search() right before calling this.
+function renderResults() {
 
-  const totalFound = currentRows.length;
   const pageSize = getPageSize();
   const totalPages = Math.max(1, Math.ceil(totalFound / pageSize));
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  const rows = currentRows.slice(start, end);
+  const rows = currentRows;
 
-  const showingStart = totalFound === 0 ? 0 : start + 1;
-  const showingEnd = start + rows.length;
+  const showingStart = totalFound === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const showingEnd = (currentPage - 1) * pageSize + rows.length;
 
   const keywordWords = splitKeywordWords(lastParams.keyword);
 
@@ -579,7 +582,7 @@ function renderPage(page = 1) {
   const pengLevelLabel  = pengGranularity === 'kabkota' ? 'Kab/Kota' : 'Provinsi';
 
   meta.innerHTML = `
-    Ditemukan <b>${totalFound.toLocaleString('id-ID')}</b> artikel • Halaman <b>${page}</b> dari <b>${totalPages.toLocaleString('id-ID')}</b> • Menampilkan <b>${showingStart.toLocaleString('id-ID')}</b>–<b>${showingEnd.toLocaleString('id-ID')}</b>${keywordNotice}
+    Ditemukan <b>${totalFound.toLocaleString('id-ID')}</b> artikel • Halaman <b>${currentPage}</b> dari <b>${totalPages.toLocaleString('id-ID')}</b> • Menampilkan <b>${showingStart.toLocaleString('id-ID')}</b>–<b>${showingEnd.toLocaleString('id-ID')}</b>${keywordNotice}
   `;
 
   const pdrbNotice = document.getElementById('pdrb-notice');
@@ -763,8 +766,8 @@ function renderPage(page = 1) {
   });
 
   result.innerHTML = html;
-  renderPager(page, totalPages);
-  updateUrl(page);
+  renderPager(currentPage, totalPages);
+  updateUrl(currentPage);
 
   requestAnimationFrame(() => {
     const pagerEl = document.querySelector('.pager.fixed-bottom');
@@ -796,13 +799,16 @@ function updateUrl(page) {
 // ====================================
 // NAVIGASI HALAMAN
 // ====================================
+// Each button now calls search(i) rather than a pure in-memory renderPage(i)
+// — pagination is server-side (see the perf-fix note above
+// applyCommonFilters()), so flipping pages fetches that page fresh.
 function renderPager(page, totalPages) {
 
   let html = "";
 
   if (page > 1) {
-    html += `<button onclick="renderPage(1)" title="Halaman Pertama">«</button>`;
-    html += `<button onclick="renderPage(${page - 1})" title="Sebelumnya">‹</button>`;
+    html += `<button onclick="search(1)" title="Halaman Pertama">«</button>`;
+    html += `<button onclick="search(${page - 1})" title="Sebelumnya">‹</button>`;
   }
 
   for (let i = 1; i <= totalPages; i++) {
@@ -810,7 +816,7 @@ function renderPager(page, totalPages) {
       html += `
         <button
           class="${i === page ? 'active' : ''}"
-          onclick="renderPage(${i})"
+          onclick="search(${i})"
         >
           ${i}
         </button>
@@ -819,8 +825,8 @@ function renderPager(page, totalPages) {
   }
 
   if (page < totalPages) {
-    html += `<button onclick="renderPage(${page + 1})" title="Berikutnya">›</button>`;
-    html += `<button onclick="renderPage(${totalPages})" title="Halaman Terakhir">»</button>`;
+    html += `<button onclick="search(${page + 1})" title="Berikutnya">›</button>`;
+    html += `<button onclick="search(${totalPages})" title="Halaman Terakhir">»</button>`;
   }
 
   if (totalPages > 5) {
@@ -848,7 +854,7 @@ function jumpToPage(totalPages) {
   let target = parseInt(input.value, 10);
   if (!target || target < 1) target = 1;
   if (target > totalPages) target = totalPages;
-  renderPage(target);
+  search(target);
 }
 
 
@@ -963,8 +969,7 @@ document.getElementById('news_preset').addEventListener('change', applyNewsPrese
 
 document.getElementById('sort_select').addEventListener('change', function () {
   sortOrder = this.value;
-  sortCurrentRows();
-  renderPage(1);
+  search(1);
 });
 
 pdrb_only.addEventListener("change", () => {
@@ -976,17 +981,16 @@ document.querySelectorAll(".event_filter").forEach(cb => {
   cb.addEventListener("change", () => search(1));
 });
 
-/* Page size change handler: calculates the first visible article index based on the current page and old page size, updates the page size in sessionStorage, then calculates the new page number to render so that the same articles remain visible. After rendering the new page, it scrolls to the article that was at the top of the viewport before the change. */
-document.getElementById("page_size_select").addEventListener("change", function () {
+/* Page size change handler: calculates the first visible article index based on the current page and old page size, updates the page size in sessionStorage, then fetches the new page (server-side — see the perf-fix note above applyCommonFilters()) so the same articles remain visible. After rendering, it scrolls to the article that was at the top of the viewport before the change. */
+document.getElementById("page_size_select").addEventListener("change", async function () {
   const oldPageSize = getPageSize();
-  const currentPage = parseInt(new URL(window.location).searchParams.get('page') || '1', 10);
   const firstVisibleIndex = (currentPage - 1) * oldPageSize;
 
   const newPageSize = parseInt(this.value, 10);
   sessionStorage.setItem('page_size', this.value);
 
   const newPage = Math.floor(firstVisibleIndex / newPageSize) + 1;
-  renderPage(newPage);
+  await search(newPage);
 
   const cardIndex = firstVisibleIndex % newPageSize;
   const cards = result.querySelectorAll('article.news-card');
@@ -1120,10 +1124,67 @@ window.onload = async () => {
 // ====================================
 // EKSPOR KE EXCEL
 // ====================================
-function exportToExcel() {
+// Export needs every row matching the active filter, not just the current
+// page — currentRows only holds one page now (see the perf-fix note above
+// applyCommonFilters()), so this runs its own fetch. It still has to page
+// through the full result set (Supabase caps rows per request), but skips
+// the heaviest column (`content`, the full article body) since export never
+// uses it — only the columns actually referenced in exportData below.
+const EXPORT_COLUMNS = [
+  'title', 'publication_datetime', 'source', 'region_final', 'category',
+  'event_time', 'lu_relevan', 'pengeluaran_relevan', 'kategori_lapus',
+  'arah_lapus', 'komponen_pengeluaran', 'arah_pengeluaran', 'summary', 'url'
+].join(', ');
 
-  if (!currentRows || currentRows.length === 0) {
+async function fetchAllRowsForExport() {
+  const BATCH = 1000;
+  let allRows = [];
+  let from = 0;
+
+  while (true) {
+    let query = db.from('news')
+      .select(EXPORT_COLUMNS)
+      .order('publication_datetime', { ascending: sortOrder === 'asc' })
+      .range(from, from + BATCH - 1);
+    query = applyCommonFilters(query, lastParams);
+
+    const { data: rows, error } = await query;
+    if (error) {
+      console.error(error);
+      return null;
+    }
+
+    allRows = allRows.concat(rows || []);
+    if (!rows || rows.length < BATCH) break;
+    from += BATCH;
+  }
+
+  return allRows;
+}
+
+async function exportToExcel() {
+
+  if (!totalFound) {
     showAlert("Tidak ada data untuk diekspor.");
+    return;
+  }
+
+  const exportBtn = document.querySelector('.export-btn');
+  const originalLabel = exportBtn ? exportBtn.textContent : null;
+  if (exportBtn) {
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Mengunduh...';
+  }
+
+  const exportRows = await fetchAllRowsForExport();
+
+  if (exportBtn) {
+    exportBtn.disabled = false;
+    exportBtn.textContent = originalLabel;
+  }
+
+  if (exportRows === null) {
+    showAlert("Gagal mengambil data untuk diekspor. Coba lagi.");
     return;
   }
 
@@ -1136,7 +1197,7 @@ function exportToExcel() {
   const pengColName    = `Komp. Pengeluaran${pengColSuffix}`;
   const pengColName2   = `Komp. Pengeluaran 2${pengColSuffix}`;
 
-  const exportData = currentRows.map((r, i) => {
+  const exportData = exportRows.map((r, i) => {
     const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
     const lapusArr = r.kategori_lapus || [];
     const pengArr  = r.komponen_pengeluaran || [];
@@ -1146,7 +1207,7 @@ function exportToExcel() {
     // Dedupe ke kode kelompok Kab/Kota sebelum dipecah ke 2 kolom — kalau kedua kode
     // Provinsi artikel jatuh ke kelompok yang sama (mis. 1g & 1i -> 1.e), harusnya
     // cuma muncul sekali di kolom pertama, bukan diulang di kolom kedua. Sama pola
-    // dengan dedupe di badge kartu (renderPage()) — lihat pengeluaranDisplayCode().
+    // dengan dedupe di badge kartu (renderResults()) — lihat pengeluaranDisplayCode().
     const pengGroups = new Map();
     pengArr.forEach(k => {
       const displayCode = pengeluaranDisplayCode(k, pengGranularity);
@@ -1215,7 +1276,7 @@ function exportToExcel() {
       db.from('user_events').insert({
         user_id: session.user.id,
         event_type: 'export_excel',
-        payload: { row_count: currentRows.length, filters: lastParams }
+        payload: { row_count: exportRows.length, filters: lastParams }
       }).then(({ error }) => { if (error) console.error(error); });
     }
   })();
