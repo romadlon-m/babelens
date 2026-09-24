@@ -22,8 +22,15 @@ const CHART_COLORS = {
   neutral: '#d1d5db'
 };
 
-let rawData = [];
-let lastFilteredData = [];
+// Perf fix (2026-09-24): dashboard used to fetch every raw `news` row
+// matching the active filter (no LIMIT) and aggregate client-side — this
+// shipped several MB of JSON per load and grew daily as `news` grew. All
+// aggregation now happens in Postgres via the dashboard_summary() RPC
+// (see supabase/migrations/20260924110000_dashboard_summary_rpc.sql);
+// `summary` holds its jsonb result (total/pdrb/lapus/pengeluaran/wilayah/
+// status/monthly), replacing the old rawData/lastFilteredData row arrays
+// every render function used to re-aggregate from scratch.
+let summary = null;
 
 // ====================================
 // LABEL MAPS
@@ -145,23 +152,17 @@ const PENGELUARAN_PROVINSI_TO_KABKOTA = {
 // ====================================
 // HELPERS
 // ====================================
-function isPdrbRelevan(r) {
-  return r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
-}
-
-function countByLapus(data) {
-  return data.reduce((acc, r) => {
-    (r.kategori_lapus || []).forEach(v => { acc[v] = (acc[v] || 0) + 1; });
-    return acc;
-  }, {});
-}
-
-function countByPengeluaran(data, granularity) {
-  return data.reduce((acc, r) => {
-    (r.komponen_pengeluaran || []).forEach(v => {
-      const key = granularity === 'kabkota' ? (PENGELUARAN_PROVINSI_TO_KABKOTA[v] || v) : v;
-      acc[key] = (acc[key] || 0) + 1;
-    });
+// Re-groups an already-aggregated {code: count} object (from
+// dashboard_summary()'s "pengeluaran" field, always at Provinsi
+// granularity) into the coarser Kab/Kota scheme by summing counts —
+// mathematically identical to counting raw rows per Kab/Kota code, since
+// PENGELUARAN_PROVINSI_TO_KABKOTA only ever merges Provinsi codes together,
+// never splits one.
+function regroupPengeluaran(counts, granularity) {
+  if (granularity !== 'kabkota') return counts;
+  return Object.entries(counts).reduce((acc, [code, n]) => {
+    const key = PENGELUARAN_PROVINSI_TO_KABKOTA[code] || code;
+    acc[key] = (acc[key] || 0) + n;
     return acc;
   }, {});
 }
@@ -205,14 +206,6 @@ function updatePengeluaranLevelUI(granularity, region) {
   if (titleEl)      titleEl.textContent = `5 Komponen Pengeluaran Terbanyak ${suffix}`;
   if (infoEl)       infoEl.dataset.tooltip = tooltipText;
   if (modalTitleEl) modalTitleEl.textContent = `Semua Komponen Pengeluaran ${suffix}`;
-}
-
-function countBy(data, key) {
-  return data.reduce((acc, r) => {
-    const val = r[key] || 'Tidak Diketahui';
-    acc[val] = (acc[val] || 0) + 1;
-    return acc;
-  }, {});
 }
 
 const fmt = n => n.toLocaleString('id-ID');
@@ -369,43 +362,42 @@ function applyPreset() {
 // ====================================
 // LOAD DASHBOARD
 // ====================================
+// Reads all 4 filters (date range, region, PDRB-only) and calls the
+// dashboard_summary() RPC, which does the filtering AND aggregation in
+// Postgres in one round trip — see the perf-fix note near `let summary`
+// above. Every filter control (date "Terapkan", region dropdown, PDRB-only
+// checkbox, period preset) triggers this same function; there is no more
+// separate client-side re-filter step.
 async function loadDashboard() {
   const dateFrom = document.getElementById('dash_from').value;
   const dateTo   = document.getElementById('dash_to').value;
-
-  let query = db.from('news')
-    .select('publication_datetime, kategori_lapus, komponen_pengeluaran, region_final, lu_relevan, pengeluaran_relevan, event_time');
-
-  if (dateFrom) query = query.gte('publication_datetime', dateFrom);
-  if (dateTo)   query = query.lte('publication_datetime', dateTo + 'T23:59:59');
-
-  const { data, error } = await query;
-  if (error || !data) return;
-
-  rawData = data;
-  applyFiltersAndRender();
-}
-
-// ====================================
-// APPLY FILTERS + RENDER
-// ====================================
-function applyFiltersAndRender() {
-  const region  = document.getElementById('dash_region').value;
+  const region   = document.getElementById('dash_region').value;
   const pdrbOnly = document.getElementById('dash_pdrb_only').checked;
 
-  let filtered = rawData;
-  if (region)   filtered = filtered.filter(r => r.region_final === region);
-  if (pdrbOnly) filtered = filtered.filter(r => isPdrbRelevan(r));
+  const { data, error } = await db.rpc('dashboard_summary', {
+    p_date_from: dateFrom || null,
+    p_date_to:   dateTo   || null,
+    p_region:    region   || null,
+    p_pdrb_only: pdrbOnly
+  });
+  if (error || !data) return;
 
-  lastFilteredData = filtered;
+  summary = data;
 
   updateWilayahVisibility(region);
-  renderStats(filtered, region);
-  renderTren(filtered);
-  renderLapus(filtered);
-  renderPengeluaran(filtered);
-  renderWilayah(filtered);
-  renderStatus(filtered);
+  renderStats(summary, region);
+  renderTren(summary);
+  renderLapus(summary);
+  renderPengeluaran(summary);
+  renderWilayah(summary);
+  renderStatus(summary);
+}
+
+// Kept as an alias so existing "change" listeners (region, PDRB-only) don't
+// need renaming — filtering now happens server-side inside loadDashboard()
+// itself, so there's nothing left to do client-side after fetching.
+function applyFiltersAndRender() {
+  loadDashboard();
 }
 
 // ====================================
@@ -434,24 +426,24 @@ function updateWilayahVisibility(region) {
 // ====================================
 // STAT CARDS
 // ====================================
-function renderStats(data, region) {
-  const total      = data.length;
-  const pdrb       = data.filter(r => isPdrbRelevan(r)).length;
-  const luRelevan  = data.filter(r => r.lu_relevan === 'Ya').length;
-  const pengRelevan = data.filter(r => r.pengeluaran_relevan === 'Ya').length;
-  const lapusSet   = new Set(data.flatMap(r => r.kategori_lapus || []));
+function renderStats(summary, region) {
+  const total       = summary.total;
+  const pdrb        = summary.pdrb;
+  const luRelevan   = summary.lu_relevan_count;
+  const pengRelevan = summary.pengeluaran_relevan_count;
+  const lapusCount  = Object.keys(summary.lapus).length;
   const granularity = getPengeluaranGranularity(region);
-  const pengCount  = Object.keys(countByPengeluaran(data, granularity)).length;
-  const wilayahSet = new Set(data.map(r => r.region_final).filter(Boolean));
+  const pengCount   = Object.keys(regroupPengeluaran(summary.pengeluaran, granularity)).length;
+  const wilayahCount = Object.keys(summary.wilayah).length;
 
   document.getElementById('stat-total').textContent       = total.toLocaleString('id-ID');
   document.getElementById('stat-pdrb').textContent        = pdrb.toLocaleString('id-ID');
   document.getElementById('stat-pdrb-pct').textContent    = total
     ? `${(pdrb / total * 100).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`
     : '';
-  document.getElementById('stat-lapus').textContent       = lapusSet.size;
+  document.getElementById('stat-lapus').textContent       = lapusCount;
   document.getElementById('stat-pengeluaran').textContent = pengCount;
-  document.getElementById('stat-wilayah').textContent     = wilayahSet.size;
+  document.getElementById('stat-wilayah').textContent     = wilayahCount;
 
   const pengInfoEl = document.getElementById('stat-pengeluaran-info');
   if (pengInfoEl) {
@@ -475,29 +467,22 @@ function renderStats(data, region) {
 // ====================================
 // CHART: JUMLAH BERITA PER BULAN
 // ====================================
-function renderTren(data) {
-  const monthlyTotal    = {};
-  const monthlyRelevant = {};
-
-  data.forEach(r => {
-    if (!r.publication_datetime) return;
-    const d   = new Date(r.publication_datetime);
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-    monthlyTotal[key] = (monthlyTotal[key] || 0) + 1;
-    if (isPdrbRelevan(r)) monthlyRelevant[key] = (monthlyRelevant[key] || 0) + 1;
-  });
+function renderTren(summary) {
+  // summary.monthly: { "YYYY-MM": { total, relevant } }, already aggregated
+  // server-side by dashboard_summary().
+  const monthly = summary.monthly;
 
   const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni',
                     'Juli','Agustus','September','Oktober','November','Desember'];
 
-  const keys           = Object.keys(monthlyTotal).sort();
+  const keys           = Object.keys(monthly).sort();
   const indoLabels     = keys.map(k => {
     const [year, month] = k.split('-');
     return `${BULAN_ID[parseInt(month, 10) - 1]}\n${year}`;
   });
-  const relevantValues    = keys.map(k => monthlyRelevant[k] || 0);
-  const notRelevantValues = keys.map(k => (monthlyTotal[k] || 0) - (monthlyRelevant[k] || 0));
-  const totalValues       = keys.map(k => monthlyTotal[k] || 0);
+  const relevantValues    = keys.map(k => monthly[k].relevant || 0);
+  const notRelevantValues = keys.map(k => (monthly[k].total || 0) - (monthly[k].relevant || 0));
+  const totalValues       = keys.map(k => monthly[k].total || 0);
 
   const maxTotal     = Math.max(...totalValues, 1);
   const minLabelValue = maxTotal * 0.05;
@@ -570,9 +555,8 @@ function renderTren(data) {
 // ====================================
 // CHART: LAPANGAN USAHA (TOP 5)
 // ====================================
-function renderLapus(data) {
-  const counts = countByLapus(data);
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+function renderLapus(summary) {
+  const sorted = Object.entries(summary.lapus).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const el    = document.getElementById('chart-lapus');
   const chart = echarts.getInstanceByDom(el) || echarts.init(el);
@@ -615,12 +599,12 @@ function renderLapus(data) {
 // ====================================
 // CHART: KOMPONEN PENGELUARAN (TOP 5)
 // ====================================
-function renderPengeluaran(data) {
+function renderPengeluaran(summary) {
   const region      = document.getElementById('dash_region').value;
   const granularity = getPengeluaranGranularity(region);
   updatePengeluaranLevelUI(granularity, region);
 
-  const counts = countByPengeluaran(data, granularity);
+  const counts = regroupPengeluaran(summary.pengeluaran, granularity);
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const el    = document.getElementById('chart-pengeluaran');
@@ -664,9 +648,8 @@ function renderPengeluaran(data) {
 // ====================================
 // CHART: DISTRIBUSI WILAYAH
 // ====================================
-function renderWilayah(data) {
-  const counts = countBy(data.filter(r => r.region_final), 'region_final');
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+function renderWilayah(summary) {
+  const sorted = Object.entries(summary.wilayah).sort((a, b) => b[1] - a[1]);
 
   const el    = document.getElementById('chart-wilayah');
   const chart = echarts.getInstanceByDom(el) || echarts.init(el);
@@ -705,8 +688,8 @@ function renderWilayah(data) {
 // ====================================
 // CHART: STATUS KEJADIAN
 // ====================================
-function renderStatus(data) {
-  const counts    = countBy(data.filter(r => r.event_time), 'event_time');
+function renderStatus(summary) {
+  const counts    = summary.status;
   const colors    = CHART_COLORS.status;
   const ORDER     = ['Sudah Terjadi', 'Sedang Terjadi', 'Akan Terjadi', 'Tidak Disebutkan'];
   const labels    = ORDER.filter(k => counts[k] !== undefined);
@@ -746,7 +729,7 @@ let lapusModalChart = null;
 function openLapusModal() {
   document.getElementById('lapus-modal').classList.add('open');
 
-  const counts = countByLapus(lastFilteredData);
+  const counts = summary.lapus;
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
   const el = document.getElementById('chart-lapus-all');
@@ -811,7 +794,7 @@ function openPengModal() {
   const granularity = getPengeluaranGranularity(region);
   updatePengeluaranLevelUI(granularity, region);
 
-  const counts = countByPengeluaran(lastFilteredData, granularity);
+  const counts = regroupPengeluaran(summary.pengeluaran, granularity);
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
   const el = document.getElementById('chart-peng-all');
