@@ -760,6 +760,16 @@ select {
     left: 24px;
     right: 24px;
   }
+
+  /* At this width .pager.fixed-bottom spans nearly the full width and can sit
+     right under #feedback-wrapper (both anchored bottom-right) — push the
+     feedback button above it while the pager is actually visible (class
+     toggled by updatePagerVisibility() in news-search.js) so they never
+     overlap. Fixed offset with margin, not synced to the pager's exact
+     height, since that varies slightly with the jump-to-page control. */
+  body.pager-visible #feedback-wrapper {
+    bottom: 132px;
+  }
 }
 
 .pager.fixed-bottom.visible {

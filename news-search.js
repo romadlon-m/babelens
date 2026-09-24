@@ -626,8 +626,13 @@ function renderPage(page = 1) {
     const highlightedContent = highlightKeyword(r.content || "-", keywordWords);
 
     // Relevansi PDRB: Ya jika relevan LU atau Pengeluaran
-    // NULL berarti artikel belum terlabeli (di luar rentang pelabelan batch 1)
-    const isLabeled = r.lu_relevan !== null && r.lu_relevan !== undefined;
+    // NULL berarti belum dilabel sama sekali. Lapus dan Pengeluaran dilabel
+    // secara paralel oleh intern berbeda (lihat CLAUDE.md "PDRB labeling tool"),
+    // jadi salah satu bisa sudah terisi sementara yang lain masih null — cek
+    // keduanya, bukan cuma lu_relevan, supaya badge "Dalam Proses Analisis"
+    // tidak muncul berdampingan dengan badge Peng/Lapus yang sudah ada isinya.
+    const isLabeled = (r.lu_relevan !== null && r.lu_relevan !== undefined)
+      || (r.pengeluaran_relevan !== null && r.pengeluaran_relevan !== undefined);
     const isRelevant = r.lu_relevan === 'Ya' || r.pengeluaran_relevan === 'Ya';
 
     // Lapangan Usaha: array → join untuk display, tooltip label panjang
@@ -1021,11 +1026,12 @@ keywordSearchBtn.addEventListener('click', () => search(1));
 function updatePagerVisibility() {
   const pager = document.getElementById("pager");
   if (!pager) return;
-  if (window.scrollY >= 300) {
-    pager.classList.add("visible");
-  } else {
-    pager.classList.remove("visible");
-  }
+  const show = window.scrollY >= 300;
+  pager.classList.toggle("visible", show);
+  // Lets a mobile-only CSS rule (style.css, @media max-width:960px) push
+  // #feedback-wrapper above the floating pager so they don't overlap —
+  // see the "Tombol pager melayang" fix.
+  document.body.classList.toggle("pager-visible", show);
 }
 
 window.addEventListener("scroll", updatePagerVisibility);
