@@ -873,7 +873,7 @@ select {
    ============================================================ */
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -909,6 +909,13 @@ select {
   font-weight: 700;
   color: var(--primary);
   line-height: 1;
+}
+
+.stat-value-sub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 6px;
 }
 
 .charts-grid {
@@ -1598,9 +1605,9 @@ select {
     overflow-y: auto;
   }
 
-  /* Stat cards: all 4 in one row, allow shrinking */
+  /* Stat cards: keep all cards in one row, allow shrinking */
   .dashboard-page .stat-cards {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   }
 
   .dashboard-page .stat-card {
@@ -1731,7 +1738,7 @@ select {
 
   .dash-header-row .stat-cards {
     width: 100%;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   }
 
   /* Charts: single column, 200px each */
