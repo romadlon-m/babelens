@@ -53,6 +53,14 @@ const TOUR_STEPS = [
   },
 ];
 
+// Temporary diagnostic logging (2026-09-25) while chasing a report of the
+// tour silently stopping when navigating from index.html to news.html —
+// no console errors were seen, so these trace the actual decision points
+// instead of guessing further. Safe to remove once the cause is confirmed.
+function tourLog(...args) {
+  console.log('[tour]', ...args);
+}
+
 function tourCurrentPage() {
   const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   return path === '' ? 'index.html' : path;
@@ -201,12 +209,14 @@ function tourRepositionCurrent() {
 }
 
 async function showStep(index) {
+  tourLog('showStep() called with index', index, 'on page', tourCurrentPage());
   const step = TOUR_STEPS[index];
-  if (!step) { finishTour(); return; }
-  if (!isTourDesktop()) { endTour(); return; }
+  if (!step) { tourLog('showStep(): no step at index', index, '- finishing'); finishTour(); return; }
+  if (!isTourDesktop()) { tourLog('showStep(): not desktop width (' + window.innerWidth + 'px) - ending'); endTour(); return; }
 
   const el = await waitForElement(step.selector, step.waitFor ? 5000 : 3000);
-  if (!el) { tourGoTo(index + 1); return; }
+  if (!el) { tourLog('showStep(): selector', JSON.stringify(step.selector), 'not found in time - skipping to next step'); tourGoTo(index + 1); return; }
+  tourLog('showStep(): found target element for', JSON.stringify(step.selector), '- rendering step', index + 1, 'of', TOUR_STEPS.length);
 
   tourCurrentIndex = index;
   sessionStorage.setItem(TOUR_ACTIVE_KEY, '1');
@@ -233,17 +243,20 @@ async function showStep(index) {
 }
 
 function tourGoTo(newIndex) {
+  tourLog('tourGoTo(' + newIndex + ') called, current page:', tourCurrentPage());
   window.removeEventListener('scroll', tourRepositionCurrent, true);
   window.removeEventListener('resize', tourRepositionCurrent);
 
   if (newIndex < 0) return;
-  if (newIndex >= TOUR_STEPS.length) { finishTour(); return; }
+  if (newIndex >= TOUR_STEPS.length) { tourLog('tourGoTo(): past last step - finishing'); finishTour(); return; }
 
   const step = TOUR_STEPS[newIndex];
   sessionStorage.setItem(TOUR_ACTIVE_KEY, '1');
   sessionStorage.setItem(TOUR_STEP_KEY, String(newIndex));
+  tourLog('tourGoTo(): saved sessionStorage step =', newIndex, ', target step page =', step.page);
 
   if (step.page !== tourCurrentPage()) {
+    tourLog('tourGoTo(): target page differs from current page - navigating to', step.page);
     tourRemoveOverlay();
     window.location.href = step.page;
     return;
@@ -273,11 +286,17 @@ function startTourFromBeginning() {
 }
 
 function resumeTourIfActive() {
-  if (sessionStorage.getItem(TOUR_ACTIVE_KEY) !== '1') return false;
-  if (!isTourDesktop()) { endTour(); return false; }
-  const idx = parseInt(sessionStorage.getItem(TOUR_STEP_KEY) || '0', 10);
+  const activeFlag = sessionStorage.getItem(TOUR_ACTIVE_KEY);
+  const storedIdx = sessionStorage.getItem(TOUR_STEP_KEY);
+  tourLog('resumeTourIfActive(): active flag =', activeFlag, ', stored step =', storedIdx, ', page =', tourCurrentPage(), ', innerWidth =', window.innerWidth);
+  if (activeFlag !== '1') { tourLog('resumeTourIfActive(): no active tour in sessionStorage'); return false; }
+  if (!isTourDesktop()) { tourLog('resumeTourIfActive(): not desktop width - ending tour'); endTour(); return false; }
+  const idx = parseInt(storedIdx || '0', 10);
   const step = TOUR_STEPS[idx];
-  if (!step || step.page !== tourCurrentPage()) return true; // tour active, just not this page's turn
+  if (!step || step.page !== tourCurrentPage()) {
+    tourLog('resumeTourIfActive(): stored step page (' + (step && step.page) + ') does not match current page - not resuming here');
+    return true; // tour active, just not this page's turn
+  }
   showStep(idx);
   return true;
 }
@@ -328,6 +347,7 @@ async function maybeShowOnboardingModal() {
 // Called once per page (index.html / news.html) after the page's own auth
 // check has resolved.
 function initOnboarding() {
+  tourLog('initOnboarding() called on', tourCurrentPage());
   if (resumeTourIfActive()) return;
   maybeShowOnboardingModal();
 }
