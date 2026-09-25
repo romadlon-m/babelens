@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="auth.js?v=20260919"></script>
-  <link rel="stylesheet" href="style.css?v=20260924e">
+  <script src="auth.js?v=20260925"></script>
+  <link rel="stylesheet" href="style.css?v=20260925">
   <style>
     /* ── Guide-specific overrides ────────────── */
     .section-header {
@@ -241,12 +241,24 @@
           </p>
         </div>
 
+        <!-- TUR INTERAKTIF -->
+        <div class="guide-section guide-full guide-tour-trigger">
+          <div class="section-header">
+            <span class="section-icon">💡</span>
+            <h3>Tur Interaktif</h3>
+          </div>
+          <p>Ingin ditunjukkan langsung? Tur ini memandu Anda melalui kartu ringkasan, filter, dan grafik di Beranda, lalu pencarian berita — dimulai dari Beranda.</p>
+          <button type="button" class="primary-btn" onclick="startTourFromBeginning()">💡 Mulai Tur Interaktif</button>
+        </div>
+
       </div>
     </main>
 
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20260919"></script>
+  <script src="dialog.js?v=20260925"></script>
+  <script src="onboarding-tour.js?v=20260925"></script>
   <script>
     requireAuth().then(r => { if (r) document.body.style.visibility = 'visible'; });
   </script>
