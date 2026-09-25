@@ -66,6 +66,20 @@ function tourCurrentPage() {
   return path === '' ? 'index.html' : path;
 }
 
+// Some local dev servers serve pages without the ".html" extension in the
+// URL (e.g. "/news" instead of "/news.html") — confirmed 2026-09-25 via a
+// real user report (their localhost:3000 setup). TOUR_STEPS' `page` values
+// keep the ".html" suffix (still needed for the literal navigation target in
+// tourGoTo()/startTour()), so every page-name comparison must go through
+// this instead of comparing the raw strings directly.
+function tourNormalizePage(name) {
+  return (name || '').toLowerCase().replace(/\.html$/, '');
+}
+
+function tourPagesMatch(a, b) {
+  return tourNormalizePage(a) === tourNormalizePage(b);
+}
+
 function isTourDesktop() {
   return window.innerWidth > 767;
 }
@@ -255,7 +269,7 @@ function tourGoTo(newIndex) {
   sessionStorage.setItem(TOUR_STEP_KEY, String(newIndex));
   tourLog('tourGoTo(): saved sessionStorage step =', newIndex, ', target step page =', step.page);
 
-  if (step.page !== tourCurrentPage()) {
+  if (!tourPagesMatch(step.page, tourCurrentPage())) {
     tourLog('tourGoTo(): target page differs from current page - navigating to', step.page);
     tourRemoveOverlay();
     window.location.href = step.page;
@@ -270,7 +284,7 @@ function startTour() {
   sessionStorage.setItem(TOUR_ACTIVE_KEY, '1');
   sessionStorage.setItem(TOUR_STEP_KEY, '0');
   const firstStepPage = TOUR_STEPS[0].page;
-  if (firstStepPage !== tourCurrentPage()) {
+  if (!tourPagesMatch(firstStepPage, tourCurrentPage())) {
     window.location.href = firstStepPage;
     return;
   }
@@ -293,7 +307,7 @@ function resumeTourIfActive() {
   if (!isTourDesktop()) { tourLog('resumeTourIfActive(): not desktop width - ending tour'); endTour(); return false; }
   const idx = parseInt(storedIdx || '0', 10);
   const step = TOUR_STEPS[idx];
-  if (!step || step.page !== tourCurrentPage()) {
+  if (!step || !tourPagesMatch(step.page, tourCurrentPage())) {
     tourLog('resumeTourIfActive(): stored step page (' + (step && step.page) + ') does not match current page - not resuming here');
     return true; // tour active, just not this page's turn
   }
@@ -321,7 +335,7 @@ function showTourToast(message) {
 // ────────────────────────────────────────────────────────────
 async function maybeShowOnboardingModal() {
   if (!isTourDesktop()) return;
-  if (tourCurrentPage() !== 'index.html') return;
+  if (!tourPagesMatch(tourCurrentPage(), 'index.html')) return;
   if (sessionStorage.getItem(TOUR_ACTIVE_KEY) === '1') return;
 
   const { data: { session } } = await window.db.auth.getSession();
