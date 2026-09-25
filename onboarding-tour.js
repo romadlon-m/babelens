@@ -42,13 +42,13 @@ const TOUR_STEPS = [
     page: 'news.html',
     selector: '.pdrb-toggle-label',
     title: 'Hanya PDRB Relevan',
-    text: 'Aktifkan untuk hanya menampilkan berita yang dinilai relevan terhadap PDRB oleh AI.',
+    text: 'Aktifkan untuk hanya menampilkan berita yang dinilai relevan terhadap PDRB oleh AI. Kami aktifkan dulu sebagai contoh — hasil pencarian akan langsung menyesuaikan.',
   },
   {
     page: 'news.html',
     selector: '#result .news-card:first-child',
     title: 'Label pada Berita',
-    text: 'Setiap kartu berita menampilkan status PDRB — badge hijau/abu untuk hasil klasifikasi (lapangan usaha, komponen pengeluaran), atau "Dalam Proses Analisis" jika belum sempat diproses AI. Arahkan kursor ke tiap badge untuk detail lebih lanjut.',
+    text: 'Setiap kartu berita PDRB relevan menampilkan badge lapangan usaha dan/atau komponen pengeluaran hasil klasifikasi AI. Arahkan kursor ke tiap badge untuk detail lebih lanjut.',
     waitFor: true,
   },
 ];
@@ -76,13 +76,47 @@ function tourRemoveOverlay() {
 
 let tourCurrentIndex = null;
 
+// Steps 5 and 6 (0-based: "Hanya PDRB Relevan" then "Label pada Berita") turn
+// the PDRB filter on for real so the demo is concrete and the last step's
+// spotlighted card is reliably already labeled (PDRB-relevant implies
+// lu_relevan/pengeluaran_relevan is filled) instead of "Dalam Proses
+// Analisis". The toggle's checked state is persisted to localStorage by
+// news-search.js on every change, so it must be restored to whatever it was
+// before the demo once the user leaves that range — otherwise the tour would
+// silently change the user's saved filter preference for future visits.
+const PDRB_DEMO_STEP_INDICES = [5, 6];
+let tourPdrbOriginalChecked = null;
+
+function tourApplyPdrbDemo() {
+  if (tourPdrbOriginalChecked !== null) return; // already applied
+  const el = document.getElementById('pdrb_only');
+  if (!el) return;
+  tourPdrbOriginalChecked = el.checked;
+  if (!el.checked) {
+    el.checked = true;
+    el.dispatchEvent(new Event('change'));
+  }
+}
+
+function tourRevertPdrbDemo() {
+  if (tourPdrbOriginalChecked === null) return;
+  const el = document.getElementById('pdrb_only');
+  if (el && el.checked !== tourPdrbOriginalChecked) {
+    el.checked = tourPdrbOriginalChecked;
+    el.dispatchEvent(new Event('change'));
+  }
+  tourPdrbOriginalChecked = null;
+}
+
 function endTour() {
+  tourRevertPdrbDemo();
   tourClearState();
   tourRemoveOverlay();
   tourCurrentIndex = null;
 }
 
 function finishTour() {
+  tourRevertPdrbDemo();
   tourClearState();
   tourRemoveOverlay();
   tourCurrentIndex = null;
@@ -177,6 +211,12 @@ async function showStep(index) {
   tourCurrentIndex = index;
   sessionStorage.setItem(TOUR_ACTIVE_KEY, '1');
   sessionStorage.setItem(TOUR_STEP_KEY, String(index));
+
+  if (PDRB_DEMO_STEP_INDICES.includes(index)) {
+    tourApplyPdrbDemo();
+  } else {
+    tourRevertPdrbDemo();
+  }
 
   tourBuildOverlay();
   document.getElementById('tour-step-counter').textContent = `Langkah ${index + 1} dari ${TOUR_STEPS.length}`;
