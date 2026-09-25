@@ -48,7 +48,7 @@ const TOUR_STEPS = [
     page: 'news.html',
     selector: '#result .news-card:first-child',
     title: 'Label pada Berita',
-    text: 'Setiap kartu berita menampilkan label PDRB, lapangan usaha, dan komponen pengeluaran hasil klasifikasi AI. Arahkan kursor ke tiap label untuk detail lebih lanjut.',
+    text: 'Setiap kartu berita menampilkan status PDRB — badge hijau/abu untuk hasil klasifikasi (lapangan usaha, komponen pengeluaran), atau "Dalam Proses Analisis" jika belum sempat diproses AI. Arahkan kursor ke tiap badge untuk detail lebih lanjut.',
     waitFor: true,
   },
 ];
