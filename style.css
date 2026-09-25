@@ -3174,6 +3174,125 @@ select {
   .app-dialog-btn { width: 100%; }
 }
 
+/* ============================================================
+   ONBOARDING TOUR (onboarding-tour.js) — desktop only
+   ============================================================ */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2050;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(17, 24, 39, 0.65);
+  pointer-events: none;
+  transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
+  z-index: 2051;
+}
+
+.tour-tooltip {
+  position: fixed;
+  z-index: 2052;
+  width: min(320px, calc(100vw - 24px));
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  transition: left 0.25s ease, top 0.25s ease;
+}
+
+.tour-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.tour-step-counter {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tour-close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+}
+.tour-close-btn:hover { color: var(--text); }
+
+.tour-tooltip-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.tour-tooltip-text {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #374151;
+  margin-bottom: 14px;
+}
+
+.tour-tooltip-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tour-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tour-btn-primary { background: var(--primary); color: #fff; margin-left: auto; }
+.tour-btn-primary:hover { opacity: 0.9; }
+.tour-btn-secondary { background: #f3f4f6; color: #374151; }
+.tour-btn-secondary:hover { background: #e5e7eb; }
+
+.tour-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 12px);
+  background: var(--text);
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1.5;
+  padding: 12px 18px;
+  border-radius: 10px;
+  max-width: min(420px, calc(100vw - 32px));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 2060;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.tour-toast-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 767px) {
+  .tour-overlay, .tour-toast { display: none; }
+  .guide-tour-trigger { display: none; }
+}
+
 /* Login page with the shared app header: card centered in the space below it */
 .login-body.login-with-header {
   flex-direction: column;

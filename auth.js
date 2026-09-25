@@ -56,11 +56,19 @@ async function getCurrentProfile() {
   if (!session) return null;
   const { data, error } = await window.db
     .from('profiles')
-    .select('id, nip_lama, nama, must_change_password, is_admin, is_labeler')
+    .select('id, nip_lama, nama, must_change_password, is_admin, is_labeler, has_seen_onboarding')
     .eq('id', session.user.id)
     .single();
   console.log('[getCurrentProfile]', { data, error });
   return data;
+}
+
+async function markOnboardingSeen(userId) {
+  const { error } = await window.db
+    .from('profiles')
+    .update({ has_seen_onboarding: true })
+    .eq('id', userId);
+  if (error) console.error('[markOnboardingSeen]', error);
 }
 
 window.db.auth.onAuthStateChange((event, session) => {
