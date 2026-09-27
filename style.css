@@ -147,6 +147,16 @@ select {
   width: auto;
 }
 
+.checkbox-row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.checkbox-row-inline .checkbox-row {
+  margin-bottom: 4px;
+}
+
 /* ACTIVE FILTER INDICATOR */
 .active-filters {
   background: var(--primary-light);
