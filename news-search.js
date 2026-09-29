@@ -204,12 +204,16 @@ function getPageSize() {
 let defaultMinDate = null;
 let defaultMaxDate = null;
 
-// LABEL CUTOFF: Tanggal artikel terlabeli terbaru dari pelabelan 22k (Copilot, Juli 2026).
-// Artikel setelah tanggal ini belum memiliki lu_relevan/pengeluaran_relevan (NULL)
-// dan akan tampil dengan badge "Dalam Proses Analisis".
-// Update nilai ini setelah batch pelabelan berikutnya selesai diupload ke Supabase.
-// Terakhir diupdate: 2 Agustus 2026 (pelabelan batch 1, ~22k artikel).
-const LABEL_CUTOFF = '2026-07-18';
+// LABEL_CUTOFF dihapus 2026-09-30 — sudah tidak dipakai di logika mana pun
+// sejak fix 2026-09-24 membuat badge "Dalam Proses Analisis" per-baris murni
+// data-driven (lihat isLabeled di renderResults(), cek lu_relevan DAN
+// pengeluaran_relevan langsung dari row, bukan dibanding suatu tanggal statis)
+// — jadi menyisakan konstanta ini hanya berisiko tampak seperti masih
+// dipakai padahal tidak. Untuk konteks kenapa itu aman: per 2026-09-30,
+// seluruh baris `news` sudah berstatus jelas (batch 1 ~9k habis discreening/
+// dilapus/dipengeluaran; batch 2 ~23k legacy Copilot sudah berlabel sejak
+// sebelum tool labeling ini ada) — lihat komentar LABEL_CUTOFF di dashboard.js
+// untuk detail lengkap kenapa tidak ada lagi baris yang "belum diproses".
 
 
 // ====================================
