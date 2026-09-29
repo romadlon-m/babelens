@@ -77,6 +77,32 @@
       .guide-content { grid-template-columns: 1fr; }
       .guide-full, .guide-col1, .guide-col2 { grid-column: 1; }
     }
+
+    /* Pedoman PDF embed */
+    .guide-pdf-section {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .guide-pdf-section p {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .guide-pdf-frame {
+      width: 100%;
+      height: calc(100vh - 230px);
+      min-height: 480px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+    }
+    .guide-pdf-download { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; flex-shrink: 0; }
+
+    @media (max-width: 767px) {
+      .guide-pdf-frame { height: 60vh; }
+    }
   </style>
 </head>
 <body style="visibility:hidden">
@@ -104,6 +130,28 @@
         </div>
       </header>
 
+      <div class="admin-tabs">
+        <button type="button" class="admin-tab-btn active" id="guide-tabbtn-ringkasan" onclick="showGuideTab('ringkasan')">Ringkasan Fitur</button>
+        <button type="button" class="admin-tab-btn" id="guide-tabbtn-pedoman" onclick="showGuideTab('pedoman')">📄 Pedoman Lengkap (PDF)</button>
+      </div>
+
+      <div id="guide-tab-pedoman" hidden>
+        <div class="guide-section guide-pdf-section">
+          <p>
+            Dokumen lengkap yang mendokumentasikan seluruh menu dan fitur Babelens dari sudut pandang pengguna biasa,
+            cocok dibaca dari awal bagi pegawai yang baru pertama kali menggunakan aplikasi ini.
+            <a class="primary-btn guide-pdf-download" href="assets/docs/Pedoman-Penggunaan-Babelens.pdf?v=20260930" download="Pedoman-Penggunaan-Babelens.pdf">⬇️ Unduh Pedoman (PDF)</a>
+          </p>
+          <iframe
+            src="assets/docs/Pedoman-Penggunaan-Babelens.pdf?v=20260930#view=FitH"
+            class="guide-pdf-frame"
+            title="Pedoman Penggunaan Aplikasi Babelens"
+            loading="lazy">
+          </iframe>
+        </div>
+      </div>
+
+      <div id="guide-tab-ringkasan">
       <div class="guide-content">
 
         <!-- TENTANG -->
@@ -245,6 +293,7 @@
         </div>
 
       </div>
+      </div><!-- /#guide-tab-ringkasan -->
     </main>
 
   </div><!-- /.app-body -->
@@ -253,6 +302,12 @@
   <script src="dialog.js?v=20260925"></script>
   <script src="onboarding-tour.js?v=20260925e"></script>
   <script>
+    function showGuideTab(tab) {
+      document.getElementById('guide-tab-ringkasan').hidden = tab !== 'ringkasan';
+      document.getElementById('guide-tab-pedoman').hidden = tab !== 'pedoman';
+      document.getElementById('guide-tabbtn-ringkasan').classList.toggle('active', tab === 'ringkasan');
+      document.getElementById('guide-tabbtn-pedoman').classList.toggle('active', tab === 'pedoman');
+    }
     requireAuth().then(r => { if (r) document.body.style.visibility = 'visible'; });
   </script>
 </body>
