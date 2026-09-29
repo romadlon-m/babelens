@@ -1,10 +1,24 @@
 const db = window.db;
 
-// LABEL_CUTOFF: tanggal artikel terlabeli terbaru (batch 1, ~22k artikel).
-// Artikel setelahnya belum punya lu_relevan/pengeluaran_relevan.
-// Update setelah batch labeling berikutnya selesai diupload ke Supabase.
-// Terakhir diupdate: 2 Agustus 2026.
-const LABEL_CUTOFF  = '2026-07-18';
+// LABEL_CUTOFF dihapus 2026-09-30 (butuh update manual tiap batch pelabelan,
+// gampang basi — nilainya masih 2026-07-18 sampai baru diketahui salah).
+// Diverifikasi langsung ke Supabase (bukan cuma tabel antrean): dari 32.046
+// baris `news`, TIDAK ADA baris yang benar-benar belum tersentuh pelabelan.
+// Batch 1 (~9k, ditangani tool ini) sudah 100% habis discreening/dilapus/
+// dipengeluaran; batch 2 (~23k legacy Copilot) sudah punya label sejak
+// sebelum tool ini ada. Baris yang lu_relevan/pengeluaran_relevan-nya masih
+// null semuanya batch 1 yang Tidak Lolos Pengecekan Awal — keputusan final
+// by design (submit_label() tidak menulis "Tidak" ke kolom itu untuk batch 1,
+// beda dari alur relabel batch 2), bukan "belum diproses", dan tersebar di
+// seluruh rentang tanggal — bukan konsentrasi di bulan-bulan terbaru — jadi
+// tidak ada lagi alasan membatasi tanggal akhir dashboard ke suatu cutoff.
+// `todayStr()` di bawah cuma mencegah user memilih tanggal akhir di masa
+// depan (mis. preset Triwulan IV sebelum Triwulan IV dimulai), tidak
+// terkait status pelabelan sama sekali — jadi tidak perlu di-maintain.
+// Kalau pola "belum diproses tersebar di rentang tanggal manapun" ini
+// berubah lagi di masa depan (mis. ada gap pelabelan baru), pertimbangkan
+// endpoint yang mengembalikan cutoff aktual dari data, bukan konstanta statis.
+const todayStr = () => new Date().toISOString().slice(0, 10);
 const DATASET_START = '2025-10-01'; // tanggal data paling awal di Supabase
 
 const CHART_COLORS = {
@@ -214,13 +228,9 @@ const fmt = n => n.toLocaleString('id-ID');
 // INIT
 // ====================================
 window.onload = async () => {
-  // LABEL_CUTOFF dan DATASET_START didefinisikan sebagai konstanta global di atas.
-  // Update LABEL_CUTOFF setelah batch pelabelan berikutnya selesai diupload ke Supabase.
-  // Terakhir diupdate: 2 Agustus 2026 (pelabelan batch 1, ~22k artikel).
-
   document.getElementById('dash_from').value = `${new Date().getFullYear()}-01-01`;
   document.getElementById('dash_from').min   = DATASET_START;
-  document.getElementById('dash_to').value   = LABEL_CUTOFF;
+  document.getElementById('dash_to').value   = todayStr();
 
   document.getElementById('dash_region').addEventListener('change', applyFiltersAndRender);
   document.getElementById('dash_pdrb_only').addEventListener('change', applyFiltersAndRender);
@@ -342,18 +352,19 @@ function applyPreset() {
   const now      = new Date();
   const thisYear = now.getFullYear();
 
+  const today = todayStr();
   if (val === 'year') {
     dashFrom.value = `${thisYear}-01-01`;
-    dashTo.value   = LABEL_CUTOFF;
+    dashTo.value   = today;
   } else if (val === 'all') {
     dashFrom.value = DATASET_START;
-    dashTo.value   = LABEL_CUTOFF;
+    dashTo.value   = today;
   } else {
     // format: "tw|from|to" atau "bln|from|to"
     const [, from, to] = val.split('|');
     dashFrom.value = from;
-    // Batasi tanggal akhir ke LABEL_CUTOFF jika periode melewatinya
-    dashTo.value   = to > LABEL_CUTOFF ? LABEL_CUTOFF : to;
+    // Batasi tanggal akhir ke hari ini kalau periode (mis. triwulan berjalan) melewatinya
+    dashTo.value   = to > today ? today : to;
   }
 
   loadDashboard();
