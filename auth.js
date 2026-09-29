@@ -37,11 +37,23 @@ async function signIn(nipLama, password) {
   const email = `${nipLama}@babelens.internal`;
   const result = await window.db.auth.signInWithPassword({ email, password });
   if (!result.error && result.data.session) {
-    window.db.from('user_events').insert({
+    // Awaited on purpose (found + fixed 2026-09-30 via live testing): the
+    // caller (login.js's handleLogin()) redirects immediately after signIn()
+    // resolves, and a fire-and-forget insert here was still in flight when
+    // that navigation fired, so the browser aborted the request
+    // (net::ERR_ABORTED) before it reached Supabase — every login silently
+    // failed to log its 'login' user_events row, breaking notify_login's
+    // Discord ping and starving admin-users.js's "Aktivitas Terakhir" column
+    // of its primary signal (it fell back to session_resume only). The
+    // error is still just logged, not surfaced to the user or allowed to
+    // block login — this only guarantees the request is sent before the
+    // caller can navigate away.
+    const { error } = await window.db.from('user_events').insert({
       user_id: result.data.session.user.id,
       event_type: 'login',
       payload: { method: 'password' }
-    }).then(({ error }) => { if (error) console.error(error); });
+    });
+    if (error) console.error(error);
   }
   return result;
 }

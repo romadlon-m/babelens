@@ -18,7 +18,20 @@ const db = window.db;
 // Kalau pola "belum diproses tersebar di rentang tanggal manapun" ini
 // berubah lagi di masa depan (mis. ada gap pelabelan baru), pertimbangkan
 // endpoint yang mengembalikan cutoff aktual dari data, bukan konstanta statis.
-const todayStr = () => new Date().toISOString().slice(0, 10);
+//
+// PENTING: pakai komponen tanggal LOKAL (getFullYear/Month/Date), BUKAN
+// toISOString() (yang berbasis UTC) — ditemukan & diperbaiki 2026-09-30
+// lewat pengujian nyata: browser pengguna di WIB (UTC+7) jam 00:00-06:59
+// punya tanggal lokal sudah "besok" sementara toISOString() masih
+// mengembalikan tanggal UTC "kemarin", sehingga dash_to salah mundur satu
+// hari setiap dini hari — pola bug yang sama dengan catatan WIB-vs-UTC di
+// labeling_my_progress() (lihat CLAUDE.md, "Per-labeler progress").
+function todayStr() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
 const DATASET_START = '2025-10-01'; // tanggal data paling awal di Supabase
 
 const CHART_COLORS = {
@@ -486,10 +499,21 @@ function renderTren(summary) {
   const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni',
                     'Juli','Agustus','September','Oktober','November','Desember'];
 
+  const BULAN_SINGKAT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
   const keys           = Object.keys(monthly).sort();
   const indoLabels     = keys.map(k => {
     const [year, month] = k.split('-');
     return `${BULAN_ID[parseInt(month, 10) - 1]}\n${year}`;
+  });
+  // Label singkat 1-baris untuk layar sempit — dipakai di bawah (bug 2026-09-30:
+  // interval:0 dulu memaksa semua label penuh tampil meski tidak muat, jadi
+  // bertabrakan begitu jumlah bulan data tumbuh lewat 7-8 bar di ~390px lebar
+  // mobile, mis. setelah LABEL_CUTOFF dihapus dan rentang default tahun ini
+  // bisa mencapai 9+ bulan).
+  const shortLabels    = keys.map(k => {
+    const [year, month] = k.split('-');
+    return `${BULAN_SINGKAT[parseInt(month, 10) - 1]} '${year.slice(2)}`;
   });
   const relevantValues    = keys.map(k => monthly[k].relevant || 0);
   const notRelevantValues = keys.map(k => (monthly[k].total || 0) - (monthly[k].relevant || 0));
@@ -500,6 +524,20 @@ function renderTren(summary) {
 
   const el    = document.getElementById('chart-tren');
   const chart = echarts.getInstanceByDom(el) || echarts.init(el);
+
+  // Pilih label penuh 2-baris (lebar cukup) atau singkat 1-baris dirotasi
+  // (sempit) berdasarkan lebar kontainer aktual saat ini — lihat catatan
+  // shortLabels di atas.
+  function xAxisLabelOption() {
+    const narrow = el.clientWidth < 500;
+    return narrow
+      ? { fontSize: 10, interval: 0, rotate: 45 }
+      : { fontSize: 11, interval: 0, rotate: 0 };
+  }
+  function currentLabels() {
+    return el.clientWidth < 500 ? shortLabels : indoLabels;
+  }
+
   chart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -517,7 +555,7 @@ function renderTren(summary) {
       }
     },
     legend: { show: false },
-    xAxis: { type: 'category', data: indoLabels, axisLabel: { fontSize: 11, interval: 0 } },
+    xAxis: { type: 'category', data: currentLabels(), axisLabel: xAxisLabelOption() },
     yAxis: { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
     series: [
       {
@@ -560,7 +598,10 @@ function renderTren(summary) {
     ],
     grid: { left: 10, right: 20, bottom: 30, top: 24 }
   });
-  window.addEventListener('resize', () => chart.resize());
+  window.addEventListener('resize', () => {
+    chart.resize();
+    chart.setOption({ xAxis: { data: currentLabels(), axisLabel: xAxisLabelOption() } });
+  });
 }
 
 // ====================================
