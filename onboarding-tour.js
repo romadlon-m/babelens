@@ -342,7 +342,11 @@ async function maybeShowOnboardingModal() {
   if (!session) return;
 
   const profile = await getCurrentProfile();
-  if (!profile || profile.has_seen_onboarding) return;
+  if (!profile) return;
+  // Test account (NIP 999999990) always sees the tour offer, regardless of
+  // has_seen_onboarding, so it stays reliable for demos/repeat testing.
+  const isTourTestAccount = profile.nip_lama === '999999990';
+  if (!isTourTestAccount && profile.has_seen_onboarding) return;
 
   const wantsTour = await showConfirm(
     'Kenalan dengan fitur-fitur utama Babelens dalam beberapa langkah singkat: kartu ringkasan, filter, grafik di Beranda, lalu pencarian berita.',
