@@ -11,14 +11,14 @@ const TOUR_STEPS = [
   {
     page: 'index.html',
     selector: '.stat-cards',
-    title: 'Kartu Ringkasan',
+    title: 'Ringkasan Statistik',
     text: 'Menampilkan total berita, jumlah yang relevan PDRB, serta cakupan lapangan usaha, komponen pengeluaran, dan wilayah — semuanya mengikuti filter yang aktif.',
   },
   {
     page: 'index.html',
     selector: '#dash_preset',
     title: 'Filter Beranda',
-    text: 'Pilih periode cepat, atau atur wilayah dan tanggal secara manual di sidebar ini. Semua grafik dan kartu akan diperbarui otomatis.',
+    text: 'Pilih periode cepat, atau atur wilayah dan tanggal secara manual di sidebar ini. Semua grafik dan ringkasan akan diperbarui otomatis.',
   },
   {
     page: 'index.html',
@@ -48,7 +48,7 @@ const TOUR_STEPS = [
     page: 'news.html',
     selector: '#result .news-card:first-child',
     title: 'Label pada Berita',
-    text: 'Setiap kartu berita PDRB relevan menampilkan badge lapangan usaha dan/atau komponen pengeluaran hasil klasifikasi AI. Arahkan kursor ke tiap badge untuk detail lebih lanjut.',
+    text: 'Setiap artikel PDRB relevan menampilkan badge lapangan usaha dan/atau komponen pengeluaran hasil klasifikasi AI. Arahkan kursor ke tiap badge untuk detail lebih lanjut.',
     waitFor: true,
   },
 ];
@@ -349,7 +349,7 @@ async function maybeShowOnboardingModal() {
   if (!isTourTestAccount && profile.has_seen_onboarding) return;
 
   const wantsTour = await showConfirm(
-    'Kenalan dengan fitur-fitur utama Babelens dalam beberapa langkah singkat: kartu ringkasan, filter, grafik di Beranda, lalu pencarian berita.',
+    'Kenalan dengan fitur-fitur utama Babelens dalam beberapa langkah singkat: ringkasan statistik, filter, grafik di Beranda, lalu pencarian berita.',
     { title: 'Kenalan dulu dengan Babelens?', confirmText: 'Mulai Tur', cancelText: 'Lewati' }
   );
 
