@@ -729,7 +729,7 @@ function renderResults() {
           ${r.event_time ? `
             <span
               class="badge badge-gray tooltip"
-              data-tooltip="Status kejadian dibuat menggunakan ekstraksi AI. Harap verifikasi jika diperlukan."
+              data-tooltip="Status kejadian ditentukan AI dari isi artikel saat ditulis — bukan relatif terhadap tanggal publikasi atau hari ini, dan bisa berbeda antar-artikel untuk topik yang sama."
             >
               ${r.event_time}
             </span>
