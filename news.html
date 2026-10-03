@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260930"></script>
-  <link rel="stylesheet" href="style.css?v=20260927">
+  <link rel="stylesheet" href="style.css?v=20261004">
 </head>
 <body class="news-page" style="visibility:hidden">
 
@@ -49,10 +49,6 @@
           <button type="button" class="scope-chip active" data-cb="f_summary" onclick="toggleScope('f_summary', this)">Ringkasan</button>
           <button type="button" class="scope-chip"        data-cb="f_full"    onclick="toggleScope('f_full', this)">Artikel Lengkap</button>
         </div>
-        <button type="button" id="quick-keyword-toggle" class="quick-keyword-toggle">
-          Saran kata kunci <span class="quick-keyword-toggle-arrow">▾</span>
-        </button>
-        <div id="quick-keyword-chips" class="scope-chips"></div>
         <!-- Hidden checkboxes — dipakai JS, disinkron oleh chip -->
         <input type="checkbox" id="f_title"   checked style="display:none">
         <input type="checkbox" id="f_summary" checked style="display:none">
@@ -105,7 +101,7 @@
       </div>
 
       <div class="filter-group">
-        <label>Lapangan Usaha</label>
+        <label>PDRB Lapangan Usaha</label>
         <select id="lapus">
           <option value="">Semua Lapangan Usaha</option>
           <option value="A">A - Pertanian, Kehutanan, dan Perikanan</option>
@@ -131,7 +127,7 @@
       </div>
 
       <div class="filter-group">
-        <label id="pengeluaran_filter_label">Komponen Pengeluaran</label>
+        <label id="pengeluaran_filter_label">PDRB Pengeluaran (Provinsi)</label>
         <select id="pengeluaran_filter">
           <option value="">Semua Komponen</option>
           <optgroup label="Subkomponen PKRT">
@@ -157,6 +153,28 @@
             <option value="6">6 - Ekspor Luar Negeri</option>
             <option value="7">7 - Impor Luar Negeri</option>
           </optgroup>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Indikator BPS Lain</label>
+        <select id="indikator_bps_filter">
+          <option value="">Semua Indikator</option>
+          <option value="Ekspor-Impor">Ekspor-Impor</option>
+          <option value="Indeks Pembangunan Manusia (IPM)">Indeks Pembangunan Manusia (IPM)</option>
+          <option value="Inflasi/IHK">Inflasi/IHK</option>
+          <option value="Kemiskinan">Kemiskinan</option>
+          <option value="Ketenagakerjaan">Ketenagakerjaan</option>
+          <option value="Ketimpangan Gender">Ketimpangan Gender</option>
+          <option value="Ketimpangan Pengeluaran (Gini Ratio)">Ketimpangan Pengeluaran (Gini Ratio)</option>
+          <option value="Luas Panen dan Produksi Padi">Luas Panen dan Produksi Padi</option>
+          <option value="Nilai Tukar Nelayan (NTN)">Nilai Tukar Nelayan (NTN)</option>
+          <option value="Nilai Tukar Petani (NTP)">Nilai Tukar Petani (NTP)</option>
+          <option value="Pariwisata">Pariwisata</option>
+          <option value="Sensus Ekonomi">Sensus Ekonomi</option>
+          <option value="Sensus Penduduk">Sensus Penduduk</option>
+          <option value="Sensus Pertanian">Sensus Pertanian</option>
+          <option value="Transportasi">Transportasi</option>
         </select>
       </div>
 
@@ -267,7 +285,7 @@
       }
     });
   </script>
-  <script src="news-search.js?v=20261003c"></script>
+  <script src="news-search.js?v=20261004b"></script>
 
   <!-- FEEDBACK BUTTON -->
   <div id="feedback-wrapper">

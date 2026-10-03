@@ -1,10 +1,5 @@
 const db = window.db;
 
-const QUICK_KEYWORDS = [
-  'timah', 'lada', 'kaolin', 'sawit', 'ekspor', 'investasi',
-  'ekonomi', 'pariwisata', 'inflasi', 'umkm', 'tambang', 'perikanan'
-];
-
 // ====================================
 // LAPUS LABELS
 // ====================================
@@ -180,8 +175,8 @@ function renderPengeluaranFilterOptions() {
   const labelEl = document.getElementById('pengeluaran_filter_label');
   if (labelEl) {
     labelEl.textContent = granularity === 'kabkota'
-      ? 'Komponen Pengeluaran (Kab/Kota)'
-      : 'Komponen Pengeluaran (Provinsi)';
+      ? 'PDRB Pengeluaran (Kab/Kota)'
+      : 'PDRB Pengeluaran (Provinsi)';
   }
 }
 
@@ -253,35 +248,6 @@ function toggleScope(id, btn) {
   cb.checked = !cb.checked;
   btn.classList.toggle('active', cb.checked);
   search(1);
-}
-
-// ====================================
-// CHIP KATA KUNCI POPULER
-// ====================================
-function renderQuickKeywordChips() {
-  const wrap = document.getElementById('quick-keyword-chips');
-  if (!wrap) return;
-
-  wrap.innerHTML = QUICK_KEYWORDS.map(kw => `
-    <button type="button" class="scope-chip" data-kw="${kw}" onclick="applyQuickKeyword('${kw}', this)">${kw}</button>
-  `).join('');
-}
-
-function applyQuickKeyword(kw, btn) {
-  keyword.value = kw;
-  updateKeywordClearVisibility();
-  document.querySelectorAll('#quick-keyword-chips .scope-chip').forEach(chip => {
-    chip.classList.toggle('active', chip === btn);
-  });
-  search(1);
-}
-
-function toggleQuickKeywordChips() {
-  const wrap = document.getElementById('quick-keyword-chips');
-  const btn = document.getElementById('quick-keyword-toggle');
-  const willShow = !wrap.classList.contains('chips-visible');
-  wrap.classList.toggle('chips-visible', willShow);
-  btn.classList.toggle('open', willShow);
 }
 
 // ====================================
@@ -433,6 +399,7 @@ function applyCommonFilters(query, params, { includePdrb = true } = {}) {
   if (params.region)       query = query.eq('region_final', params.region);
   if (params.lapus)        query = query.contains('kategori_lapus', [params.lapus]);
   query = applyPengeluaranFilter(query, params.pengeluaran);
+  if (params.indikator_bps) query = query.contains('indikator_bps', [params.indikator_bps]);
   if (includePdrb && params.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
   if (params.date_from)    query = query.gte('publication_datetime', params.date_from);
   if (params.date_to)      query = query.lte('publication_datetime', params.date_to + 'T23:59:59');
@@ -473,6 +440,7 @@ async function search(page = 1) {
     region: region.value,
     lapus: lapus.value,
     pengeluaran: document.getElementById('pengeluaran_filter').value,
+    indikator_bps: document.getElementById('indikator_bps_filter').value,
     pdrb_relevan: pdrb_only.checked,
     event_time: Array.from(
       document.querySelectorAll(".event_filter:checked")
@@ -647,6 +615,17 @@ function renderResults() {
     const lapusShort = lapusArr.join(', ') || '-';
     const lapusLong = lapusArr.map(k => `${k} - ${LAPUS_LABELS[k] || k}`).join('\n');
 
+    // Indikator BPS lain (selain PDRB). Nilainya sudah teks siap-tampil (bukan kode
+    // yang perlu di-lookup seperti kategori_lapus), jadi tidak perlu LABELS map. "Tidak
+    // Ada" di-filter keluar — badge hanya muncul kalau memang ada indikator nyata.
+    // Nama indikator jauh lebih panjang dari kode Lapus ("A, G"), jadi kalau >1 badge
+    // hanya menampilkan nilai pertama + jumlah sisanya supaya lebar badge tetap stabil
+    // di tengah kartu yang sudah padat badge lain — daftar lengkap tetap di tooltip.
+    const indikatorArr = (r.indikator_bps || []).filter(v => v !== 'Tidak Ada');
+    const indikatorDisplay = indikatorArr.length > 1
+      ? `${indikatorArr[0]} +${indikatorArr.length - 1} lainnya`
+      : indikatorArr[0];
+
     // Komponen Pengeluaran. Skema (Provinsi/Kab-Kota) ikut ditandai di label badge
     // dan tooltip — lihat getPengeluaranGranularity() soal aturan Provinsi vs Kab/Kota.
     // Kode yang ditampilkan diterjemahkan ke kode kelompok di mode Kab/Kota
@@ -732,6 +711,16 @@ function renderResults() {
               data-tooltip="Status kejadian ditentukan AI dari isi artikel saat ditulis — bukan relatif terhadap tanggal publikasi atau hari ini, dan bisa berbeda antar-artikel untuk topik yang sama."
             >
               ${r.event_time}
+            </span>
+          ` : ""}
+
+          ${indikatorArr.length > 0 ? `
+            <span
+              class="badge tooltip"
+              style="background:#e0e7ff;color:#3730a3;"
+              data-tooltip="${indikatorArr.join(', ')} — Indikator BPS lain (selain PDRB) yang disebut artikel ini. Dihasilkan klasifikasi AI. Harap verifikasi jika diperlukan."
+            >
+              Indikator: ${indikatorDisplay}
             </span>
           ` : ""}
 
@@ -924,6 +913,7 @@ function resetSearch() {
   renderPengeluaranFilterOptions();
   lapus.value = "";
   document.getElementById('pengeluaran_filter').value = "";
+  document.getElementById('indikator_bps_filter').value = "";
   document.getElementById('news_preset').value = "30d";  pdrb_only.checked = false;
   localStorage.setItem("babelens_pdrb_filter", "false");
   f_title.checked = true;
@@ -933,10 +923,6 @@ function resetSearch() {
   document.querySelectorAll('.scope-chip').forEach(chip => {
     const cb = document.getElementById(chip.dataset.cb);
     if (cb) chip.classList.toggle('active', cb.checked);
-  });
-
-  document.querySelectorAll('#quick-keyword-chips .scope-chip').forEach(chip => {
-    chip.classList.remove('active');
   });
 
   sortOrder = 'desc';
@@ -961,7 +947,7 @@ function resetSearch() {
 // ====================================
 // EVENT OTOMATIS PENCARIAN
 // ====================================
-["region", "lapus", "pengeluaran_filter", "date_from", "date_to"]
+["region", "lapus", "pengeluaran_filter", "indikator_bps_filter", "date_from", "date_to"]
   .forEach(id => {
     document.getElementById(id).addEventListener("change", () => {
       if (id === "region") renderPengeluaranFilterOptions();
@@ -1010,8 +996,6 @@ keyword.addEventListener("keydown", e => {
 const keywordClearBtn = document.getElementById('keyword_clear');
 const keywordSearchBtn = document.getElementById('keyword_search_btn');
 
-document.getElementById('quick-keyword-toggle').addEventListener('click', toggleQuickKeywordChips);
-
 function updateKeywordClearVisibility() {
   keywordClearBtn.classList.toggle('visible', keyword.value.length > 0);
 }
@@ -1022,9 +1006,6 @@ updateKeywordClearVisibility();
 keywordClearBtn.addEventListener('click', () => {
   keyword.value = '';
   updateKeywordClearVisibility();
-  document.querySelectorAll('#quick-keyword-chips .scope-chip').forEach(chip => {
-    chip.classList.remove('active');
-  });
   keyword.focus();
   search(1);
 });
@@ -1105,7 +1086,6 @@ window.onload = async () => {
   document.getElementById("page_size_select").value = getPageSize();
 
   buildNewsPresetOptions();
-  renderQuickKeywordChips();
 
   pdrb_only.checked = localStorage.getItem("babelens_pdrb_filter") === "true";
 
@@ -1137,7 +1117,8 @@ window.onload = async () => {
 const EXPORT_COLUMNS = [
   'title', 'publication_datetime', 'source', 'region_final', 'category',
   'event_time', 'lu_relevan', 'pengeluaran_relevan', 'kategori_lapus',
-  'arah_lapus', 'komponen_pengeluaran', 'arah_pengeluaran', 'summary', 'url'
+  'arah_lapus', 'komponen_pengeluaran', 'arah_pengeluaran', 'indikator_bps',
+  'summary', 'url'
 ].join(', ');
 
 async function fetchAllRowsForExport() {
@@ -1237,6 +1218,7 @@ async function exportToExcel() {
       [pengColName]: pengLabel(pengEntries[0]),
       [pengColName2]: pengLabel(pengEntries[1]),
       "Arah Pengeluaran": r.arah_pengeluaran || "-",
+      "Indikator BPS Lain": (r.indikator_bps || []).filter(v => v !== 'Tidak Ada').join(', ') || "-",
       "Ringkasan": r.summary || "-",
       "URL": r.url || "-",
       "Kutipan": r.title
@@ -1266,6 +1248,7 @@ async function exportToExcel() {
     { wch: 40 },  // Komp. Pengeluaran
     { wch: 40 },  // Komp. Pengeluaran 2
     { wch: 14 },  // Arah Pengeluaran
+    { wch: 40 },  // Indikator BPS Lain
     { wch: 60 },  // Ringkasan
     { wch: 40 },  // URL
     { wch: 80 },  // Kutipan

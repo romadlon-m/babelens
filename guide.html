@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260930"></script>
-  <link rel="stylesheet" href="style.css?v=20260927">
+  <link rel="stylesheet" href="style.css?v=20261004">
   <style>
     /* ── Guide-specific overrides ────────────── */
     .section-header {
@@ -211,8 +211,9 @@
             <li><b>Pilih Periode</b>: 30 Hari Terakhir (default), Tahun Ini, Triwulan I–IV, atau bulanan.</li>
             <li><b>Tanggal Awal &amp; Akhir</b>: atur rentang waktu secara manual.</li>
             <li><b>Wilayah</b>: kabupaten/kota yang disebut dalam berita.</li>
-            <li><b>Lapangan Usaha</b>: sektor ekonomi klasifikasi BPS.</li>
-            <li><b>Komponen Pengeluaran</b>: subkomponen PKRT maupun komponen utama PDRB.</li>
+            <li><b>PDRB Lapangan Usaha</b>: sektor ekonomi klasifikasi BPS.</li>
+            <li><b>PDRB Pengeluaran</b>: subkomponen PKRT maupun komponen utama PDRB.</li>
+            <li><b>Indikator BPS Lain</b>: relevansi berita terhadap indikator BPS di luar PDRB (Inflasi, Kemiskinan, Ketenagakerjaan, dll).</li>
             <li><b>Hanya PDRB Relevan</b>: aktif secara default. Hover ikon <b>ⓘ</b> untuk penjelasan metodologi.</li>
             <li><b>Status Kejadian</b>: Sudah, Sedang, atau Akan Terjadi (bisa kombinasi).</li>
           </ul>
@@ -259,6 +260,10 @@
             <li>
               <span class="badge badge-gray">Sudah Terjadi</span>
               <span>Status waktu kejadian yang diekstrak AI dari isi berita saat ditulis — bukan relatif terhadap tanggal publikasi atau hari ini. Nilainya unik per artikel, jadi dua berita tentang topik yang sama bisa punya status berbeda tergantung kapan masing-masing ditulis.</span>
+            </li>
+            <li>
+              <span class="badge" style="background:#e0e7ff;color:#3730a3">Indikator: Pariwisata</span>
+              <span>Relevansi terhadap indikator BPS lain di luar PDRB (Inflasi, Kemiskinan, Ketenagakerjaan, dll), dapat lebih dari satu. Dihasilkan klasifikasi AI. Hover untuk melihat daftar lengkap kalau lebih dari satu.</span>
             </li>
           </ul>
           <p style="margin-top:10px">Hover badge untuk melihat nama lengkap dan catatan metodologi.</p>
