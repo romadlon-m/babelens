@@ -46,16 +46,13 @@ function labelingFormatDate(iso) {
   if (!iso) return '-';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '-';
-  // timeZone: 'UTC' -- deliberately NOT a true UTC->WIB conversion. Matches
-  // news-search.js's formatDateIndo() on purpose: most publication_datetime
-  // values currently stored are a pre-fix scraper bug (WIB wall-clock digits
-  // saved without their +07:00 offset, so Postgres stored them as if already
-  // UTC) -- displaying the raw digits with no further conversion happens to
-  // show the correct WIB calendar date for that majority. Converting to real
-  // Asia/Jakarta here would double-shift that same majority forward another 7
-  // hours instead. Revisit this once the historical backfill (see CLAUDE.md
-  // "publication_datetime timezone bug") lands and every row is true UTC.
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  // timeZone: 'Asia/Jakarta' explicit so the displayed calendar date is correct
+  // regardless of the viewer's own browser timezone -- publication_datetime is
+  // true UTC as of the 2026-10-04 backfill (see CLAUDE.md "publication_datetime
+  // timezone bug"); a bare toLocaleDateString() with no timeZone would rely on
+  // the browser already being WIB, which happens to be true for labelers but
+  // isn't guaranteed.
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
 }
 
 function labelingFormatArticleForPrompt(row) {
