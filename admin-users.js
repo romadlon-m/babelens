@@ -217,21 +217,16 @@ function formatReportDate(iso) {
 
 // Specifically for news.publication_datetime (Detail Baris' "Tanggal" column +
 // its Excel export) -- NOT for labeling_log/label_prompts created_at, which stay
-// on formatReportDate() above. Deliberately NOT a true UTC->WIB conversion: most
-// publication_datetime values currently stored are a pre-fix scraper bug (WIB
-// wall-clock digits saved without their +07:00 offset, so Postgres stored them as
-// if already UTC) -- displaying the raw digits with no further conversion happens
-// to show the correct WIB calendar date for that majority. Converting to real
-// Asia/Jakarta here would double-shift that same majority forward another 7
-// hours instead. Same reasoning as news-search.js's formatDateIndo() and
-// labeling-common.js's labelingFormatDate() -- keep the 3 in sync. Revisit once
-// the historical backfill (see CLAUDE.md "publication_datetime timezone bug")
-// lands and every row is true UTC.
+// on formatReportDate() above. timeZone: 'Asia/Jakarta' explicit so this reads
+// correctly regardless of the viewer's browser timezone -- publication_datetime
+// is true UTC as of the 2026-10-04 backfill (see CLAUDE.md "publication_datetime
+// timezone bug"). Same reasoning as news-search.js's formatDateIndo() and
+// labeling-common.js's labelingFormatDate() -- keep the 3 in sync.
 function formatPublicationDate(iso) {
   if (!iso) return '-';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' });
 }
 
 // Monitoring produktivitas intern (LABELING_TOOL_PLAN.md bagian 7): jumlah submit per

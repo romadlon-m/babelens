@@ -231,11 +231,14 @@ function renderNewsSearchSkeleton(count = 4) {
 // ====================================
 function formatDateIndo(dateString) {
   const d = new Date(dateString);
+  // timeZone: "Asia/Jakarta" explicit so this reads correctly regardless of the
+  // viewer's browser timezone -- publication_datetime is true UTC as of the
+  // 2026-10-04 backfill (see CLAUDE.md "publication_datetime timezone bug").
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-    timeZone: "UTC"
+    timeZone: "Asia/Jakarta"
   }).format(d);
 }
 
@@ -401,8 +404,13 @@ function applyCommonFilters(query, params, { includePdrb = true } = {}) {
   query = applyPengeluaranFilter(query, params.pengeluaran);
   if (params.indikator_bps) query = query.contains('indikator_bps', [params.indikator_bps]);
   if (includePdrb && params.pdrb_relevan) query = query.or('lu_relevan.eq.Ya,pengeluaran_relevan.eq.Ya');
-  if (params.date_from)    query = query.gte('publication_datetime', params.date_from);
-  if (params.date_to)      query = query.lte('publication_datetime', params.date_to + 'T23:59:59');
+  // +07:00 explicit so "Dari"/"Sampai" (plain <input type="date"> values, meant
+  // as WIB calendar days) compare correctly against publication_datetime, which
+  // is true UTC as of the 2026-10-04 backfill (see CLAUDE.md "publication_datetime
+  // timezone bug") -- an offset-less date string would be parsed using Postgres'
+  // session timezone (UTC), silently shifting both ends of the range by 7 hours.
+  if (params.date_from)    query = query.gte('publication_datetime', params.date_from + 'T00:00:00+07:00');
+  if (params.date_to)      query = query.lte('publication_datetime', params.date_to + 'T23:59:59+07:00');
   const eventTimes = params.event_time ? params.event_time.split(',') : [];
   if (eventTimes.length > 0 && eventTimes.length < 3) query = query.in('event_time', eventTimes);
   query = applyKeywordFilter(query, params);
