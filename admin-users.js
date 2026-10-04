@@ -215,6 +215,25 @@ function formatReportDate(iso) {
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Specifically for news.publication_datetime (Detail Baris' "Tanggal" column +
+// its Excel export) -- NOT for labeling_log/label_prompts created_at, which stay
+// on formatReportDate() above. Deliberately NOT a true UTC->WIB conversion: most
+// publication_datetime values currently stored are a pre-fix scraper bug (WIB
+// wall-clock digits saved without their +07:00 offset, so Postgres stored them as
+// if already UTC) -- displaying the raw digits with no further conversion happens
+// to show the correct WIB calendar date for that majority. Converting to real
+// Asia/Jakarta here would double-shift that same majority forward another 7
+// hours instead. Same reasoning as news-search.js's formatDateIndo() and
+// labeling-common.js's labelingFormatDate() -- keep the 3 in sync. Revisit once
+// the historical backfill (see CLAUDE.md "publication_datetime timezone bug")
+// lands and every row is true UTC.
+function formatPublicationDate(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
 // Monitoring produktivitas intern (LABELING_TOOL_PLAN.md bagian 7): jumlah submit per
 // intern/jenis/hari, dihitung dari labeling_log. Nama diambil dari adminUsersCache
 // (dimuat lewat Edge Function admin-users) karena RLS profiles tidak mengizinkan
@@ -723,7 +742,7 @@ function renderDetailRows(rows) {
     const mainRow = `
       <tr>
         <td>${r.id}</td>
-        <td>${escapeHtml(formatReportDate(r.publication_datetime))}</td>
+        <td>${escapeHtml(formatPublicationDate(r.publication_datetime))}</td>
         <td class="admin-detail-title">${titleCell}</td>
         <td>${escapeHtml(r.source || '-')}</td>
         <td>${labelCell}</td>
@@ -820,7 +839,7 @@ async function exportDetailToExcel() {
     const exportData = rows.map((r, i) => ({
       'No': i + 1,
       'ID Berita': r.id,
-      'Tanggal': r.publication_datetime ? formatReportDate(r.publication_datetime) : '-',
+      'Tanggal': r.publication_datetime ? formatPublicationDate(r.publication_datetime) : '-',
       'Judul': r.title || '-',
       'Sumber': r.source || '-',
       'Label': r.label_value ?? '-',
