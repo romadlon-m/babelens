@@ -139,6 +139,20 @@ async function labelingQueueCountByBatch(jenis) {
   return { batch1: data?.batch1 ?? 0, batch2: data?.batch2 ?? 0 };
 }
 
+// Live-computed progress for the Triwulan III 2026 (Jul-Sep) Lapus/Pengeluaran
+// backlog-completion sprint -- see news-scraper-babel/Q3_2026_COMPLETION_LABELING.md.
+// Screener for that window is already fully done, so this only supports 'lapus'/
+// 'pengeluaran' (see labeling_sprint_q3_2026_progress() migration). "total" is
+// recomputed server-side on every call, not read from a frozen snapshot, so a
+// resolved flag, a Review Label correction, or a late-arriving row in the window
+// shows up automatically. This RPC and its call sites here are meant to be removed
+// once the backlog is cleared, not left in permanently.
+async function labelingSprintQ3Progress(jenis) {
+  const { data, error } = await window.db.rpc('labeling_sprint_q3_2026_progress', { p_jenis: jenis });
+  if (error) throw new Error('Gagal memuat progres sprint: ' + error.message);
+  return { total: data?.total ?? 0, done: data?.done ?? 0, remaining: data?.remaining ?? 0 };
+}
+
 // Counts this labeler's own submissions for `jenis` — total ever, and since
 // local (WIB) midnight today — via a SECURITY DEFINER RPC rather than a direct
 // `labeling_log` query, since that table's only SELECT policy is admin-only
@@ -219,6 +233,7 @@ function initLabelingPage(config) {
   const els = {
     queueCount: document.getElementById('labeling-queue-count'),
     myProgress: document.getElementById('labeling-my-progress'),
+    sprintProgress: document.getElementById('labeling-sprint-progress'),
     card: document.getElementById('labeling-card'),
     empty: document.getElementById('labeling-empty'),
     title: document.getElementById('labeling-title'),
@@ -301,6 +316,21 @@ function initLabelingPage(config) {
     }
   }
 
+  // No-ops on labeling-screener.html (no #labeling-sprint-progress element there --
+  // Screener for this window is already done) and raises nothing since the element
+  // check happens before the RPC call.
+  async function refreshSprintProgress() {
+    if (!els.sprintProgress) return;
+    try {
+      const { total, done, remaining } = await labelingSprintQ3Progress(jenis);
+      els.sprintProgress.innerHTML = `🎯 Sprint Triwulan III 2026: <strong>${done.toLocaleString('id-ID')}</strong> selesai, `
+        + `<strong>${remaining.toLocaleString('id-ID')}</strong> sisa (dari ${total.toLocaleString('id-ID')})`;
+    } catch (err) {
+      els.sprintProgress.textContent = '🎯 Sprint Triwulan III 2026: (gagal memuat)';
+      console.error(err);
+    }
+  }
+
   async function loadNext() {
     els.card.hidden = true;
     els.empty.hidden = true;
@@ -345,6 +375,7 @@ function initLabelingPage(config) {
       await labelingSubmit(currentRow.id, jenis, hasil);
       await refreshQueueCount();
       await refreshMyProgress();
+      await refreshSprintProgress();
       await loadNext();
     } catch (err) {
       els.validationMsg.textContent = '❌ Gagal mengirim: ' + err.message;
@@ -428,6 +459,7 @@ function initLabelingPage(config) {
     }
     await refreshQueueCount();
     await refreshMyProgress();
+    await refreshSprintProgress();
     await loadInitial();
   })();
 }
