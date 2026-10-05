@@ -38,6 +38,13 @@
         </div>
       </header>
 
+      <div id="labeling-screener-disabled" class="labeling-empty-state" hidden>
+        ⏸️ Pengecekan Awal sedang dinonaktifkan sementara untuk labeler. Fokus pelabelan saat ini ada di <strong>Lapangan Usaha</strong> dan <strong>Pengeluaran</strong>.
+        <div style="margin-top:16px;">
+          <a href="labeling-lapus.html" class="primary-btn" style="text-decoration:none; display:inline-block;">Buka Lapangan Usaha</a>
+        </div>
+      </div>
+
       <div class="labeling-layout">
         <div class="labeling-workflow">
           <div id="labeling-queue-count" class="labeling-queue-counter">Sisa antrean: memuat...</div>
@@ -80,8 +87,8 @@
     </main>
   </div><!-- /.app-body -->
 
-  <script src="sidebar.js?v=20260919"></script>
-  <script src="labeling-common.js?v=20261004c"></script>
+  <script src="sidebar.js?v=20261005"></script>
+  <script src="labeling-common.js?v=20261005"></script>
   <script src="labeling-screener.js?v=20260913b"></script>
   <script>
     requireAuth().then(r => {
@@ -91,6 +98,13 @@
         return;
       }
       document.body.style.visibility = 'visible';
+      if (!r.profile?.is_admin) {
+        // TEMPORARY (2026-10-05): see labelingHideScreenerTabForNonAdmin() in labeling-common.js
+        document.querySelector('.labeling-layout').hidden = true;
+        document.getElementById('labeling-screener-disabled').hidden = false;
+        labelingHideScreenerTabForNonAdmin(false);
+        return;
+      }
       initLabelingPage({ jenis: 'screener', parseLine: parseScreenerLine });
     });
   </script>
