@@ -81,8 +81,8 @@
     </main>
   </div><!-- /.app-body -->
 
-  <script src="sidebar.js?v=20260919"></script>
-  <script src="labeling-common.js?v=20261004c"></script>
+  <script src="sidebar.js?v=20261005"></script>
+  <script src="labeling-common.js?v=20261005"></script>
   <script src="labeling-pengeluaran.js?v=20260920a"></script>
   <script>
     requireAuth().then(r => {
@@ -92,6 +92,7 @@
         return;
       }
       document.body.style.visibility = 'visible';
+      labelingHideScreenerTabForNonAdmin(!!r.profile?.is_admin);
       initLabelingPage({ jenis: 'pengeluaran', parseLine: parsePengeluaranLine });
     });
   </script>
