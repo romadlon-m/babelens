@@ -85,12 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ? '<a href="admin-users.html" class="user-dropdown-item">🛠️ Kelola Pengguna</a>'
               + '<a href="admin-review.html" class="user-dropdown-item">🔍 Review Label</a>'
             : '';
-          // TEMPORARY (2026-10-05): non-admin labelers land on Lapangan Usaha directly since
-          // Pengecekan Awal is paused for them (see labelingHideScreenerTabForNonAdmin() in
-          // labeling-common.js) — admins still land on Screener as before. Revert the href
-          // back to 'labeling-screener.html' once Screener work resumes for everyone.
           const labelerLink = (profile?.is_labeler || profile?.is_admin)
-            ? `<a href="${profile?.is_admin ? 'labeling-screener.html' : 'labeling-lapus.html'}" class="user-dropdown-item">🏷️ Labeling PDRB</a>`
+            ? '<a href="labeling-screener.html" class="user-dropdown-item">🏷️ Labeling PDRB</a>'
             : '';
           widget.innerHTML = `
             <div class="user-dropdown-wrapper">

@@ -101,17 +101,6 @@ function labelingFormatExistingLabel(jenis, row) {
   return `${row.pengeluaran_relevan}${komponen}`;
 }
 
-// TEMPORARY (added 2026-10-05): Pengecekan Awal paused for non-admin labelers so they
-// focus on Lapangan Usaha/Pengeluaran instead — admins are unaffected (still need Screener
-// for Batch 2 relabel, flag resolution, Review Label's Screener column). Removes the
-// "1. Pengecekan Awal" subnav tab for non-admins on whichever labeling-*.html page calls
-// this. Revert by deleting this function and its 3 call sites once Screener work resumes.
-function labelingHideScreenerTabForNonAdmin(isAdmin) {
-  if (isAdmin) return;
-  document.querySelectorAll('#labeling-subnav .labeling-subnav-item[data-jenis="screener"]')
-    .forEach(el => el.remove());
-}
-
 // Marks the current stage active in the shared 3-item subnav markup (identical
 // on all 3 labeling-*.html pages, like sidebar.js's setActiveNav() for the top nav).
 function renderLabelingSubnav(jenis) {
