@@ -2524,20 +2524,6 @@ select {
   margin-top: 4px;
 }
 
-/* Temporary badge for the Triwulan III 2026 (Jul-Sep) Lapus/Pengeluaran backlog
-   sprint -- only present on labeling-lapus.html/labeling-pengeluaran.html (Screener
-   for that window is already done). Remove alongside the RPC/JS call sites once the
-   backlog is cleared -- see labeling_sprint_q3_2026_progress() migration. */
-.labeling-sprint-progress {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--jenis-color, var(--primary));
-  background: var(--jenis-color-light, var(--primary-light));
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin: -6px 0 16px;
-}
-
 .labeling-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -2755,7 +2741,6 @@ select {
   .labeling-page .topbar { position: static; top: auto; flex-shrink: 0; margin-bottom: 12px; }
   .labeling-page .labeling-queue-counter,
   .labeling-page .labeling-progress,
-  .labeling-page .labeling-sprint-progress,
   .labeling-page .labeling-format-hint { flex-shrink: 0; margin-bottom: 10px; }
 
   /* :not([hidden]) matters here: an author-stylesheet `display` declaration always
