@@ -80,8 +80,8 @@
     </main>
   </div><!-- /.app-body -->
 
-  <script src="sidebar.js?v=20261005"></script>
-  <script src="labeling-common.js?v=20261007"></script>
+  <script src="sidebar.js?v=20261007b"></script>
+  <script src="labeling-common.js?v=20261007b"></script>
   <script src="labeling-lapus.js?v=20260920a"></script>
   <script>
     requireAuth().then(r => {
@@ -91,7 +91,6 @@
         return;
       }
       document.body.style.visibility = 'visible';
-      labelingHideScreenerTabForNonAdmin(!!r.profile?.is_admin);
       initLabelingPage({ jenis: 'lapus', parseLine: parseLapusLine });
     });
   </script>
