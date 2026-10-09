@@ -3116,19 +3116,31 @@ select {
      field di sini saja (bukan di .labeling-card/.review-column secara umum, supaya
      admin-review.html yang sudah pas tidak ikut berubah). */
   .admin-ml-monitor-page .labeling-card {
-    padding: 14px;
+    padding: 10px;
   }
 
   .admin-ml-monitor-page .review-column {
     padding: 8px 10px;
   }
 
-  .admin-ml-monitor-page .ml-field-row {
+  .admin-ml-monitor-page .review-column-title {
     font-size: 12px;
   }
 
-  .admin-ml-monitor-page .review-column-title {
+  /* Root cause dari "info di kanan terpotong": .ml-field-row (label kiri, value kanan,
+     space-between) memaksa label+value berbagi satu baris sempit -- flex item default
+     min-width:auto bikin keduanya menolak menyusut cukup jauh, baris jadi lebih lebar
+     dari kolom, kolom jadi lebih lebar dari viewport, value yang text-align:right
+     ter-dorong keluar layar. Ditumpuk (label di atas, value di bawah, rata kiri)
+     menghilangkan perebutan lebar itu sama sekali -- tidak sekadar mengecilkan font.*/
+  .admin-ml-monitor-page .ml-field-row {
+    flex-direction: column;
+    gap: 0;
     font-size: 12px;
+  }
+
+  .admin-ml-monitor-page .ml-field-value {
+    text-align: left;
   }
 }
 
