@@ -198,8 +198,8 @@ function mlRenderCard(row) {
       ${row.summary ? `<details class="review-summary-toggle"><summary>Ringkasan</summary><div class="review-summary">${mlEscapeHtml(row.summary)}</div></details>` : ''}
       <div class="review-columns">
         ${mlRenderColumn('Screener', 'screener', row.screener, row.news_id)}
-        ${mlRenderColumn('Lapus (relevan + kategori + arah)', 'lapus', row.lapus, row.news_id)}
-        ${mlRenderColumn('Pengeluaran (relevan + kategori + arah)', 'pengeluaran', row.pengeluaran, row.news_id)}
+        ${mlRenderColumn('Lapus', 'lapus', row.lapus, row.news_id)}
+        ${mlRenderColumn('Pengeluaran', 'pengeluaran', row.pengeluaran, row.news_id)}
       </div>
     </div>
   `;
