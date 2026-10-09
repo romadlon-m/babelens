@@ -3025,6 +3025,41 @@ select {
   font-size: 12px;
 }
 
+/* Same reasoning as .admin-review-page's identical rule above: cards show 3 columns
+   (Screener/Lapus/Pengeluaran) side by side on desktop, needs the wider .admin-page
+   max-width rather than the narrower default .main-content. */
+.admin-ml-monitor-page .main-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.ml-column-badge {
+  margin-left: 6px;
+}
+
+.ml-field-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.ml-field-row:last-of-type {
+  border-bottom: none;
+}
+
+.ml-field-label {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.ml-field-value {
+  text-align: right;
+}
+
 /* Tahap C: 3 kolom (Screener/Lapus/Pengeluaran) dalam satu kartu artikel —
    side-by-side di layar lebar, ditumpuk di mobile (lihat @media di bawah). */
 .review-columns {

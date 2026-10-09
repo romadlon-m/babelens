@@ -1,37 +1,25 @@
 // Monitor Model ML (shadow mode) -- lihat SHADOW_MODE_PLAN.md (repo news-scraper-babel).
-// Murni observasi: tidak ada aksi apa pun dari tabel di halaman ini (beda dari
-// admin-review.html yang punya tombol Sesuai/Edit), tidak ada write ke `news`/antrean.
+// Satu kartu per artikel, 3 kolom (Screener/Lapus/Pengeluaran) -- L2/P2 (kategori+arah)
+// digabung ke kolom Lapus/Pengeluaran karena keduanya dibandingkan ke SATU baris aktual
+// labeling_log yang sama (lihat admin_ml_shadow_queue_by_article() migration). Halaman ini
+// sendiri tidak pernah menulis ke `news`/antrean -- tombol "Koreksi" membuka halaman
+// labeling asli (submit_label()), bukan overwrite langsung.
 
-const ML_PAGE_SIZE = 20;
+const ML_PAGE_SIZE = 10;
 
 const mlState = {
-  jenis: 'screener',
-  status: 'semua', // 'semua' | 'sudah' | 'belum'
+  onlyMismatch: true,
   dateFrom: null,
   dateTo: null,
   page: 1,
 };
-
-function mlIsKategori(jenis) {
-  return jenis === 'lapus_kategori' || jenis === 'pengeluaran_kategori';
-}
-
-// Halaman labeling tempat koreksi sebenarnya dikerjakan -- jenis kategori (lapus_kategori/
-// pengeluaran_kategori) tidak punya halaman sendiri, relevan+kategori+arah-nya satu paket
-// di labeling-lapus.html/labeling-pengeluaran.html (lihat v_log_jenis di migration RPC).
-function mlLabelingPageFor(jenis) {
-  if (jenis === 'lapus_kategori') return 'labeling-lapus.html';
-  if (jenis === 'pengeluaran_kategori') return 'labeling-pengeluaran.html';
-  return `labeling-${jenis}.html`;
-}
 
 function initMlMonitorPage() {
   mlMonitorRefresh();
 }
 
 function mlMonitorReadFilters() {
-  mlState.jenis = document.getElementById('ml-jenis').value;
-  mlState.status = document.getElementById('ml-status').value;
+  mlState.onlyMismatch = document.getElementById('ml-only-mismatch').value === 'true';
   mlState.dateFrom = document.getElementById('ml-date-from').value || null;
   mlState.dateTo = document.getElementById('ml-date-to').value || null;
 }
@@ -51,84 +39,29 @@ async function mlMonitorRefresh() {
   mlMonitorReadFilters();
   const loading = document.getElementById('ml-loading');
   const empty = document.getElementById('ml-empty');
-  const wrapper = document.getElementById('ml-table-wrapper');
-  const summaryEl = document.getElementById('ml-summary-cards');
+  const list = document.getElementById('ml-list');
   loading.hidden = false;
   empty.hidden = true;
-  wrapper.hidden = true;
-  summaryEl.hidden = true;
+  list.hidden = true;
 
   try {
-    if (mlState.status === 'sudah') {
-      await mlMonitorRenderSummary();
-      const { data, error } = await window.db.rpc('admin_ml_shadow_disagreements', {
-        p_jenis: mlState.jenis,
-        p_date_from: mlState.dateFrom,
-        p_date_to: mlState.dateTo,
-        p_page: mlState.page,
-        p_page_size: ML_PAGE_SIZE,
-      });
-      if (error) throw error;
-      mlMonitorRenderTable(data.rows || [], 'disagreement', data.total || 0);
-    } else {
-      const hasLabel = mlState.status === 'belum' ? false : null;
-      const { data, error } = await window.db.rpc('admin_ml_shadow_raw', {
-        p_jenis: mlState.jenis,
-        p_has_label: hasLabel,
-        p_date_from: mlState.dateFrom,
-        p_date_to: mlState.dateTo,
-        p_page: mlState.page,
-        p_page_size: ML_PAGE_SIZE,
-      });
-      if (error) throw error;
-      mlMonitorRenderTable(data.rows || [], 'raw', data.total || 0);
-    }
+    const { data, error } = await window.db.rpc('admin_ml_shadow_queue_by_article', {
+      p_date_from: mlState.dateFrom,
+      p_date_to: mlState.dateTo,
+      p_only_mismatch: mlState.onlyMismatch,
+      p_page: mlState.page,
+      p_page_size: ML_PAGE_SIZE,
+    });
+    if (error) throw error;
+    mlMonitorRenderList(data.rows || [], data.total || 0);
   } catch (err) {
     console.error('[ml-monitor]', err);
-    wrapper.hidden = true;
+    list.hidden = true;
     empty.hidden = false;
     empty.textContent = 'Gagal memuat data: ' + (err?.message || err);
   } finally {
     loading.hidden = true;
   }
-}
-
-async function mlMonitorRenderSummary() {
-  const summaryEl = document.getElementById('ml-summary-cards');
-  const { data, error } = await window.db.rpc('admin_ml_shadow_summary', {
-    p_jenis: mlState.jenis,
-    p_date_from: mlState.dateFrom,
-    p_date_to: mlState.dateTo,
-  });
-  if (error) {
-    summaryEl.hidden = true;
-    return;
-  }
-
-  const cards = [];
-  if (mlIsKategori(mlState.jenis)) {
-    cards.push(mlStatCard('📊', 'n (sudah dilabel)', data.n ?? 0));
-    cards.push(mlStatCard('🏷️', 'Kategori exact-match', mlPct(data.kategori_exact_match_ratio)));
-    cards.push(mlStatCard('🧭', 'Akurasi arah', mlPct(data.arah_accuracy)));
-  } else {
-    cards.push(mlStatCard('📊', 'n (sudah dilabel)', data.n ?? 0));
-    cards.push(mlStatCard('✅', 'Jumlah cocok', data.n_match ?? 0));
-    cards.push(mlStatCard('🎯', 'Akurasi', mlPct(data.accuracy)));
-  }
-  summaryEl.innerHTML = cards.join('');
-  summaryEl.hidden = false;
-}
-
-function mlStatCard(icon, label, value) {
-  return `<div class="stat-card">
-    <div class="stat-icon">${icon}</div>
-    <div><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>
-  </div>`;
-}
-
-function mlPct(ratio) {
-  if (ratio === null || ratio === undefined) return '-';
-  return (ratio * 100).toFixed(1) + '%';
 }
 
 function mlEscapeHtml(text) {
@@ -139,74 +72,96 @@ function mlEscapeHtml(text) {
 
 function mlFormatArr(arr) {
   if (!arr || arr.length === 0) return '<span class="ml-muted">-</span>';
-  return arr.map(mlEscapeHtml).join(', ');
+  return [...arr].sort().map(mlEscapeHtml).join(', ');
 }
 
-function mlFormatRelevan(value) {
+function mlFormatVal(value) {
   if (value === null || value === undefined) return '<span class="ml-muted">-</span>';
   return mlEscapeHtml(value);
 }
 
-function mlMonitorRenderTable(rows, mode, total) {
-  const wrapper = document.getElementById('ml-table-wrapper');
+function mlMonitorRenderList(rows, total) {
+  const list = document.getElementById('ml-list');
   const empty = document.getElementById('ml-empty');
-  const thead = document.getElementById('ml-table-head');
-  const tbody = document.getElementById('ml-table-body');
-  const isKategori = mlIsKategori(mlState.jenis);
 
-  document.getElementById('ml-remaining').textContent =
-    mode === 'disagreement'
-      ? `${total} baris tidak cocok (prediksi ≠ label)`
-      : `${total} baris`;
+  document.getElementById('ml-remaining').textContent = mlState.onlyMismatch
+    ? `${total} artikel punya minimal 1 kolom berbeda`
+    : `${total} artikel sudah dilabel (minimal 1 jenis)`;
 
   if (!rows.length) {
-    wrapper.hidden = true;
+    list.hidden = true;
     empty.hidden = false;
-    empty.textContent = mode === 'disagreement'
-      ? 'Tidak ada disagreement untuk filter ini -- model dan labeler sepakat di semua baris yang sudah dilabel.'
-      : 'Tidak ada baris untuk filter ini.';
+    empty.textContent = mlState.onlyMismatch
+      ? 'Tidak ada disagreement untuk filter ini -- model dan labeler sepakat di semua artikel yang sudah dilabel.'
+      : 'Tidak ada artikel yang sudah dilabel untuk filter ini.';
     mlMonitorUpdatePagination(total);
     return;
   }
 
   empty.hidden = true;
-  wrapper.hidden = false;
-
-  const cols = isKategori
-    ? ['Judul', 'Kategori Prediksi', 'Kategori Aktual', 'Arah Prediksi', 'Arah Aktual']
-    : ['Judul', 'Prediksi', 'Aktual'];
-  if (mode === 'raw') cols.push('Sudah Dilabel?');
-  cols.push('Diprediksi Pada');
-  if (mode === 'disagreement') cols.push('');
-
-  thead.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
-
-  tbody.innerHTML = rows.map(r => {
-    const titleCell = `<a href="news.html" onclick="return false;" title="news_id ${r.news_id}">${mlEscapeHtml(r.title || '(tanpa judul)')}</a>`;
-    const cells = [titleCell];
-    if (isKategori) {
-      cells.push(mlFormatArr(r.predicted_kategori));
-      cells.push(mlFormatArr(r.actual_kategori));
-      cells.push(mlFormatRelevan(r.predicted_arah));
-      cells.push(mlFormatRelevan(r.actual_arah));
-    } else {
-      cells.push(mlFormatRelevan(r.predicted_relevan));
-      cells.push(mlFormatRelevan(r.actual_relevan));
-    }
-    if (mode === 'raw') cells.push(r.has_label ? 'Ya' : 'Belum');
-    cells.push(r.predicted_at ? new Date(r.predicted_at).toLocaleString('id-ID') : '-');
-    if (mode === 'disagreement') {
-      // Buka halaman labeling yang sesungguhnya (news_id=...) supaya koreksi tetap
-      // lewat submit_label() yang sudah ada -- audit trail, prompt_version_id, dan
-      // pembersihan labeling_flags tetap konsisten. TIDAK ada overwrite langsung ke
-      // tabel dari halaman ini -- lihat diskusi di riwayat chat kenapa itu berisiko.
-      const page = mlLabelingPageFor(mlState.jenis);
-      cells.push(`<a class="card-btn" href="${page}?news_id=${r.news_id}" target="_blank">✏️ Koreksi</a>`);
-    }
-    return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
-  }).join('');
-
+  list.hidden = false;
+  list.innerHTML = rows.map(mlRenderCard).join('');
   mlMonitorUpdatePagination(total);
+}
+
+function mlRenderColumn(title, col, labelingPage, newsId, isKategori) {
+  const badge = !col.has_label
+    ? '<span class="badge badge-gray ml-column-badge">Belum dilabel</span>'
+    : col.mismatch
+      ? '<span class="badge badge-red ml-column-badge">⚠️ Berbeda</span>'
+      : '<span class="badge badge-green ml-column-badge">Cocok</span>';
+
+  let fields = `
+    <div class="ml-field-row"><span class="ml-field-label">Relevan -- Prediksi</span><span class="ml-field-value">${mlFormatVal(col.predicted_relevan)}</span></div>
+    <div class="ml-field-row"><span class="ml-field-label">Relevan -- Aktual</span><span class="ml-field-value">${mlFormatVal(col.actual_relevan)}</span></div>
+  `;
+  if (isKategori) {
+    fields += `
+    <div class="ml-field-row"><span class="ml-field-label">Kategori -- Prediksi</span><span class="ml-field-value">${mlFormatArr(col.predicted_kategori)}</span></div>
+    <div class="ml-field-row"><span class="ml-field-label">Kategori -- Aktual</span><span class="ml-field-value">${mlFormatArr(col.actual_kategori)}</span></div>
+    <div class="ml-field-row"><span class="ml-field-label">Arah -- Prediksi</span><span class="ml-field-value">${mlFormatVal(col.predicted_arah)}</span></div>
+    <div class="ml-field-row"><span class="ml-field-label">Arah -- Aktual</span><span class="ml-field-value">${mlFormatVal(col.actual_arah)}</span></div>
+    `;
+  }
+
+  // "Koreksi" membuka halaman labeling asli (claim_specific_news_for_labeling() +
+  // submit_label()) -- TIDAK ada overwrite langsung dari halaman ini, lihat catatan
+  // di atas file ini dan diskusi di riwayat chat kenapa itu berisiko.
+  const correctBtn = col.has_label
+    ? `<a class="card-btn" href="${labelingPage}?news_id=${newsId}" target="_blank">✏️ Koreksi</a>`
+    : '<span class="ml-muted" style="font-size:12px;">Belum ada aktual untuk dikoreksi</span>';
+
+  return `
+    <div class="review-column">
+      <div class="review-column-head">
+        <span class="review-column-title">${title}</span>
+        ${badge}
+      </div>
+      ${fields}
+      <div class="review-column-actions">${correctBtn}</div>
+    </div>
+  `;
+}
+
+function mlRenderCard(row) {
+  const pubDate = row.publication_datetime
+    ? new Date(row.publication_datetime).toLocaleDateString('id-ID')
+    : '-';
+
+  return `
+    <div class="labeling-card">
+      <h3>${mlEscapeHtml(row.title || '(tanpa judul)')}</h3>
+      <div class="labeling-meta">
+        <span>news_id ${row.news_id}</span>
+        <span>Publikasi: ${pubDate}</span>
+      </div>
+      <div class="review-columns">
+        ${mlRenderColumn('Screener', row.screener, 'labeling-screener.html', row.news_id, false)}
+        ${mlRenderColumn('Lapus (relevan + kategori + arah)', row.lapus, 'labeling-lapus.html', row.news_id, true)}
+        ${mlRenderColumn('Pengeluaran (relevan + kategori + arah)', row.pengeluaran, 'labeling-pengeluaran.html', row.news_id, true)}
+      </div>
+    </div>
+  `;
 }
 
 function mlMonitorUpdatePagination(total) {
