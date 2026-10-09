@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babelens - Monitor Model ML</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth.js?v=20260930"></script>
+  <link rel="stylesheet" href="style.css?v=20261007">
+</head>
+<body class="admin-page admin-ml-monitor-page" style="visibility:hidden;">
+
+  <!-- GLOBAL HEADER -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <img src="assets/images/babelens-logo.png" alt="Babelens" class="app-header-logo">
+      <div class="app-header-tagline"><span>Lensa Berita</span><span>Bangka Belitung</span></div>
+    </div>
+    <div id="nav-placeholder" class="app-header-nav"></div>
+    <div id="header-user-widget"></div>
+  </header>
+
+  <div class="app-body">
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="topbar-left">
+            <div><h2>Monitor Model ML (Shadow Mode)</h2></div>
+          </div>
+          <a class="card-btn" href="admin-users.html">← Kembali ke Kelola Pengguna</a>
+        </div>
+      </header>
+
+      <p class="ml-monitor-note">
+        Halaman ini hanya memantau -- prediksi 5 model (Screener, Lapus relevan, Pengeluaran
+        relevan, kategori Lapus+arah, kategori Pengeluaran+arah) tidak pernah mempengaruhi
+        antrean labeling atau ditampilkan ke labeler. Lihat <code>SHADOW_MODE_PLAN.md</code>
+        (repo <code>news-scraper-babel</code>) untuk desain lengkap.
+      </p>
+
+      <div class="review-toolbar">
+        <div class="review-filters">
+          <div class="filter-group">
+            <label for="ml-jenis">Jenis</label>
+            <select id="ml-jenis" onchange="mlMonitorOnFilterChange()">
+              <option value="screener" selected>Pengecekan Awal (Screener)</option>
+              <option value="lapus">Lapus - Relevan (L1)</option>
+              <option value="pengeluaran">Pengeluaran - Relevan (P1)</option>
+              <option value="lapus_kategori">Lapus - Kategori + Arah (L2)</option>
+              <option value="pengeluaran_kategori">Pengeluaran - Kategori + Arah (P2)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="ml-status">Status Label</label>
+            <select id="ml-status" onchange="mlMonitorOnFilterChange()">
+              <option value="semua" selected>Semua</option>
+              <option value="sudah">Sudah dilabel</option>
+              <option value="belum">Belum dilabel</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="ml-date-from">Diprediksi Dari</label>
+            <input type="date" id="ml-date-from" onchange="mlMonitorOnFilterChange()">
+          </div>
+          <div class="filter-group">
+            <label for="ml-date-to">Diprediksi Sampai</label>
+            <input type="date" id="ml-date-to" onchange="mlMonitorOnFilterChange()">
+          </div>
+        </div>
+        <div id="ml-remaining" class="review-remaining">Memuat...</div>
+      </div>
+
+      <!-- Angka ringkas (cuma dari subset "sudah dilabel" -- akurasi tidak bisa dihitung
+           tanpa jawaban pembanding). Isi berubah bentuk: jenis biner (screener/lapus/
+           pengeluaran) menampilkan n/akurasi; jenis kategori (lapus_kategori/
+           pengeluaran_kategori) menampilkan exact-match kategori + akurasi arah terpisah,
+           karena dua task yang berbeda (multi-label vs multiclass). -->
+      <div id="ml-summary-cards" class="stat-cards" hidden></div>
+
+      <div id="ml-loading" class="review-loading" hidden>Memuat data...</div>
+
+      <div id="ml-table-wrapper" class="admin-table-wrapper">
+        <table class="admin-table" id="ml-table">
+          <thead id="ml-table-head"></thead>
+          <tbody id="ml-table-body">
+            <tr><td>Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="ml-empty" class="labeling-empty-state" hidden>
+        Tidak ada baris untuk filter ini.
+      </div>
+
+      <div class="admin-detail-pagination">
+        <div class="admin-detail-pagination-nav">
+          <button class="card-btn" id="ml-prev-btn" onclick="mlMonitorChangePage(-1)">‹ Sebelumnya</button>
+          <span id="ml-page-info"></span>
+          <button class="card-btn" id="ml-next-btn" onclick="mlMonitorChangePage(1)">Berikutnya ›</button>
+        </div>
+      </div>
+    </main>
+  </div><!-- /.app-body -->
+
+  <script src="sidebar.js?v=20261009"></script>
+  <script src="admin-ml-monitor.js?v=20261009"></script>
+  <script>
+    requireAuth().then(r => {
+      if (!r) return;
+      if (!r.profile?.is_admin) {
+        window.location.replace('index.html');
+        return;
+      }
+      document.body.style.visibility = 'visible';
+      initMlMonitorPage();
+    });
+  </script>
+</body>
+</html>
