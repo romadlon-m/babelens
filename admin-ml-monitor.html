@@ -44,8 +44,9 @@
         masih lebih lemah dari manusia untuk beberapa jenis (lihat kriteria kelulusan di
         <code>SHADOW_MODE_PLAN.md</code>, repo <code>news-scraper-babel</code>). Tabel ini
         cuma membantu menemukan kandidat yang layak dicek ulang; keputusan benar/salah tetap
-        manual lewat tombol "✏️ Koreksi" (membuka halaman labeling asli, bukan overwrite
-        langsung ke tabel).
+        manual lewat tombol "✏️ Koreksi" di tiap kolom (form koreksi langsung di kartu ini,
+        tetap lewat <code>submit_label()</code> yang sudah ada -- bukan overwrite langsung
+        ke tabel).
       </p>
 
       <div class="review-toolbar">
@@ -88,7 +89,18 @@
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20261009"></script>
-  <script src="admin-ml-monitor.js?v=20261009c"></script>
+  <!-- Reuse koreksi inline dari admin-review.js (reviewBuildPerbaikiFormHtml()/
+       reviewReadPerbaikiForm()) + dependensinya -- labelingSubmit()/labelingEscapeHtml()
+       dari labeling-common.js, LAPUS_CODES/PENGELUARAN_CODES dari labeling-*.js. Tidak ada
+       konflik nama dengan admin-ml-monitor.js (prefix ml* vs review*/LAPUS_*/PENGELUARAN_*),
+       dan fungsi-fungsi admin-review.js murni didefinisikan di sini, tidak ada yang auto-run
+       tanpa initReviewPage() dipanggil (yang TIDAK dipanggil di halaman ini). -->
+  <script src="labeling-common.js?v=20261007b"></script>
+  <script src="labeling-screener.js?v=20260913b"></script>
+  <script src="labeling-lapus.js?v=20260920a"></script>
+  <script src="labeling-pengeluaran.js?v=20260920a"></script>
+  <script src="admin-review.js?v=20260922a"></script>
+  <script src="admin-ml-monitor.js?v=20261010"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
