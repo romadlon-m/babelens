@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js?v=20260930"></script>
-  <link rel="stylesheet" href="style.css?v=20261007">
+  <link rel="stylesheet" href="style.css?v=20261009">
 </head>
 <body class="admin-page admin-ml-monitor-page" style="visibility:hidden;">
 
@@ -51,55 +51,30 @@
       <div class="review-toolbar">
         <div class="review-filters">
           <div class="filter-group">
-            <label for="ml-jenis">Jenis</label>
-            <select id="ml-jenis" onchange="mlMonitorOnFilterChange()">
-              <option value="screener" selected>Pengecekan Awal (Screener)</option>
-              <option value="lapus">Lapus - Relevan (L1)</option>
-              <option value="pengeluaran">Pengeluaran - Relevan (P1)</option>
-              <option value="lapus_kategori">Lapus - Kategori + Arah (L2)</option>
-              <option value="pengeluaran_kategori">Pengeluaran - Kategori + Arah (P2)</option>
+            <label for="ml-only-mismatch">Tampilkan</label>
+            <select id="ml-only-mismatch" onchange="mlMonitorOnFilterChange()">
+              <option value="true" selected>Hanya yang berbeda (disagreement)</option>
+              <option value="false">Semua yang sudah dilabel</option>
             </select>
           </div>
           <div class="filter-group">
-            <label for="ml-status">Status Label</label>
-            <select id="ml-status" onchange="mlMonitorOnFilterChange()">
-              <option value="semua" selected>Semua</option>
-              <option value="sudah">Sudah dilabel -- fokus ke yang berbeda (disagreement)</option>
-              <option value="belum">Belum dilabel</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="ml-date-from">Diprediksi Dari</label>
+            <label for="ml-date-from">Tgl. Publikasi Dari</label>
             <input type="date" id="ml-date-from" onchange="mlMonitorOnFilterChange()">
           </div>
           <div class="filter-group">
-            <label for="ml-date-to">Diprediksi Sampai</label>
+            <label for="ml-date-to">Tgl. Publikasi Sampai</label>
             <input type="date" id="ml-date-to" onchange="mlMonitorOnFilterChange()">
           </div>
         </div>
         <div id="ml-remaining" class="review-remaining">Memuat...</div>
       </div>
 
-      <!-- Angka ringkas (cuma dari subset "sudah dilabel" -- akurasi tidak bisa dihitung
-           tanpa jawaban pembanding). Isi berubah bentuk: jenis biner (screener/lapus/
-           pengeluaran) menampilkan n/akurasi; jenis kategori (lapus_kategori/
-           pengeluaran_kategori) menampilkan exact-match kategori + akurasi arah terpisah,
-           karena dua task yang berbeda (multi-label vs multiclass). -->
-      <div id="ml-summary-cards" class="stat-cards" hidden></div>
-
       <div id="ml-loading" class="review-loading" hidden>Memuat data...</div>
 
-      <div id="ml-table-wrapper" class="admin-table-wrapper">
-        <table class="admin-table" id="ml-table">
-          <thead id="ml-table-head"></thead>
-          <tbody id="ml-table-body">
-            <tr><td>Memuat data...</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <div id="ml-list" class="review-list"></div>
 
       <div id="ml-empty" class="labeling-empty-state" hidden>
-        Tidak ada baris untuk filter ini.
+        Tidak ada artikel untuk filter ini.
       </div>
 
       <div class="admin-detail-pagination">
@@ -113,7 +88,7 @@
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20261009"></script>
-  <script src="admin-ml-monitor.js?v=20261009b"></script>
+  <script src="admin-ml-monitor.js?v=20261009c"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
