@@ -35,10 +35,17 @@
       </header>
 
       <p class="ml-monitor-note">
-        Halaman ini hanya memantau -- prediksi 5 model (Screener, Lapus relevan, Pengeluaran
-        relevan, kategori Lapus+arah, kategori Pengeluaran+arah) tidak pernah mempengaruhi
-        antrean labeling atau ditampilkan ke labeler. Lihat <code>SHADOW_MODE_PLAN.md</code>
-        (repo <code>news-scraper-babel</code>) untuk desain lengkap.
+        <strong>Prediksi</strong> = tebakan model ML (shadow mode) -- murni observasi,
+        <u>tidak pernah</u> dipakai di antrean labeling, filter, chart, atau ditampilkan
+        ke labeler mana pun.<br>
+        <strong>Aktual</strong> = label asli yang sudah disubmit labeler/admin
+        (<code>labeling_log</code>) -- ini yang benar-benar dipakai di seluruh aplikasi.<br>
+        Baris dengan Prediksi ≠ Aktual <u>bukan otomatis berarti Aktual salah</u> -- model
+        masih lebih lemah dari manusia untuk beberapa jenis (lihat kriteria kelulusan di
+        <code>SHADOW_MODE_PLAN.md</code>, repo <code>news-scraper-babel</code>). Tabel ini
+        cuma membantu menemukan kandidat yang layak dicek ulang; keputusan benar/salah tetap
+        manual lewat tombol "✏️ Koreksi" (membuka halaman labeling asli, bukan overwrite
+        langsung ke tabel).
       </p>
 
       <div class="review-toolbar">
@@ -57,7 +64,7 @@
             <label for="ml-status">Status Label</label>
             <select id="ml-status" onchange="mlMonitorOnFilterChange()">
               <option value="semua" selected>Semua</option>
-              <option value="sudah">Sudah dilabel</option>
+              <option value="sudah">Sudah dilabel -- fokus ke yang berbeda (disagreement)</option>
               <option value="belum">Belum dilabel</option>
             </select>
           </div>
@@ -106,7 +113,7 @@
   </div><!-- /.app-body -->
 
   <script src="sidebar.js?v=20261009"></script>
-  <script src="admin-ml-monitor.js?v=20261009"></script>
+  <script src="admin-ml-monitor.js?v=20261009b"></script>
   <script>
     requireAuth().then(r => {
       if (!r) return;
