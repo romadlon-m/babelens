@@ -223,6 +223,32 @@ function mlRecomputeMismatch(jenis, col) {
   );
 }
 
+// Kalau Screener dikoreksi jadi "Tidak Lolos", Lapus & Pengeluaran ikut dipaksa
+// relevan='Tidak' + kategori/komponen+arah kosong -- artikel yang tidak lolos
+// pengecekan awal secara definisi tidak bisa relevan Lapus/Pengeluaran. Ini perilaku
+// yang SUDAH ADA di submit_label() tapi cuma utk baris batch2 (lihat "Batch 2 relabel
+// flow" di CLAUDE.md) -- di sini diterapkan eksplisit utk SEMUA baris lewat 2 submit
+// terpisah, bukan mengandalkan logika batch2 yang bersyarat itu.
+async function mlCascadeTidakLolos(newsId, row, screenerAlasan) {
+  for (const jenis of ['lapus', 'pengeluaran']) {
+    const field = jenis === 'lapus' ? 'kategori' : 'komponen';
+    const alasan = `Otomatis mengikuti Screener (Tidak Lolos): ${screenerAlasan}`;
+    const hasil = { relevan: 'Tidak', [field]: [], arah: null, alasan };
+    try {
+      await labelingSubmit(newsId, jenis, hasil, 'review');
+      const col = row[jenis];
+      col.has_label = true;
+      col.actual_relevan = 'Tidak';
+      col.actual_kategori = [];
+      col.actual_arah = null;
+      col.actual_alasan = alasan;
+      mlRecomputeMismatch(jenis, col);
+    } catch (err) {
+      console.error(`[ml-monitor] gagal cascade ${jenis}:`, err);
+    }
+  }
+}
+
 async function mlHandleKoreksiSubmit(newsId, jenis, colEl, row) {
   const msgEl = colEl.querySelector('.review-form-msg');
   msgEl.textContent = '';
@@ -247,6 +273,10 @@ async function mlHandleKoreksiSubmit(newsId, jenis, colEl, row) {
     col.actual_arah = hasil.arah ?? null;
     col.actual_alasan = hasil.alasan || '';
     mlRecomputeMismatch(jenis, col);
+
+    if (jenis === 'screener' && hasil.lolos === false) {
+      await mlCascadeTidakLolos(newsId, row, hasil.alasan);
+    }
 
     const cardEl = document.querySelector(`.labeling-card[data-news-id="${newsId}"]`);
     if (cardEl) cardEl.outerHTML = mlRenderCard(row);
