@@ -2874,6 +2874,8 @@ select {
 .review-alasan-current summary {
   cursor: pointer;
   list-style: none;
+  display: block;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3058,6 +3060,7 @@ select {
 
 .ml-field-value {
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 /* Tahap C: 3 kolom (Screener/Lapus/Pengeluaran) dalam satu kartu artikel —
