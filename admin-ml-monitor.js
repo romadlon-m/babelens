@@ -16,6 +16,15 @@ function mlIsKategori(jenis) {
   return jenis === 'lapus_kategori' || jenis === 'pengeluaran_kategori';
 }
 
+// Halaman labeling tempat koreksi sebenarnya dikerjakan -- jenis kategori (lapus_kategori/
+// pengeluaran_kategori) tidak punya halaman sendiri, relevan+kategori+arah-nya satu paket
+// di labeling-lapus.html/labeling-pengeluaran.html (lihat v_log_jenis di migration RPC).
+function mlLabelingPageFor(jenis) {
+  if (jenis === 'lapus_kategori') return 'labeling-lapus.html';
+  if (jenis === 'pengeluaran_kategori') return 'labeling-pengeluaran.html';
+  return `labeling-${jenis}.html`;
+}
+
 function initMlMonitorPage() {
   mlMonitorRefresh();
 }
@@ -168,6 +177,7 @@ function mlMonitorRenderTable(rows, mode, total) {
     : ['Judul', 'Prediksi', 'Aktual'];
   if (mode === 'raw') cols.push('Sudah Dilabel?');
   cols.push('Diprediksi Pada');
+  if (mode === 'disagreement') cols.push('');
 
   thead.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
 
@@ -185,6 +195,14 @@ function mlMonitorRenderTable(rows, mode, total) {
     }
     if (mode === 'raw') cells.push(r.has_label ? 'Ya' : 'Belum');
     cells.push(r.predicted_at ? new Date(r.predicted_at).toLocaleString('id-ID') : '-');
+    if (mode === 'disagreement') {
+      // Buka halaman labeling yang sesungguhnya (news_id=...) supaya koreksi tetap
+      // lewat submit_label() yang sudah ada -- audit trail, prompt_version_id, dan
+      // pembersihan labeling_flags tetap konsisten. TIDAK ada overwrite langsung ke
+      // tabel dari halaman ini -- lihat diskusi di riwayat chat kenapa itu berisiko.
+      const page = mlLabelingPageFor(mlState.jenis);
+      cells.push(`<a class="card-btn" href="${page}?news_id=${r.news_id}" target="_blank">✏️ Koreksi</a>`);
+    }
     return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
   }).join('');
 
