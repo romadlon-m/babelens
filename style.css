@@ -3110,6 +3110,26 @@ select {
   .review-columns {
     flex-direction: column;
   }
+
+  /* admin-ml-monitor.html: kartu Screener/Lapus/Pengeluaran masih terasa terlalu lebar
+     di layar sempit (padding kartu + kolom menumpuk) -- perkecil padding & font-size
+     field di sini saja (bukan di .labeling-card/.review-column secara umum, supaya
+     admin-review.html yang sudah pas tidak ikut berubah). */
+  .admin-ml-monitor-page .labeling-card {
+    padding: 14px;
+  }
+
+  .admin-ml-monitor-page .review-column {
+    padding: 8px 10px;
+  }
+
+  .admin-ml-monitor-page .ml-field-row {
+    font-size: 12px;
+  }
+
+  .admin-ml-monitor-page .review-column-title {
+    font-size: 12px;
+  }
 }
 
 /* Sits after the last card of a batch (appended in JS, not static markup) —
