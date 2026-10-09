@@ -129,9 +129,11 @@ function mlColToReviewShape(jenis, col) {
 function mlRenderColumn(jenisLabel, jenis, col, newsId) {
   const badge = !col.has_label
     ? '<span class="badge badge-gray ml-column-badge">Belum dilabel</span>'
-    : col.mismatch
-      ? '<span class="badge badge-red ml-column-badge">⚠️ Berbeda</span>'
-      : '<span class="badge badge-green ml-column-badge">Cocok</span>';
+    : !col.mismatch
+      ? '<span class="badge badge-green ml-column-badge">Cocok</span>'
+      : col.reviewed
+        ? '<span class="badge badge-blue ml-column-badge">👀 Sudah dicek (Prediksi salah)</span>'
+        : '<span class="badge badge-red ml-column-badge">⚠️ Berbeda</span>';
 
   const isKategori = jenis !== 'screener';
   let fields = `
@@ -154,6 +156,14 @@ function mlRenderColumn(jenisLabel, jenis, col, newsId) {
     ? `<button class="card-btn" data-action="ml-koreksi-toggle">✏️ Koreksi</button>`
     : '<span class="ml-muted" style="font-size:12px;">Belum ada aktual untuk dikoreksi</span>';
 
+  // "Sesuai" cuma relevan kalau ada mismatch yg belum direview -- menandai "Prediksi
+  // yang salah, Aktual sudah benar, tidak perlu dikoreksi" tanpa pernah mengubah Prediksi
+  // itu sendiri. Hilang sendiri (dan baris resurface) kalau Aktual dikoreksi ulang
+  // setelahnya -- lihat validasi staleness di admin_ml_shadow_queue_by_article().
+  const sesuaiBtn = col.has_label && col.mismatch && !col.reviewed
+    ? `<button class="secondary-btn" data-action="ml-sesuai">✅ Sesuai</button>`
+    : '';
+
   // Form koreksi dibangun dari reviewBuildPerbaikiFormHtml() (admin-review.js) --
   // rowId dipakai cuma utk nama radio-group unik, dipakai newsId di sini (bukan id
   // baris admin-review's own queue), supaya tiap kolom di kartu berbeda tidak kolisi.
@@ -169,7 +179,7 @@ function mlRenderColumn(jenisLabel, jenis, col, newsId) {
       </div>
       ${fields}
       ${col.has_label ? `
-        <div class="review-column-actions">${koreksiBtn}</div>
+        <div class="review-column-actions">${koreksiBtn}${sesuaiBtn}</div>
         <div class="review-perbaiki-box" hidden>
           ${perbaikiHtml}
           <div class="review-form-msg labeling-validation-msg"></div>
@@ -242,6 +252,7 @@ async function mlCascadeTidakLolos(newsId, row, screenerAlasan) {
       col.actual_kategori = [];
       col.actual_arah = null;
       col.actual_alasan = alasan;
+      col.reviewed = false; // entri labeling_log baru -- status reviewed lama (kalau ada) jadi basi
       mlRecomputeMismatch(jenis, col);
     } catch (err) {
       console.error(`[ml-monitor] gagal cascade ${jenis}:`, err);
@@ -272,6 +283,7 @@ async function mlHandleKoreksiSubmit(newsId, jenis, colEl, row) {
     col.actual_kategori = hasil.kategori || hasil.komponen || [];
     col.actual_arah = hasil.arah ?? null;
     col.actual_alasan = hasil.alasan || '';
+    col.reviewed = false; // entri labeling_log baru -- status reviewed lama (kalau ada) jadi basi
     mlRecomputeMismatch(jenis, col);
 
     if (jenis === 'screener' && hasil.lolos === false) {
@@ -283,6 +295,24 @@ async function mlHandleKoreksiSubmit(newsId, jenis, colEl, row) {
   } catch (err) {
     msgEl.textContent = '❌ Gagal menyimpan: ' + err.message;
     msgEl.classList.add('error');
+  }
+}
+
+async function mlHandleSesuaiSubmit(newsId, jenis, colEl, row) {
+  const btn = colEl.querySelector('button[data-action="ml-sesuai"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+  try {
+    const { error } = await window.db.rpc('admin_ml_shadow_mark_reviewed', {
+      p_news_id: newsId,
+      p_jenis: jenis,
+    });
+    if (error) throw error;
+    row[jenis].reviewed = true;
+    const cardEl = document.querySelector(`.labeling-card[data-news-id="${newsId}"]`);
+    if (cardEl) cardEl.outerHTML = mlRenderCard(row);
+  } catch (err) {
+    alert('Gagal menandai Sesuai: ' + (err?.message || err));
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Sesuai'; }
   }
 }
 
@@ -306,6 +336,7 @@ function mlWireListDelegation() {
       return;
     }
     if (action === 'ml-koreksi-submit') return mlHandleKoreksiSubmit(newsId, jenis, colEl, row);
+    if (action === 'ml-sesuai') return mlHandleSesuaiSubmit(newsId, jenis, colEl, row);
   });
 }
 
