@@ -3040,6 +3040,19 @@ select {
   margin-left: 6px;
 }
 
+/* admin-ml-monitor.html: badge Cocok/Berbeda/Sudah ditinjau ditaruh di baris sendiri DI
+   BAWAH judul kolom (Screener/Lapus/Pengeluaran), bukan sejajar lewat .review-column-head's
+   justify-content:space-between bawaan (yang dipakai juga oleh admin-review.html -- scoped
+   ke .admin-ml-monitor-page saja supaya Review Label tidak ikut berubah). */
+.admin-ml-monitor-page .review-column-head {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-ml-monitor-page .ml-column-badge {
+  margin-left: 0;
+}
+
 .ml-field-row {
   display: flex;
   justify-content: space-between;

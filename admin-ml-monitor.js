@@ -9,6 +9,16 @@
 // jadi TIDAK PERNAH overwrite langsung ke tabel. Hanya "Aktual" yang bisa dikoreksi;
 // "Prediksi" adalah catatan historis apa kata model saat itu dan tidak pernah diedit --
 // kalau Prediksi ikut diubah, tujuan shadow mode (melacak akurasi model) jadi tidak valid.
+//
+// Submit Koreksi SELALU menandai kolom itu reviewed juga (lewat admin_ml_shadow_mark_reviewed),
+// bukan cuma submit "Sesuai" -- begitu admin sudah mengoreksi Aktual secara manual, itu
+// sudah keputusan final admin, walau hasil koreksinya masih beda dari Prediksi model (mis.
+// admin yakin modelnya salah dengan cara lain dari yang disarankan "Sesuai"). Tanpa ini,
+// baris akan terus resurface di antrean "Hanya yang berbeda" meski sudah ditinjau, karena
+// reviewed_at lama otomatis basi terhadap entri labeling_log baru (lihat komentar di
+// admin_ml_shadow_mark_reviewed() migration). "Terapkan Prediksi" (tombol ketiga, mismatch
+// saja) adalah jalan pintas kalau sebaliknya -- Prediksi model yang benar dan Aktual lama
+// yang salah -- submit predicted_* langsung sebagai Aktual baru tanpa isi ulang form manual.
 
 const ML_PAGE_SIZE = 10;
 
@@ -132,7 +142,7 @@ function mlRenderColumn(jenisLabel, jenis, col, newsId) {
     : !col.mismatch
       ? '<span class="badge badge-green ml-column-badge">Cocok</span>'
       : col.reviewed
-        ? '<span class="badge badge-blue ml-column-badge">👀 Sudah dicek (Prediksi salah)</span>'
+        ? '<span class="badge badge-blue ml-column-badge">👀 Sudah ditinjau</span>'
         : '<span class="badge badge-red ml-column-badge">⚠️ Berbeda</span>';
 
   const isKategori = jenis !== 'screener';
@@ -158,10 +168,22 @@ function mlRenderColumn(jenisLabel, jenis, col, newsId) {
 
   // "Sesuai" cuma relevan kalau ada mismatch yg belum direview -- menandai "Prediksi
   // yang salah, Aktual sudah benar, tidak perlu dikoreksi" tanpa pernah mengubah Prediksi
-  // itu sendiri. Hilang sendiri (dan baris resurface) kalau Aktual dikoreksi ulang
-  // setelahnya -- lihat validasi staleness di admin_ml_shadow_queue_by_article().
+  // itu sendiri. Status reviewed ini otomatis batal lagi kalau Aktual dikoreksi ulang
+  // SETELAH ditandai di sini (reviewed_at jadi basi terhadap labeling_log baru) -- tapi
+  // submit Koreksi sendiri sekarang juga menandai reviewed (lihat mlHandleKoreksiSubmit),
+  // jadi baris hanya resurface kalau ada koreksi dari LUAR halaman ini (mis. Review Label).
   const sesuaiBtn = col.has_label && col.mismatch && !col.reviewed
     ? `<button class="secondary-btn" data-action="ml-sesuai">✅ Sesuai</button>`
+    : '';
+
+  // "Terapkan Prediksi" -- kebalikan dari Sesuai: Prediksi model yang BENAR, Aktual lama
+  // yang salah. Submit predicted_relevan/predicted_kategori/predicted_arah langsung sebagai
+  // Aktual baru (lewat labelingSubmit, path yang sama dengan Koreksi manual -- bukan
+  // overwrite langsung) tanpa admin perlu isi ulang form yang nilainya sudah tampil sebagai
+  // "Prediksi" di kartu. Disembunyikan kalau predicted_relevan null (model tidak punya
+  // jawaban buat kolom ini) -- tidak ada yang bisa diterapkan.
+  const terapkanBtn = col.has_label && col.mismatch && !col.reviewed && col.predicted_relevan != null
+    ? `<button class="secondary-btn" data-action="ml-terapkan-prediksi">🎯 Terapkan Prediksi</button>`
     : '';
 
   // Form koreksi dibangun dari reviewBuildPerbaikiFormHtml() (admin-review.js) --
@@ -179,7 +201,7 @@ function mlRenderColumn(jenisLabel, jenis, col, newsId) {
       </div>
       ${fields}
       ${col.has_label ? `
-        <div class="review-column-actions">${koreksiBtn}${sesuaiBtn}</div>
+        <div class="review-column-actions">${koreksiBtn}${sesuaiBtn}${terapkanBtn}</div>
         <div class="review-perbaiki-box" hidden>
           ${perbaikiHtml}
           <div class="review-form-msg labeling-validation-msg"></div>
@@ -254,9 +276,27 @@ async function mlCascadeTidakLolos(newsId, row, screenerAlasan) {
       col.actual_alasan = alasan;
       col.reviewed = false; // entri labeling_log baru -- status reviewed lama (kalau ada) jadi basi
       mlRecomputeMismatch(jenis, col);
+      await mlMarkReviewedQuiet(newsId, jenis, col);
     } catch (err) {
       console.error(`[ml-monitor] gagal cascade ${jenis}:`, err);
     }
+  }
+}
+
+// Panggil admin_ml_shadow_mark_reviewed() setelah submit Koreksi/cascade berhasil -- gagal
+// di sini TIDAK dianggap error fatal (submit label utamanya sudah sukses), cuma berarti
+// baris masih bisa resurface di antrean "Hanya yang berbeda" sampai ditandai manual lewat
+// "Sesuai". Dipisah jadi helper supaya dipakai sama persis di koreksi langsung & cascade.
+async function mlMarkReviewedQuiet(newsId, jenis, col) {
+  try {
+    const { error } = await window.db.rpc('admin_ml_shadow_mark_reviewed', {
+      p_news_id: newsId,
+      p_jenis: jenis,
+    });
+    if (!error) col.reviewed = true;
+    else console.error(`[ml-monitor] gagal mark reviewed (${jenis}):`, error);
+  } catch (err) {
+    console.error(`[ml-monitor] gagal mark reviewed (${jenis}):`, err);
   }
 }
 
@@ -285,6 +325,7 @@ async function mlHandleKoreksiSubmit(newsId, jenis, colEl, row) {
     col.actual_alasan = hasil.alasan || '';
     col.reviewed = false; // entri labeling_log baru -- status reviewed lama (kalau ada) jadi basi
     mlRecomputeMismatch(jenis, col);
+    await mlMarkReviewedQuiet(newsId, jenis, col);
 
     if (jenis === 'screener' && hasil.lolos === false) {
       await mlCascadeTidakLolos(newsId, row, hasil.alasan);
@@ -316,6 +357,44 @@ async function mlHandleSesuaiSubmit(newsId, jenis, colEl, row) {
   }
 }
 
+// "Terapkan Prediksi" -- submit predicted_* kolom ini langsung sebagai Aktual baru lewat
+// labelingSubmit(..., 'review') (path yang sama dengan Koreksi manual, bukan overwrite
+// langsung ke news/labeling_log). Setelah submit sukses, actual == predicted sehingga
+// mlRecomputeMismatch() otomatis menghasilkan mismatch=false -- tidak perlu panggil
+// admin_ml_shadow_mark_reviewed() terpisah, badge langsung jadi "Cocok".
+async function mlHandleTerapkanPrediksi(newsId, jenis, colEl, row) {
+  const btn = colEl.querySelector('button[data-action="ml-terapkan-prediksi"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menerapkan...'; }
+  const col = row[jenis];
+  const alasan = 'Diterapkan dari prediksi model (ML shadow monitor).';
+  const hasil = jenis === 'screener'
+    ? { lolos: col.predicted_relevan === 'Ya', alasan }
+    : { relevan: col.predicted_relevan, arah: col.predicted_arah, alasan, [jenis === 'lapus' ? 'kategori' : 'komponen']: col.predicted_kategori || [] };
+
+  try {
+    await labelingSubmit(newsId, jenis, hasil, 'review');
+
+    col.actual_relevan = hasil.lolos !== undefined
+      ? (hasil.lolos ? 'Ya' : 'Tidak')
+      : hasil.relevan;
+    col.actual_kategori = hasil.kategori || hasil.komponen || [];
+    col.actual_arah = hasil.arah ?? null;
+    col.actual_alasan = hasil.alasan || '';
+    col.reviewed = false;
+    mlRecomputeMismatch(jenis, col);
+
+    if (jenis === 'screener' && hasil.lolos === false) {
+      await mlCascadeTidakLolos(newsId, row, hasil.alasan);
+    }
+
+    const cardEl = document.querySelector(`.labeling-card[data-news-id="${newsId}"]`);
+    if (cardEl) cardEl.outerHTML = mlRenderCard(row);
+  } catch (err) {
+    alert('Gagal menerapkan prediksi: ' + (err?.message || err));
+    if (btn) { btn.disabled = false; btn.textContent = '🎯 Terapkan Prediksi'; }
+  }
+}
+
 function mlWireListDelegation() {
   document.getElementById('ml-list').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
@@ -337,6 +416,7 @@ function mlWireListDelegation() {
     }
     if (action === 'ml-koreksi-submit') return mlHandleKoreksiSubmit(newsId, jenis, colEl, row);
     if (action === 'ml-sesuai') return mlHandleSesuaiSubmit(newsId, jenis, colEl, row);
+    if (action === 'ml-terapkan-prediksi') return mlHandleTerapkanPrediksi(newsId, jenis, colEl, row);
   });
 }
 
